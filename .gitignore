@@ -36,3 +36,4 @@ VERSION.txt
 /main*.cpp
 /Makefile
 /Makefile-backup
+/README_PhysiCell.md

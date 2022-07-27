@@ -221,7 +221,7 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
 
     static double PKPD_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
 
-    // check for new dose of drug 1
+    // set up first dose time dor drug 1
     if (std::isnan(PKPD_D1_next_dose_time))
     {
         if (parameters.bools("PKPD_D1_set_first_dose_time"))
@@ -241,7 +241,7 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
         }
     }
 
-    // check for new dose of drug 2
+    // set up first dose time dor drug 2
     if (std::isnan(PKPD_D2_next_dose_time))
     {
         if (parameters.bools("PKPD_D2_set_first_dose_time"))
