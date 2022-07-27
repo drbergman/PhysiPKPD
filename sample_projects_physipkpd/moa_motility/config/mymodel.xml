@@ -84,6 +84,23 @@
             </Dirichlet_options>
         </variable>
 
+        <variable name="oxygen" units="dimensionless" ID="2">
+            <physical_parameter_set>
+                <diffusion_coefficient units="micron^2/min">100000.0</diffusion_coefficient>
+                <decay_rate units="1/min">.1</decay_rate>
+            </physical_parameter_set>
+            <initial_condition units="mmHg">38</initial_condition>
+            <Dirichlet_boundary_condition units="mmHg" enabled="true">38</Dirichlet_boundary_condition>
+            <Dirichlet_options>
+                <boundary_value ID="xmin" enabled="true">38</boundary_value>
+                <boundary_value ID="xmax" enabled="true">38</boundary_value>
+                <boundary_value ID="ymin" enabled="true">38</boundary_value>
+                <boundary_value ID="ymax" enabled="true">38</boundary_value>
+                <boundary_value ID="zmin" enabled="true">38</boundary_value>
+                <boundary_value ID="zmax" enabled="true">38</boundary_value>
+            </Dirichlet_options>
+        </variable>
+
         <options>
             <calculate_gradients>true</calculate_gradients>
             <track_internalized_substrates_in_each_agent>true</track_internalized_substrates_in_each_agent>
@@ -165,16 +182,16 @@
                 </mechanics>
 
                 <motility>  
-					<speed units="micron/min">1</speed>
-					<persistence_time units="min">1</persistence_time>
+					<speed units="micron/min">10</speed>
+					<persistence_time units="min">15</persistence_time>
 					<migration_bias units="dimensionless">.5</migration_bias>
 					
 					<options>
-						<enabled>false</enabled>
+						<enabled>true</enabled>
 						<use_2D>true</use_2D>
 						<chemotaxis>
-							<enabled>false</enabled>
-							<substrate>PKPD_drug_number_1</substrate>
+                            <enabled>true</enabled>
+                            <substrate>oxygen</substrate>
 							<direction>1</direction>
 						</chemotaxis>
 					</options>
@@ -194,6 +211,13 @@
                         <uptake_rate units="1/min">20</uptake_rate>
                         <net_export_rate units="total substrate/min">0</net_export_rate>
                     </substrate>
+
+                    <substrate name="oxygen">
+                        <secretion_rate units="1/min">0</secretion_rate>
+                        <secretion_target units="substrate density">1</secretion_target>
+                        <uptake_rate units="1/min">10</uptake_rate>
+                        <net_export_rate units="total substrate/min">0</net_export_rate>
+                    </substrate>
                 </secretion>
 
             </phenotype>
@@ -201,55 +225,67 @@
 
                 <!-- <div_drugs type="divider" description="-Starting Drug 1 PD parameters-"/> -->
 
-                <PKPD_D1_moa_is_prolif units="bool">1.0</PKPD_D1_moa_is_prolif>
-                <PKPD_D1_prolif_saturation_rate units="1/min">1e-6</PKPD_D1_prolif_saturation_rate>
-                <PKPD_D1_prolif_EC50 units="damage">1e8</PKPD_D1_prolif_EC50>
-                <PKPD_D1_prolif_hill_power units="dimensionless">2</PKPD_D1_prolif_hill_power>
+                <PKPD_D1_moa_is_prolif>0.0</PKPD_D1_moa_is_prolif>
+                <PKPD_D1_prolif_saturation_rate>1e-6</PKPD_D1_prolif_saturation_rate>
+                <PKPD_D1_prolif_EC50>1e8</PKPD_D1_prolif_EC50>
+                <PKPD_D1_prolif_hill_power>2</PKPD_D1_prolif_hill_power>
 
-                <PKPD_D1_moa_is_apop units="bool">0.0</PKPD_D1_moa_is_apop>
-                <PKPD_D1_apop_saturation_rate units="1/min">1e-2</PKPD_D1_apop_saturation_rate>
-                <PKPD_D1_apop_EC50 units="damage">1e8</PKPD_D1_apop_EC50>
-                <PKPD_D1_apop_hill_power units="dimensionless">2</PKPD_D1_apop_hill_power>
+                <PKPD_D1_moa_is_apop>0.0</PKPD_D1_moa_is_apop>
+                <PKPD_D1_apop_saturation_rate>1e-2</PKPD_D1_apop_saturation_rate>
+                <PKPD_D1_apop_EC50>1e7</PKPD_D1_apop_EC50>
+                <PKPD_D1_apop_hill_power>2</PKPD_D1_apop_hill_power>
 
-                <PKPD_D1_moa_is_necrosis units="bool">0.0</PKPD_D1_moa_is_necrosis>
-                <PKPD_D1_necrosis_saturation_rate units="1/min">1e-3</PKPD_D1_necrosis_saturation_rate>
-                <PKPD_D1_necrosis_EC50 units="damage">1e8</PKPD_D1_necrosis_EC50>
-                <PKPD_D1_necrosis_hill_power units="dimensionless">2</PKPD_D1_necrosis_hill_power>
+                <PKPD_D1_moa_is_necrosis>0.0</PKPD_D1_moa_is_necrosis>
+                <PKPD_D1_necrosis_saturation_rate>1E-4</PKPD_D1_necrosis_saturation_rate>
+                <PKPD_D1_necrosis_EC50>1e7</PKPD_D1_necrosis_EC50>
+                <PKPD_D1_necrosis_hill_power>2</PKPD_D1_necrosis_hill_power>
 
-                <PKPD_D1_moa_is_motility units="bool">0.0</PKPD_D1_moa_is_motility>
-                <PKPD_D1_motility_saturation_rate units="1/min">0.0</PKPD_D1_motility_saturation_rate>
-                <PKPD_D1_motility_EC50 units="damage">1e8</PKPD_D1_motility_EC50>
-                <PKPD_D1_motility_hill_power units="dimensionless">2</PKPD_D1_motility_hill_power>
+                <PKPD_D1_moa_is_motility>1.0</PKPD_D1_moa_is_motility>
+                <PKPD_D1_motility_saturation_rate>0.0</PKPD_D1_motility_saturation_rate>
+                <PKPD_D1_motility_EC50>1e8</PKPD_D1_motility_EC50>
+                <PKPD_D1_motility_hill_power>2</PKPD_D1_motility_hill_power>
 
-                <PKPD_D1_damage units="damage">0</PKPD_D1_damage>
-                <PKPD_D1_repair_rate units="damage/min">5e6</PKPD_D1_repair_rate>
-                <PKPD_D1_metabolism_rate units="1/min">0.05</PKPD_D1_metabolism_rate>
+                <PKPD_D1_damage>0</PKPD_D1_damage>
+                <PKPD_D1_repair_rate>5e6</PKPD_D1_repair_rate>
+                <PKPD_D1_metabolism_rate>0.05</PKPD_D1_metabolism_rate>
+
 
                 <!-- <div_drugs type="divider" description="-Starting Drug 2 PD parameters-"/> -->
 
-                <PKPD_D2_moa_is_prolif units="bool">0.0</PKPD_D2_moa_is_prolif>
-                <PKPD_D2_prolif_saturation_rate units="1/min">1E-6</PKPD_D2_prolif_saturation_rate>
-                <PKPD_D2_prolif_EC50 units="damage">1e10</PKPD_D2_prolif_EC50>
-                <PKPD_D2_prolif_hill_power units="dimensionless">2</PKPD_D2_prolif_hill_power>
 
-                <PKPD_D2_moa_is_apop units="bool">1.0</PKPD_D2_moa_is_apop>
-                <PKPD_D2_apop_saturation_rate units="1/min">1e-2</PKPD_D2_apop_saturation_rate>
-                <PKPD_D2_apop_EC50 units="damage">1e8</PKPD_D2_apop_EC50>
-                <PKPD_D2_apop_hill_power units="dimensionless">2</PKPD_D2_apop_hill_power>
+                <PKPD_D2_moa_is_prolif>0.0</PKPD_D2_moa_is_prolif>
+                <PKPD_D2_prolif_saturation_rate>1E-6</PKPD_D2_prolif_saturation_rate>
+                <PKPD_D2_prolif_EC50>1e10</PKPD_D2_prolif_EC50>
+                <PKPD_D2_prolif_hill_power>2</PKPD_D2_prolif_hill_power>
 
-                <PKPD_D2_moa_is_necrosis units="bool">0.0</PKPD_D2_moa_is_necrosis>
-                <PKPD_D2_necrosis_saturation_rate units="1/min">1E-4</PKPD_D2_necrosis_saturation_rate>
-                <PKPD_D2_necrosis_EC50 units="damage">1e7</PKPD_D2_necrosis_EC50>
-                <PKPD_D2_necrosis_hill_power units="dimensionless">2</PKPD_D2_necrosis_hill_power>
+                <PKPD_D2_moa_is_apop>0.0</PKPD_D2_moa_is_apop>
+                <PKPD_D2_apop_saturation_rate>1e-2</PKPD_D2_apop_saturation_rate>
+                <PKPD_D2_apop_EC50>1e8</PKPD_D2_apop_EC50>
+                <PKPD_D2_apop_hill_power>2</PKPD_D2_apop_hill_power>
 
-                <PKPD_D2_moa_is_motility units="bool">0.0</PKPD_D2_moa_is_motility>
-                <PKPD_D2_motility_saturation_rate units="1/min">1</PKPD_D2_motility_saturation_rate>
-                <PKPD_D2_motility_EC50 units="damage">1e7</PKPD_D2_motility_EC50>
-                <PKPD_D2_motility_hill_power units="dimensionless">2</PKPD_D2_motility_hill_power>
+                <PKPD_D2_moa_is_necrosis>0.0</PKPD_D2_moa_is_necrosis>
+                <PKPD_D2_necrosis_saturation_rate>1E-4</PKPD_D2_necrosis_saturation_rate>
+                <PKPD_D2_necrosis_EC50>1e7</PKPD_D2_necrosis_EC50>
+                <PKPD_D2_necrosis_hill_power>2</PKPD_D2_necrosis_hill_power>
+
+                <PKPD_D2_moa_is_motility>0.0</PKPD_D2_moa_is_motility>
+                <PKPD_D2_motility_saturation_rate>1</PKPD_D2_motility_saturation_rate>
+                <PKPD_D2_motility_EC50>1e7</PKPD_D2_motility_EC50>
+                <PKPD_D2_motility_hill_power>2</PKPD_D2_motility_hill_power>
 
                 <PKPD_D2_damage>0</PKPD_D2_damage>
-                <PKPD_D2_repair_rate units="damage/min">1e7</PKPD_D2_repair_rate>
-                <PKPD_D2_metabolism_rate units="1/min">0.05</PKPD_D2_metabolism_rate>
+                <PKPD_D2_repair_rate>1e7</PKPD_D2_repair_rate>
+                <PKPD_D2_metabolism_rate>0.05</PKPD_D2_metabolism_rate>
+
+                <!-- <div_drugs type="divider" description="-Done with PD parameters-"/> -->
+
+                <pO2_proliferation_saturation>38</pO2_proliferation_saturation>
+                <pO2_proliferation_threshold>5</pO2_proliferation_threshold>
+                <pO2_necrosis_threshold>5</pO2_necrosis_threshold>
+                <pO2_necrosis_saturation>2.5</pO2_necrosis_saturation>
+                <max_necrosis_rate>0.0028</max_necrosis_rate>
+                <pO2_half_max>4</pO2_half_max>
+                <pO2_hill_power>2</pO2_hill_power>
 
             </custom_data>
         </cell_definition>
@@ -261,7 +297,8 @@
             <filename>cells.csv</filename>
         </cell_positions>
     </initial_conditions>
-<user_parameters>
+
+    <user_parameters>
 
         <div_initialization type="divider" description="---Initialization settings---"/>
 
@@ -276,7 +313,7 @@
         <div_drug1 type="divider" description="---Drug 1 Settings---"/>
 
         <PKPD_D1_number_loading_doses type="int" units="none" description="number of loading doses of drug 1">0</PKPD_D1_number_loading_doses>
-        <PKPD_D1_max_number_doses type="int" units="none" description="max doses of drug 1, including loading doses">3</PKPD_D1_max_number_doses>
+        <PKPD_D1_max_number_doses type="int" units="none" description="max doses of drug 1, including loading doses">1</PKPD_D1_max_number_doses>
         <PKPD_D1_dose_interval type="double" units="min" description="time between dosings of drug 1">360.0</PKPD_D1_dose_interval>
         <PKPD_D1_set_first_dose_time type="bool" units="none" description="user sets first dose time to start therapy for drug 1; false=user gives confluence condition">True</PKPD_D1_set_first_dose_time>
         <PKPD_D1_first_dose_time type="double" units="min" description="time of first dose for drug 1">0.0</PKPD_D1_first_dose_time>
@@ -289,7 +326,7 @@
         <div_drug1_PK type="divider" description="---Drug 1 PK---"/>
 
         <PKPD_D1_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">400.0</PKPD_D1_central_increase_on_loading_dose>
-        <PKPD_D1_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">5e2</PKPD_D1_central_increase_on_dose>
+        <PKPD_D1_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">2e3</PKPD_D1_central_increase_on_dose>
         <PKPD_D1_central_elimination_rate type="double" units="1/min" description="decay rate of drug 1 in systemic circulation">0.0027</PKPD_D1_central_elimination_rate>
         <PKPD_D1_flux_across_capillaries type="double" units="1/min" description="rate of central concentration change of drug 1 due to distribution and redistribution">0.0048</PKPD_D1_flux_across_capillaries>
         <PKPD_D1_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D1_biot_number>
@@ -298,11 +335,11 @@
 
         <div_drug2 type="divider" description="---Drug 2 Settings---"/>
 
-        <PKPD_D2_number_loading_doses type="int" units="none" description="number of loading doses of drug 2">0</PKPD_D2_number_loading_doses>
-        <PKPD_D2_max_number_doses type="int" units="none" description="max doses of drug 2">3</PKPD_D2_max_number_doses>
+        <PKPD_D2_number_loading_doses type="int" units="none" description="number of loading doses of drug 2">1</PKPD_D2_number_loading_doses>
+        <PKPD_D2_max_number_doses type="int" units="none" description="max doses of drug 2">0</PKPD_D2_max_number_doses>
         <PKPD_D2_dose_interval type="double" units="min" description="time between dosings of drug 2">360.0</PKPD_D2_dose_interval>
         <PKPD_D2_set_first_dose_time type="bool" units="none" description="user sets first dose time to start therapy for drug 2; false=user gives confluence condition">True</PKPD_D2_set_first_dose_time>
-        <PKPD_D2_first_dose_time type="double" units="min" description="time of first dose for drug 2">60.0</PKPD_D2_first_dose_time>
+        <PKPD_D2_first_dose_time type="double" units="min" description="time of first dose for drug 2">180.0</PKPD_D2_first_dose_time>
         <PKPD_D2_confluence_condition type="double" units="none" description="confluence as proportion at which to start therapy for drug 2">0.6</PKPD_D2_confluence_condition>
         <d2_color_ec50 type="double" units="none" description="ec50 used for coloring">1e8</d2_color_ec50>
         <d2_color_hp type="double" units="none" description="hill power used for coloring">2.0</d2_color_hp>
@@ -311,8 +348,8 @@
 
         <div_drug2_PK type="divider" description="---Drug 2 PK---"/>
 
-        <PKPD_D2_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 2">0</PKPD_D2_central_increase_on_loading_dose>
-        <PKPD_D2_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 2">5e2</PKPD_D2_central_increase_on_dose>
+        <PKPD_D2_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 2">400.0</PKPD_D2_central_increase_on_loading_dose>
+        <PKPD_D2_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 2">150.0</PKPD_D2_central_increase_on_dose>
         <PKPD_D2_central_elimination_rate type="double" units="1/min" description="decay rate of drug 2 in systemic circulation">0.0027</PKPD_D2_central_elimination_rate>
         <PKPD_D2_flux_across_capillaries type="double" units="1/min" description="rate of central concentration change of drug 2 due to distribution and redistribution">0.0048</PKPD_D2_flux_across_capillaries>
         <PKPD_D2_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D2_biot_number>
