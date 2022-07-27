@@ -5,7 +5,7 @@ output*.xml
 sample_projects/
 sample_projects_intracellular/
 .DS_Store
-BioFVM*
+BioFVM/*
 output/*
 core/*
 modules/*
