@@ -2,7 +2,8 @@
 *.mat
 output*.xml
 *.o
-sample_projects/*
+sample_projects/
+sample_projects_intracellular/
 .DS_Store
 BioFVM*
 output/*
