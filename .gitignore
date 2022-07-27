@@ -34,4 +34,5 @@ Makefile-backup
 VERSION.txt
 /ALL_CITATIONS.txt
 /main*.cpp
-/Makefile*
+/Makefile
+/Makefile-backup
