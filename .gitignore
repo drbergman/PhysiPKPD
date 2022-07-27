@@ -13,3 +13,17 @@ project
 beta/
 MeetingMinutes/*
 .vscode/*
+CITATION.txt
+addons/PhysiBoSS
+addons/dFBA
+addons/libRoadrunner
+changes.md
+config/
+documentation/
+examples/
+licenses/
+matlab/
+povray/
+protocols/
+tests/
+unit_tests/
