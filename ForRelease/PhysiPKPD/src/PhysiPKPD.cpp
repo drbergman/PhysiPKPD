@@ -292,42 +292,9 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
     }
 
     // update PK model for drug 1
-    double PKPD_D1_central_change_rate = -1 * parameters.doubles("PKPD_D1_central_elimination_rate") * PKPD_D1_central_concentration;
-    double PKPD_D1_concentration_gradient = PKPD_D1_central_concentration - PKPD_D1_periphery_concentration;
-
-    PKPD_D1_central_change_rate -= PKPD_D1_flux_rate * PKPD_D1_concentration_gradient;
-
-    PKPD_D1_central_concentration += PKPD_D1_central_change_rate * diffusion_dt;
-    PKPD_D1_periphery_concentration += PKPD_D1_flux_rate * PKPD_volume_ratio * PKPD_D1_concentration_gradient * diffusion_dt;
-
-    if (PKPD_D1_central_concentration < 0)
-    {
-        PKPD_D1_central_concentration = 0;
-    }
-
-    if (PKPD_D1_periphery_concentration < 0)
-    {
-        PKPD_D1_periphery_concentration = 0;
-    }
-
+    pk_explicit_euler( diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), PKPD_D1_flux_rate );
     // update PK model for drug 2
-    double PKPD_D2_central_change_rate = -1 * parameters.doubles("PKPD_D2_central_elimination_rate") * PKPD_D2_central_concentration;
-    double PKPD_D2_concentration_gradient = PKPD_D2_central_concentration - PKPD_D2_periphery_concentration;
-
-    PKPD_D2_central_change_rate -= PKPD_D2_flux_rate * PKPD_D2_concentration_gradient;
-
-    PKPD_D2_central_concentration += PKPD_D2_central_change_rate * diffusion_dt;
-    PKPD_D2_periphery_concentration += PKPD_D2_flux_rate * PKPD_volume_ratio * PKPD_D2_concentration_gradient * diffusion_dt;
-
-    if (PKPD_D2_central_concentration < 0)
-    {
-        PKPD_D2_central_concentration = 0;
-    }
-
-    if (PKPD_D2_periphery_concentration < 0)
-    {
-        PKPD_D2_periphery_concentration = 0;
-    }
+    pk_explicit_euler( diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), PKPD_D2_flux_rate );
 
     for (int i = 0; i < microenvironment.mesh.x_coordinates.size(); i++)
     {
@@ -575,4 +542,27 @@ double confluence_computation(void)
     output /= microenvironment.mesh.bounding_box[4] - microenvironment.mesh.bounding_box[1];
     //    output /= microenvironment.mesh.bounding_box[5] - microenvironment.mesh.bounding_box[2]; // use this if doing a 3D check for confluence (see choice of cell volume/area above)
     return output;
+}
+
+void pk_explicit_euler( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double flux_rate )
+{
+    static double central_to_periphery_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
+    // update PK model for drug 1
+    double central_change_rate = -1 * elimination_rate * central_concentration;
+    double concentration_gradient = central_concentration - periphery_concentration;
+
+    central_change_rate -= flux_rate * concentration_gradient;
+
+    central_concentration += central_change_rate * dt;
+    periphery_concentration += flux_rate * central_to_periphery_volume_ratio * concentration_gradient * dt;
+
+    if (central_concentration < 0)
+    {
+        central_concentration = 0;
+    }
+
+    if (periphery_concentration < 0)
+    {
+        periphery_concentration = 0;
+    }
 }

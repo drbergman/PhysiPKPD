@@ -21,7 +21,9 @@ To run one of these samples, do the following:
     * `make moa_motility` 
     * `make combo`
 3. Compile your project: `make`
-4. Run your project: `./project ./config/mymodel.xml`
+4. Run your project: 
+    * On Mac or Linux systems `./project ./config/mymodel.xml`
+    * On Windows `project.exe ./config/mymodel.xml`
 5. Look at the snapshots in `output/` and the living cell counts in `output/cell_counts.cvs`
 
 ## Reconfiguring, editing, and re-running

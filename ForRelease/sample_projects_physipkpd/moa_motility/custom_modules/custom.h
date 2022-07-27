@@ -65,26 +65,30 @@
 ###############################################################################
 */
 
-#ifndef _PhysiPKPD_h_
-#define _PhysiPKPD_h_
-
-#include "../../../core/PhysiCell.h"
-#include "../../../core/PhysiCell_phenotype.h"
-#include "../../../core/PhysiCell_cell.h"
-#include "../../../modules/PhysiCell_pugixml.h"
-#include "../../../modules/PhysiCell_standard_modules.h"
+#include "../core/PhysiCell.h"
+#include "../modules/PhysiCell_standard_modules.h"
+#include "../addons/PhysiPKPD/src/PhysiPKPD.h"
 
 using namespace BioFVM;
 using namespace PhysiCell;
 
-void PK_model( double current_time );
-void PD_model( double dt );
-void write_cell_data_for_plots( double current_time, char delim);
-std::vector<std::string> damage_coloring( Cell* pCell );
-double Hill_function( double input, double Hill_power , double EC_50 );
-double confluence_computation( void );
-void pd_function( Cell* pC, Phenotype& p, double dt );
-void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2);
-void pk_explicit_euler( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double flux_rate );
+// setup functions to help us along
 
-#endif
+void create_cell_types( void );
+void setup_tissue( void );
+void create_output_csv_files( void );
+
+// set up the BioFVM microenvironment
+void setup_microenvironment( void );
+
+// custom pathology coloring function
+
+std::vector<std::string> my_coloring_function( Cell* );
+
+// custom functions can go here
+
+void phenotype_function( Cell* pCell, Phenotype& phenotype, double dt );
+void custom_function( Cell* pCell, Phenotype& phenotype , double dt );
+void contact_function( Cell* pMe, Phenotype& phenoMe , Cell* pOther, Phenotype& phenoOther , double dt );
+void tumor_phenotype( Cell* pC, Phenotype& p, double dt );
+void motility_rule( Cell* pC, Phenotype& p, double dt );
