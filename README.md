@@ -1,10 +1,19 @@
 # PhysiPKPD
-## Getting Started
-1. Download the folder with all the contents (as of this writing it is called `ForRelease`) (you probably already did that and that's how you found this README!)
-2. Move the folder `PhysiPKPD` into `PhysiCell/addons/`
-3. Move the folder `sample_projects_phsyipkpd` into `PhysiCell`
+## Getting Started...
+### ...by downloading PhysiPKPD add adding to a working PhysiCell directory
+1. Download the repository and unzip the file.
+2. Move the folder `PhysiPKPD/addons/PhysiPKPD` into `PhysiCell/addons/`
+3. Move the folder `PhysiPKPD/sample_projects_phsyipkpd` into `PhysiCell`
 4. Open `PhysiCell/sample_projects/Makefile-default` (the one that `make reset` will will put in the main PhysiCell directory)
 5. Add the text from `Makefile-PhysiPKPD_Addendum` to `PhysiCell/sample_projects/Makefile-default` (anywhere should work, perhaps best around line 195 at the end of the other sample projects)
+
+### ...by cloning the repository
+1. Fork this repository to your own GitHub account.
+2. Clone the resulting forked repository onto your machine.
+3. Copy all the PhysiCell files in your PhysiCell directory **except addons**
+4. Copy the subfolders in `PhysiCell/addons` into your cloned directory's `addons` folder
+5. Open `PhysiCell/sample_projects/Makefile-default` (the one that `make reset` will will put in the main PhysiCell directory)
+6. Add the text from `Makefile-PhysiPKPD_Addendum` to `PhysiCell/sample_projects/Makefile-default` (anywhere should work, perhaps best around line 195 at the end of the other sample projects)
 
 Congratulations! You're ready to try out PhysiPKPD!
 
