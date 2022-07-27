@@ -35,7 +35,7 @@ To run one of these samples, do the following:
     * `make combo`
 3. Compile your project: `make`
 4. Run your project: `./project ./config/mymodel.xml`
-5. Look at the snapshots in `output/` and the living cell counts in `output/cell_counts.cvs`
+5. Look at the snapshots in `output/` and the living cell counts in `output/cell_counts.csv`
 
 ## Reconfiguring, editing, and re-running
 You can edit the configure file to change parameter values.
