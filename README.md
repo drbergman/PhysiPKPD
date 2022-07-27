@@ -99,34 +99,16 @@ In the table below, `X` can stand for any one of `prolif`, `apop`, `necrosis`, o
 
 ## Making your own project using PhysiPKPD
 If you wish to make your own project that uses PhysiPKPD (and not just one of the pre-built sample projects), this is how you can proceed.
-1. Make the template project and set it up with any agents and non-PKPD substrates you want.
-2. Add two additional substrates named `PKPD_drug_number_1` and `PKPD_drug_number_2`.
+1. Make the PKPD template project: `make template_pkpd`
+2. Edit the configuration file to set the Dirichlet conditions, [PK Parameters](#pk_pars), and [PD Parameters](#pd_pars) for the two PKPD drugs and the default cell type `cell`.
+3. Add additional substrates as normal (using the Model Builder for this is untested)
+4. Add additional cell types as normal (using the Model Builder for this is untested).
+Copy the `custom_data` block for `cell` into any newly created cell types, setting these as desired.
+5. By default, each cell type is assigned the same `update_phenotype` function, which is `cell_phenotype` found in the `custom.cpp` file.
+Add new phenotype functions as desired for each cell type.
+6. For each phenotype function, make sure to uncomment the line resetting the mechanism of action to its base value.
+7. If the mechanism of action is motility, then uncomment the line setting the `update_migration_bias` or add that line for each cell type that undergoes a motility effect.
 
-**Note:** Both of these substrates must be included even if you only want one drug in your model.
-A current goal is to remove this requirement.
-
-3. Add the [PK Parameters](#pk_pars) into `user_parameters` in your configuration file for *both* drugs.
-
-**Note:** A simple way to do this is to open a configuration file in one of the sample projects and copy that block into your configuration file.
-For example, copy https://github.com/drbergman/PhysiPKPD/blob/e022fe2a80f11174e4bf60cf1b7e9fa46ca6377b/sample_projects_physipkpd/moa_apoptosis/config/mymodel.xml#L277-L325.
-
-4. For *each* agent type, add *all* the [PD Parameters](#pd_pars) into `custom_data` for that agent.
-
-**Note:** A simple way to do this is to open a configuration file in one of the sample projects and copy this block into *each* agent.
-For example, copy https://github.com/drbergman/PhysiPKPD/blob/e022fe2a80f11174e4bf60cf1b7e9fa46ca6377b/sample_projects_physipkpd/moa_apoptosis/config/mymodel.xml#L202-L252.
-
-5. In `main.cpp` replace 
-```
-microenvironment.simulate_diffusion_decay( diffusion_dt );
-```
-with https://github.com/drbergman/PhysiPKPD/blob/e022fe2a80f11174e4bf60cf1b7e9fa46ca6377b/sample_projects_physipkpd/moa_apoptosis/main.cpp#L215-L221
-
-6. If you want to use PhysiPKPD's `damage_coloring` function, in `main.cpp` set 
-```
-std::vector<std::string> (*cell_coloring_function)(Cell *) = damage_coloring;
-```
-7. Include `pd_function(pC, p, dt);` into the phenotype functions for each agent.
-
-**Important:** You must reset the the targeted moa to the base value before calling `pd_function` or else the drug effect will stack (and in a way that absolutely nobody will ever want).
-
-**Note:** If the mechanism of action is motility, you will need to update the `motility_rule` as will be explained here soon...
+**Note:** You must manually put any any chemotactic signals here.
+See `PhysiCell/core/PhysiCell_standard_models.cpp` for the `chemotaxis_function`, `advanced_chemotaxis_function`, and `advanced_chemotaxis_function_normalized`.
+Hopefully, this will not be necessary in the future.

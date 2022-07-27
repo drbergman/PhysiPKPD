@@ -43,3 +43,12 @@ combo:
 	cp ./sample_projects_physipkpd/combo/Makefile .
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_physipkpd/combo/config/* ./config/
+
+template_pkpd:
+	cp ./sample_projects_physipkpd/template_pkpd/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/template_pkpd/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/template_pkpd/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/template_pkpd/config/* ./config/
