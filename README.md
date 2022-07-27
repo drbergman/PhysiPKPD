@@ -83,7 +83,7 @@ You can also set the following parameters in `microenvironment_setup` for each d
 As of now, there is only one way for the drug to enter the microenvironment: through the ymin boundary.
 Thus, do not change the `Dirichlet_options` without also changing `PK_model` in `PhysiCell/addons/PhysiPKPD/src/PhsyiPKPD.cpp`.
 
-### PD parameters
+### PD parameters <a name="pd_pars"></a>
 For each cell type, all of the PD parameters are in `custom_data` for each cell type.
 In the table below, `X` can stand for any one of `prolif`, `apop`, `necrosis`, or `motility`.
 |Parameter|Description|
@@ -105,4 +105,28 @@ If you wish to make your own project that uses PhysiPKPD (and not just one of th
 **Note:** Both of these substrates must be included even if you only want one drug in your model.
 A current goal is to remove this requirement.
 
-3. Add the [PK Parameters](#pk_pars)
+3. Add the [PK Parameters](#pk_pars) into `user_parameters` in your configuration file for *both* drugs.
+
+**Note:** A simple way to do this is to open a configuration file in one of the sample projects and copy that block into your configuration file.
+For example, copy https://github.com/drbergman/PhysiPKPD/blob/e022fe2a80f11174e4bf60cf1b7e9fa46ca6377b/sample_projects_physipkpd/moa_apoptosis/config/mymodel.xml#L277-L325.
+
+4. For *each* agent type, add *all* the [PD Parameters](#pd_pars) into `custom_data` for that agent.
+
+**Note:** A simple way to do this is to open a configuration file in one of the sample projects and copy this block into *each* agent.
+For example, copy https://github.com/drbergman/PhysiPKPD/blob/e022fe2a80f11174e4bf60cf1b7e9fa46ca6377b/sample_projects_physipkpd/moa_apoptosis/config/mymodel.xml#L202-L252.
+
+5. In `main.cpp` replace 
+```
+microenvironment.simulate_diffusion_decay( diffusion_dt );
+```
+with https://github.com/drbergman/PhysiPKPD/blob/e022fe2a80f11174e4bf60cf1b7e9fa46ca6377b/sample_projects_physipkpd/moa_apoptosis/main.cpp#L215-L221
+
+6. If you want to use PhysiPKPD's `damage_coloring` function, in `main.cpp` set 
+```
+std::vector<std::string> (*cell_coloring_function)(Cell *) = damage_coloring;
+```
+7. Include `pd_function(pC, p, dt);` into the phenotype functions for each agent.
+
+**Important:** You must reset the the targeted moa to the base value before calling `pd_function` or else the drug effect will stack (and in a way that absolutely nobody will ever want).
+
+**Note:** If the mechanism of action is motility, you will need to update the `motility_rule` as will be explained here soon...
