@@ -30,6 +30,5 @@ tests/
 unit_tests/
 custom_modules/
 config/
-Makefile
 Makefile-backup
 VERSION.txt
