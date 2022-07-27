@@ -22,9 +22,9 @@ addons/dFBA
 addons/libRoadrunner
 beta/
 BioFVM/*
-config/
+/config/
 core/*
-custom_modules/
+/custom_modules/
 documentation/
 examples/
 licenses/

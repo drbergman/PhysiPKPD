@@ -38,18 +38,21 @@ To run one of these samples, do the following:
 5. Look at the snapshots in `output/` and the living cell counts in `output/cell_counts.csv`
 
 ## Reconfiguring, editing, and re-running
-You can edit the configure file to change parameter values.
-You can either edit the one copied in `PhysiCell/config/mymodel.xml` or edit the original in `PhysiCell/sample_projects_physipkpd/[project_name]/config/mymodel.xml` to save the changes for future runs.
+**Note:** *While the below functionality is present, it is discouraged because it is likely to inadvertently affect the work of others.
+Instead, it is recommended to instead save any changes to these files in a non-tracked directory and manually copy them into their proper places after `make`-ing the sample project.*
+
+Instead of editing the configuration file copied into `PhysiCell/config/mymodel.xml`, you can choose to edit the original in `PhysiCell/sample_projects_physipkpd/[project_name]/config/mymodel.xml` to save the changes for future runs.
 The command `make rc` will reconfigure from the original `mymodel.xml` to facilitate editing in the latter fashion.
 
-Should you choose to edit any of the files in `PhysiCell/sample_projects_physipkpd/[project_name]/custom_modules/`, you can afterwards run `make redo` and this will automatically move those changes to their proper places and recompile the project.
+Similarly, you can edit the custom modules in `PhysiCell/sample_projects_physipkpd/[project_name]/custom_modules/` to save changes for future runs.
+After making these changes, you can run `make redo` and this will automatically move those changes to their proper places and recompile the project.
 
 ## Varying parameters
 PhysiPKPD parameters are largely concentrated in two areas in `mymodel.xml`: PK parameters are at the bottom in `user_parameters` and PD parameters are in `cell_definitions` in the `custom_data` for each cell type.
 PhysiPKPD comes hardcoded with two drugs and neither can be excluded. Of course, you can set them so that there are no doses or that doses result in no increase to the drug concentration.
 PK dynamics must be set for each drug and PD dynamics determined for each cell type for each drug.
 
-### PK parameters
+### PK parameters <a name="pk_pars"></a>
 For each drug, you can set the following parameters in `user_parameters`:
 
 | Parameter | Description |
@@ -92,3 +95,14 @@ In the table below, `X` can stand for any one of `prolif`, `apop`, `necrosis`, o
 | `PKPD_D1_damage` | Not a parameter; data that tracks the current damage to the cell |
 | `PKPD_D1_repair_rate` | Zero-order elimination rate of damage from drug 1 (in damage per minute) |
 | `PKPD_D1_metabolism_rate` | Rate of elimination of drug 1 from inside a cell (in minutes<sup>-1</sup>) |
+
+
+## Making your own project using PhysiPKPD
+If you wish to make your own project that uses PhysiPKPD (and not just one of the pre-built sample projects), this is how you can proceed.
+1. Make the template project and set it up with any agents and non-PKPD substrates you want.
+2. Add two additional substrates named `PKPD_drug_number_1` and `PKPD_drug_number_2`.
+
+**Note:** Both of these substrates must be included even if you only want one drug in your model.
+A current goal is to remove this requirement.
+
+3. Add the [PK Parameters](#pk_pars)
