@@ -32,3 +32,6 @@ custom_modules/
 config/
 Makefile-backup
 VERSION.txt
+/ALL_CITATIONS.txt
+/main*.cpp
+/Makefile*

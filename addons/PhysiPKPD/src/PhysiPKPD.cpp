@@ -262,49 +262,46 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
     }
 
     // add doses if time for that
-    if (current_time > PKPD_D1_next_dose_time - tolerance && PKPD_D1_dose_count < parameters.ints("PKPD_D1_max_number_doses"))
-    {
-        if (PKPD_D1_dose_count < parameters.ints("PKPD_D1_number_loading_doses"))
-        {
-            PKPD_D1_central_concentration += parameters.doubles("PKPD_D1_central_increase_on_loading_dose");
-        }
-        else
-        {
-            PKPD_D1_central_concentration += parameters.doubles("PKPD_D1_central_increase_on_dose");
-        }
-
-        PKPD_D1_next_dose_time += parameters.doubles("PKPD_D1_dose_interval");
-        PKPD_D1_dose_count++;
-    }
-    if (current_time > PKPD_D2_next_dose_time - tolerance && PKPD_D2_dose_count < parameters.ints("PKPD_D2_max_number_doses"))
-    {
-        if (PKPD_D2_dose_count < parameters.ints("PKPD_D2_number_loading_doses"))
-        {
-            PKPD_D2_central_concentration += parameters.doubles("PKPD_D2_central_increase_on_loading_dose");
-        }
-        else
-        {
-            PKPD_D2_central_concentration += parameters.doubles("PKPD_D2_central_increase_on_dose");
-        }
-
-        PKPD_D2_next_dose_time += parameters.doubles("PKPD_D2_dose_interval");
-        PKPD_D2_dose_count++;
-    }
+    // it should be possible to report that the dosing is all done by setting these update functions to null; something like pk_dose_fn = pk_dose; if( dose_count>max_number_doses ) {pk_dose_fn = null;}
+    pk_dose(current_time, PKPD_D1_next_dose_time, PKPD_D1_dose_count, parameters.ints("PKPD_D1_max_number_doses"), parameters.ints("PKPD_D1_number_loading_doses"), PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_increase_on_dose"), parameters.doubles("PKPD_D1_central_increase_on_loading_dose"));
+    pk_dose(current_time, PKPD_D2_next_dose_time, PKPD_D2_dose_count, parameters.ints("PKPD_D2_max_number_doses"), parameters.ints("PKPD_D2_number_loading_doses"), PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_increase_on_dose"), parameters.doubles("PKPD_D2_central_increase_on_loading_dose"));
 
     // update PK model for drug 1
     pk_explicit_euler( diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), PKPD_D1_flux_rate );
     // update PK model for drug 2
     pk_explicit_euler( diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), PKPD_D2_flux_rate );
 
-    for (int i = 0; i < microenvironment.mesh.x_coordinates.size(); i++)
-    {
-        // put drug 1 along the "floor" (y=0)
-        microenvironment.update_dirichlet_node(microenvironment.voxel_index(i, 0, 0),
-                                               nPKPD_D1, PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number"));
-        // put drug 2 also along the "floor" (y=0)
-        microenvironment.update_dirichlet_node(microenvironment.voxel_index(i, 0, 0),
-                                               nPKPD_D2, PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number"));
-    }
+    // for (int i = 0; i < microenvironment.mesh.x_coordinates.size(); i++)
+    // {
+    //     // put drug 1 along the "floor" (y=0)
+    //     microenvironment.update_dirichlet_node(microenvironment.voxel_index(i, 0, 0),
+    //                                            nPKPD_D1, PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number"));
+    //     // put drug 2 also along the "floor" (y=0)
+    //     microenvironment.update_dirichlet_node(microenvironment.voxel_index(i, 0, 0),
+    //                                            nPKPD_D2, PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number"));
+    // }
+
+    // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
+    static std::vector<int> nPKPD_drugs{nPKPD_D1,nPKPD_D2};
+    std::vector<double> new_dirichlet_values(2, 0);
+    new_dirichlet_values[0] = PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number");
+    new_dirichlet_values[1] = PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number");
+
+    #pragma omp parallel for 
+	for( unsigned int i=0 ; i < microenvironment.mesh.voxels.size() ;i++ )
+	{
+		if( microenvironment.mesh.voxels[i].is_Dirichlet == true )
+		{
+			for( unsigned int j=0; j < nPKPD_drugs.size(); j++ )
+			{
+				if( microenvironment.get_substrate_dirichlet_activation(nPKPD_drugs[j], i) )
+				{
+					microenvironment.update_dirichlet_node(i,nPKPD_drugs[j], new_dirichlet_values[j]);
+				}
+			}
+	
+		}
+	}
 
     return;
 }
@@ -564,5 +561,23 @@ void pk_explicit_euler( double dt, double &periphery_concentration, double &cent
     if (periphery_concentration < 0)
     {
         periphery_concentration = 0;
+    }
+}
+
+void pk_dose( double current_time, double &next_dose_time, int &dose_count, int max_number_doses, int number_loading_doses, double &central_concentration, double dose, double loading_dose)
+{
+    if (current_time > next_dose_time - tolerance && dose_count < max_number_doses)
+    {
+        if (dose_count < number_loading_doses)
+        {
+            central_concentration += loading_dose;
+        }
+        else
+        {
+            central_concentration += dose;
+        }
+
+        next_dose_time += parameters.doubles("PKPD_D1_dose_interval");
+        dose_count++;
     }
 }
