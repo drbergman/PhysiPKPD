@@ -325,6 +325,7 @@
 
         <div_drug1_PK type="divider" description="---Drug 1 PK---"/>
 
+        <PKPD_D1_read_dose_schedule_from_csv type="bool" units="none" description="if true, reads in a dosing schedule from a csv">False</PKPD_D1_read_dose_schedule_from_csv>
         <PKPD_D1_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">400.0</PKPD_D1_central_increase_on_loading_dose>
         <PKPD_D1_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">2e3</PKPD_D1_central_increase_on_dose>
         <PKPD_D1_central_elimination_rate type="double" units="1/min" description="decay rate of drug 1 in systemic circulation">0.0027</PKPD_D1_central_elimination_rate>
@@ -334,7 +335,8 @@
 
 
         <div_drug2 type="divider" description="---Drug 2 Settings---"/>
-
+        
+        <PKPD_D2_read_dose_schedule_from_csv type="bool" units="none" description="if true, reads in a dosing schedule from a csv">False</PKPD_D2_read_dose_schedule_from_csv>
         <PKPD_D2_number_loading_doses type="int" units="none" description="number of loading doses of drug 2">1</PKPD_D2_number_loading_doses>
         <PKPD_D2_max_number_doses type="int" units="none" description="max doses of drug 2">0</PKPD_D2_max_number_doses>
         <PKPD_D2_dose_interval type="double" units="min" description="time between dosings of drug 2">360.0</PKPD_D2_dose_interval>
