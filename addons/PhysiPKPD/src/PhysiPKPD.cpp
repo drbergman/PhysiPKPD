@@ -68,7 +68,7 @@
 #include <fstream>
 #include "./PhysiPKPD.h"
 
-void setup_pk(double &PKPD_D1_next_dose_time, double &PKPD_D1_confluence_check_time, double &PKPD_D2_next_dose_time, double &PKPD_D2_confluence_check_time)
+void setup_pk_next_time_only(double &PKPD_D1_next_dose_time, double &PKPD_D1_confluence_check_time, double &PKPD_D2_next_dose_time, double &PKPD_D2_confluence_check_time)
 {
     // set up first dose time for drug 1
     if (parameters.bools("PKPD_D1_set_first_dose_time"))
@@ -101,6 +101,147 @@ void setup_pk(double &PKPD_D1_next_dose_time, double &PKPD_D1_confluence_check_t
             PKPD_D2_confluence_check_time += phenotype_dt;
         }
     }
+}
+
+void setup_pk(std::vector<bool> &setup_done, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
+{
+    // set up first dose time for drug 1
+    if (!setup_done[0] && (parameters.bools("PKPD_D1_set_first_dose_time") || confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition")))
+    {
+        PKPD_D1_dose_times.resize( parameters.ints("PKPD_D1_max_number_doses"), 0 )
+        PKPD_D1_dose_values.resize( parameters.ints("PKPD_D1_max_number_doses"), 0 )
+        PKPD_D1_dose_times[0] = parameters.doubles("PKPD_D1_first_dose_time");
+        for( unsigned int i=1 ; i < parameters.ints("PKPD_D1_max_number_doses") ;i++ )
+        {
+            PKPD_D1_dose_times[i] = PKPD_D1_dose_times[i-1] + parameters.doubles("PKPD_D1_dose_interval");
+        }
+        for( unsigned int i=0 ; i < parameters.ints("PKPD_D1_max_number_doses") ;i++ )
+        {
+            PKPD_D1_dose_values[i] = i < parameters.ints("PKPD_D1_number_loading_doses") ? parameters.doubles("PKPD_D1_central_increase_on_loading_dose") : parameters.doubles("PKPD_D1_central_increase_on_dose");
+        }
+    } else
+    {
+        PKPD_D1_confluence_check_time += phenotype_dt;
+    }
+
+    // set up first dose time for drug 2
+    if (!setup_done[1] && (parameters.bools("PKPD_D2_set_first_dose_time") || confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition")))
+    {
+        PKPD_D2_dose_times.resize( parameters.ints("PKPD_D2_max_number_doses"), 0 )
+        PKPD_D2_dose_values.resize( parameters.ints("PKPD_D2_max_number_doses"), 0 )
+        PKPD_D2_dose_times[0] = parameters.doubles("PKPD_D2_first_dose_time");
+        for( unsigned int i=1 ; i < parameters.ints("PKPD_D2_max_number_doses") ;i++ )
+        {
+            PKPD_D2_dose_times[i] = PKPD_D2_dose_times[i-1] + parameters.doubles("PKPD_D2_dose_interval");
+        }
+        for( unsigned int i=0 ; i < parameters.ints("PKPD_D2_max_number_doses") ;i++ )
+        {
+            PKPD_D2_dose_values[i] = i < parameters.ints("PKPD_D2_number_loading_doses") ? parameters.doubles("PKPD_D2_central_increase_on_loading_dose") : parameters.doubles("PKPD_D2_central_increase_on_dose");
+        }
+    } else
+    {
+        PKPD_D2_confluence_check_time += phenotype_dt;
+    }
+}
+
+static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots
+
+void PK_model(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
+{
+    // Set up drug 1
+    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
+    static double PKPD_D1_next_dose_time = NAN; // set to NAN for checking when to start a confluence-based therapy
+    static int PKPD_D1_dose_count = 0;
+    static std::vector<double> PKPD_D1_dose_times;
+    static std::vector<double> PKPD_D1_dose_values;
+
+    static double PKPD_D1_central_concentration = 0.0;
+    static double PKPD_D1_periphery_concentration = 0.0; // just a bucket to model drug distributing into the entire periphery; TME is not linked to this!!!
+
+    static double PKPD_D1_flux_rate = parameters.doubles("PKPD_D1_flux_across_capillaries");
+    static double PKPD_D1_confluence_check_time = 0.0; // next time to check for confluence
+
+    // Set up drug 2
+    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
+    static double PKPD_D2_next_dose_time = NAN; // set to NAN for checking when to start a confluence-based therapy
+    static int PKPD_D2_dose_count = 0;
+    static std::vector<double> PKPD_D2_dose_times;
+    static std::vector<double> PKPD_D2_dose_values;
+
+    static double PKPD_D2_central_concentration = 0.0;
+    static double PKPD_D2_periphery_concentration = 0.0; // just a bucket to model drug distributing into the entire periphery; TME is not linked to this!!!
+
+    static double PKPD_D2_flux_rate = parameters.doubles("PKPD_D2_flux_across_capillaries");
+    static double PKPD_D2_confluence_check_time = 0.0; // next time to check for confluence
+
+    static double PKPD_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
+
+    static std::vector<bool> setup_done = {false,false};
+    if( !setup_done )
+    {
+        setup_pk(setup_done, PKPD_D1_dose_times, PKPD_D1_dose_values, PKPD_D1_confluence_check_time, PKPD_D2_dose_times, PKPD_D2_dose_values, PKPD_D2_confluence_check_time);
+        setup_done = true;
+    } else 
+    {
+        if (std::isnan(PKPD_D1_next_dose_time) && (current_time > PKPD_D1_confluence_check_time - tolerance))
+        {
+            if (confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition"))
+            {
+                PKPD_D1_next_dose_time = current_time;
+            }
+            else
+            {
+                PKPD_D1_confluence_check_time += phenotype_dt;
+            }
+        }
+
+        if (std::isnan(PKPD_D2_next_dose_time) && (current_time > PKPD_D2_confluence_check_time - tolerance))
+        {
+            if (confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition"))
+            {
+                PKPD_D2_next_dose_time = current_time;
+            }
+            else
+            {
+                PKPD_D2_confluence_check_time += phenotype_dt;
+            }
+        }
+
+    }
+
+    // add doses if time for that
+    // it should be possible to report that the dosing is all done by setting these update functions to null; something like pk_dose_fn = pk_dose; if( dose_count>max_number_doses ) {pk_dose_fn = null;}
+    pk_dose(current_time, PKPD_D1_next_dose_time, PKPD_D1_dose_count, parameters.ints("PKPD_D1_max_number_doses"), parameters.ints("PKPD_D1_number_loading_doses"), PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_increase_on_dose"), parameters.doubles("PKPD_D1_central_increase_on_loading_dose"), parameters.doubles("PKPD_D1_dose_interval"));
+    pk_dose(current_time, PKPD_D2_next_dose_time, PKPD_D2_dose_count, parameters.ints("PKPD_D2_max_number_doses"), parameters.ints("PKPD_D2_number_loading_doses"), PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_increase_on_dose"), parameters.doubles("PKPD_D2_central_increase_on_loading_dose"), parameters.doubles("PKPD_D2_dose_interval"));
+
+    // update PK model for drug 1
+    pk_explicit_euler( diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), PKPD_D1_flux_rate );
+    // update PK model for drug 2
+    pk_explicit_euler( diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), PKPD_D2_flux_rate );
+
+    // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
+    static std::vector<int> nPKPD_drugs{nPKPD_D1, nPKPD_D2};
+    std::vector<double> new_dirichlet_values(2, 0);
+    new_dirichlet_values[0] = PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number");
+    new_dirichlet_values[1] = PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number");
+
+    #pragma omp parallel for 
+	for( unsigned int i=0 ; i < microenvironment.mesh.voxels.size() ;i++ )
+	{
+		if( microenvironment.mesh.voxels[i].is_Dirichlet == true )
+		{
+			for( unsigned int j=0; j < nPKPD_drugs.size(); j++ )
+			{
+				if( microenvironment.get_substrate_dirichlet_activation(nPKPD_drugs[j], i) )
+				{
+					microenvironment.update_dirichlet_node(i,nPKPD_drugs[j], new_dirichlet_values[j]);
+				}
+			}
+	
+		}
+	}
+
+    return;
 }
 
 void pd_function(Cell *pC, Phenotype &p, double dt)
@@ -226,102 +367,6 @@ double Hill_function(double input, double EC_50, double hill_power)
     output /= temp;                    // (x/g)^n / ( 1 + (x/g)^n )
 
     return output;
-}
-
-static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots
-
-void PK_model(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
-{
-    // Set up drug 1
-    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
-    static double PKPD_D1_next_dose_time = NAN; // set to NAN for checking when to start a confluence-based therapy
-    static int PKPD_D1_dose_count = 0;
-
-    static double PKPD_D1_central_concentration = 0.0;
-    static double PKPD_D1_periphery_concentration = 0.0; // just a bucket to model drug distributing into the entire periphery; TME is not linked to this!!!
-
-    static double PKPD_D1_flux_rate = parameters.doubles("PKPD_D1_flux_across_capillaries");
-    static double PKPD_D1_confluence_check_time = 0.0; // next time to check for confluence
-
-    // Set up drug 2
-    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
-    static double PKPD_D2_next_dose_time = NAN; // set to NAN for checking when to start a confluence-based therapy
-    static int PKPD_D2_dose_count = 0;
-
-    static double PKPD_D2_central_concentration = 0.0;
-    static double PKPD_D2_periphery_concentration = 0.0; // just a bucket to model drug distributing into the entire periphery; TME is not linked to this!!!
-
-    static double PKPD_D2_flux_rate = parameters.doubles("PKPD_D2_flux_across_capillaries");
-    static double PKPD_D2_confluence_check_time = 0.0; // next time to check for confluence
-
-    static double PKPD_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
-
-    static bool setup_done = false;
-    if( !setup_done )
-    {
-        setup_pk(PKPD_D1_next_dose_time, PKPD_D1_confluence_check_time, PKPD_D2_next_dose_time, PKPD_D2_confluence_check_time);
-        setup_done = true;
-    } else 
-    {
-        if (std::isnan(PKPD_D1_next_dose_time) && (current_time > PKPD_D1_confluence_check_time - tolerance))
-        {
-            if (confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition"))
-            {
-                PKPD_D1_next_dose_time = current_time;
-            }
-            else
-            {
-                PKPD_D1_confluence_check_time += phenotype_dt;
-            }
-        }
-
-        if (std::isnan(PKPD_D2_next_dose_time) && (current_time > PKPD_D2_confluence_check_time - tolerance))
-        {
-            if (confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition"))
-            {
-                PKPD_D2_next_dose_time = current_time;
-            }
-            else
-            {
-                PKPD_D2_confluence_check_time += phenotype_dt;
-            }
-        }
-
-    }
-
-    // add doses if time for that
-    // it should be possible to report that the dosing is all done by setting these update functions to null; something like pk_dose_fn = pk_dose; if( dose_count>max_number_doses ) {pk_dose_fn = null;}
-    pk_dose(current_time, PKPD_D1_next_dose_time, PKPD_D1_dose_count, parameters.ints("PKPD_D1_max_number_doses"), parameters.ints("PKPD_D1_number_loading_doses"), PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_increase_on_dose"), parameters.doubles("PKPD_D1_central_increase_on_loading_dose"));
-    pk_dose(current_time, PKPD_D2_next_dose_time, PKPD_D2_dose_count, parameters.ints("PKPD_D2_max_number_doses"), parameters.ints("PKPD_D2_number_loading_doses"), PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_increase_on_dose"), parameters.doubles("PKPD_D2_central_increase_on_loading_dose"));
-
-    // update PK model for drug 1
-    pk_explicit_euler( diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), PKPD_D1_flux_rate );
-    // update PK model for drug 2
-    pk_explicit_euler( diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), PKPD_D2_flux_rate );
-
-    // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
-    static std::vector<int> nPKPD_drugs{nPKPD_D1,nPKPD_D2};
-    std::vector<double> new_dirichlet_values(2, 0);
-    new_dirichlet_values[0] = PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number");
-    new_dirichlet_values[1] = PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number");
-
-    #pragma omp parallel for 
-	for( unsigned int i=0 ; i < microenvironment.mesh.voxels.size() ;i++ )
-	{
-		if( microenvironment.mesh.voxels[i].is_Dirichlet == true )
-		{
-			for( unsigned int j=0; j < nPKPD_drugs.size(); j++ )
-			{
-				if( microenvironment.get_substrate_dirichlet_activation(nPKPD_drugs[j], i) )
-				{
-					microenvironment.update_dirichlet_node(i,nPKPD_drugs[j], new_dirichlet_values[j]);
-				}
-			}
-	
-		}
-	}
-
-    return;
 }
 
 void PD_model(double current_time)
@@ -582,7 +627,7 @@ void pk_explicit_euler( double dt, double &periphery_concentration, double &cent
     }
 }
 
-void pk_dose( double current_time, double &next_dose_time, int &dose_count, int max_number_doses, int number_loading_doses, double &central_concentration, double dose, double loading_dose)
+void pk_dose( double current_time, double &next_dose_time, int &dose_count, int max_number_doses, int number_loading_doses, double &central_concentration, double dose, double loading_dose, double dose_interval)
 {
     if (current_time > next_dose_time - tolerance && dose_count < max_number_doses)
     {
@@ -595,7 +640,7 @@ void pk_dose( double current_time, double &next_dose_time, int &dose_count, int 
             central_concentration += dose;
         }
 
-        next_dose_time += parameters.doubles("PKPD_D1_dose_interval");
+        next_dose_time += dose_interval;
         dose_count++;
     }
 }

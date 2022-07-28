@@ -77,6 +77,7 @@
 using namespace BioFVM;
 using namespace PhysiCell;
 
+void setup_pk_next_time_only(double &PKPD_D1_next_dose_time, double &PKPD_D1_confluence_check_time, double &PKPD_D2_next_dose_time, double &PKPD_D2_confluence_check_time);
 void setup_pk(double &PKPD_D1_next_dose_time, double &PKPD_D1_confluence_check_time, double &PKPD_D2_next_dose_time, double &PKPD_D2_confluence_check_time);
 void PK_model( double current_time );
 void PD_model( double dt );
@@ -87,6 +88,6 @@ double confluence_computation( void );
 void pd_function( Cell* pC, Phenotype& p, double dt );
 void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2);
 void pk_explicit_euler( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double flux_rate );
-void pk_dose( double current_time, double &next_dose_time, int &dose_count, int max_number_doses, int number_loading_doses, double &central_concentration, double dose, double loading_dose);
+void pk_dose( double current_time, double &next_dose_time, int &dose_count, int max_number_doses, int number_loading_doses, double &central_concentration, double dose, double loading_dose, double dose_interval);
 
 #endif
