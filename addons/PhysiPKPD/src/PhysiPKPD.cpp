@@ -94,41 +94,101 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
     // this is to handle the case when the two drugs have the same target. then will multiply these factors
     double factor_change; // factor change from drugs
 
-    // THIS REQUIRES THE LIVE CELL CYCLE; NEED TO UPDATE TO INCLUDE OTHER CELL CYCLES
-    if (p.cycle.data.transition_rate(0, 0) > 0) // only need to update proliferation if it is proliferating
+    if ( get_single_behavior(pC,"cycle entry") > 0 )
     {
         factor_change = 1.0; // set factor
         // don't need to reset to base proliferation rate here because the oxygen-arrested block already does that
         if (pC->custom_data["PKPD_D1_moa_is_prolif"] > 0.5)
         {
-            double fs_prolif_D1 = pC->custom_data["PKPD_D1_prolif_saturation_rate"] / pCD->phenotype.cycle.data.transition_rate(0, 0); // saturation factor of proliferation for drug 1
+            double fs_prolif_D1 = pC->custom_data["PKPD_D1_prolif_saturation_rate"] / get_single_base_behavior( pC, "cycle entry" ); // saturation factor of proliferation for drug 1
             if (pC->custom_data[nPKPD_D1_damage] > 0)
             {
-                if (p.cycle.model().code != PhysiCell_constants::live_cells_cycle_model)
-                {
-                    return; // don't continue with proliferative effects until we've implemented them for other model types
-                }
-                temp = Hill_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_prolif_EC50"], pC->custom_data["PKPD_D1_prolif_hill_power"]);
+                temp = Hill_response_function( pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_prolif_EC50"], pC->custom_data["PKPD_D1_prolif_hill_power"] );
                 factor_change *= 1 + (fs_prolif_D1 - 1) * temp;
             }
         }
 
         if (pC->custom_data["PKPD_D2_moa_is_prolif"] > 0.5)
         {
-            double fs_prolif_D2 = pC->custom_data["PKPD_D2_prolif_saturation_rate"] / pCD->phenotype.cycle.data.transition_rate(0, 0); // saturation factor of proliferation for drug 2
+            double fs_prolif_D2 = pC->custom_data["PKPD_D2_prolif_saturation_rate"] / get_single_base_behavior( pC, "cycle entry" ); // saturation factor of proliferation for drug 2
             if (pC->custom_data[nPKPD_D2_damage] > 0)
             {
-                if (p.cycle.model().code != PhysiCell_constants::live_cells_cycle_model)
-                {
-                    return; // don't continue with proliferative effects until we've implemented them for other model types
-                }
-                temp = Hill_function(pC->custom_data[nPKPD_D2_damage], pC->custom_data["PKPD_D2_prolif_EC50"], pC->custom_data["PKPD_D2_prolif_hill_power"]);
+                temp = Hill_response_function( pC->custom_data[nPKPD_D2_damage], pC->custom_data["PKPD_D2_prolif_EC50"], pC->custom_data["PKPD_D2_prolif_hill_power"] );
                 factor_change *= 1 + (fs_prolif_D2 - 1) * temp;
             }
         }
-
-        p.cycle.data.transition_rate(0, 0) *= factor_change;
+        set_single_behavior( pC, "cycle entry", get_single_behavior( pC, "cycle entry") * factor_change );
     }
+
+    // if (get_single_behavior(pC, "cycle entry") > 0)
+    // {
+    //     factor_change = 1.0; // set factor
+    //     // don't need to reset to base proliferation rate here because the oxygen-arrested block already does that
+    //     if (pC->custom_data["PKPD_D1_moa_is_prolif"] > 0.5)
+    //     {
+    //         double fs_prolif_D1 = pC->custom_data["PKPD_D1_prolif_saturation_rate"] / pCD->phenotype.cycle.data.transition_rate(0, 0); // saturation factor of proliferation for drug 1
+    //         if (pC->custom_data[nPKPD_D1_damage] > 0)
+    //         {
+    //             if (p.cycle.model().code != PhysiCell_constants::live_cells_cycle_model)
+    //             {
+    //                 return; // don't continue with proliferative effects until we've implemented them for other model types
+    //             }
+    //             temp = Hill_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_prolif_EC50"], pC->custom_data["PKPD_D1_prolif_hill_power"]);
+    //             factor_change *= 1 + (fs_prolif_D1 - 1) * temp;
+    //         }
+    //     }
+
+    //     if (pC->custom_data["PKPD_D2_moa_is_prolif"] > 0.5)
+    //     {
+    //         double fs_prolif_D2 = pC->custom_data["PKPD_D2_prolif_saturation_rate"] / pCD->phenotype.cycle.data.transition_rate(0, 0); // saturation factor of proliferation for drug 2
+    //         if (pC->custom_data[nPKPD_D2_damage] > 0)
+    //         {
+    //             if (p.cycle.model().code != PhysiCell_constants::live_cells_cycle_model)
+    //             {
+    //                 return; // don't continue with proliferative effects until we've implemented them for other model types
+    //             }
+    //             temp = Hill_function(pC->custom_data[nPKPD_D2_damage], pC->custom_data["PKPD_D2_prolif_EC50"], pC->custom_data["PKPD_D2_prolif_hill_power"]);
+    //             factor_change *= 1 + (fs_prolif_D2 - 1) * temp;
+    //         }
+    //     }
+
+    //     p.cycle.data.transition_rate(0, 0) *= factor_change;
+    // }
+
+    // if (p.cycle.data.transition_rate(0, 0) > 0) // only need to update proliferation if it is proliferating
+    // {
+    //     factor_change = 1.0; // set factor
+    //     // don't need to reset to base proliferation rate here because the oxygen-arrested block already does that
+    //     if (pC->custom_data["PKPD_D1_moa_is_prolif"] > 0.5)
+    //     {
+    //         double fs_prolif_D1 = pC->custom_data["PKPD_D1_prolif_saturation_rate"] / pCD->phenotype.cycle.data.transition_rate(0, 0); // saturation factor of proliferation for drug 1
+    //         if (pC->custom_data[nPKPD_D1_damage] > 0)
+    //         {
+    //             if (p.cycle.model().code != PhysiCell_constants::live_cells_cycle_model)
+    //             {
+    //                 return; // don't continue with proliferative effects until we've implemented them for other model types
+    //             }
+    //             temp = Hill_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_prolif_EC50"], pC->custom_data["PKPD_D1_prolif_hill_power"]);
+    //             factor_change *= 1 + (fs_prolif_D1 - 1) * temp;
+    //         }
+    //     }
+
+    //     if (pC->custom_data["PKPD_D2_moa_is_prolif"] > 0.5)
+    //     {
+    //         double fs_prolif_D2 = pC->custom_data["PKPD_D2_prolif_saturation_rate"] / pCD->phenotype.cycle.data.transition_rate(0, 0); // saturation factor of proliferation for drug 2
+    //         if (pC->custom_data[nPKPD_D2_damage] > 0)
+    //         {
+    //             if (p.cycle.model().code != PhysiCell_constants::live_cells_cycle_model)
+    //             {
+    //                 return; // don't continue with proliferative effects until we've implemented them for other model types
+    //             }
+    //             temp = Hill_function(pC->custom_data[nPKPD_D2_damage], pC->custom_data["PKPD_D2_prolif_EC50"], pC->custom_data["PKPD_D2_prolif_hill_power"]);
+    //             factor_change *= 1 + (fs_prolif_D2 - 1) * temp;
+    //         }
+    //     }
+
+    //     p.cycle.data.transition_rate(0, 0) *= factor_change;
+    // }
 
     // apoptosis effect
     factor_change = 1.0; // set factor
