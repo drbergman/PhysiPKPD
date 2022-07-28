@@ -68,41 +68,6 @@
 #include <fstream>
 #include "./PhysiPKPD.h"
 
-void setup_pk_next_time_only(double &PKPD_D1_next_dose_time, double &PKPD_D1_confluence_check_time, double &PKPD_D2_next_dose_time, double &PKPD_D2_confluence_check_time)
-{
-    // set up first dose time for drug 1
-    if (parameters.bools("PKPD_D1_set_first_dose_time"))
-    {
-        PKPD_D1_next_dose_time = parameters.doubles("PKPD_D1_first_dose_time");
-    } else
-    {
-        if (confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition"))
-        {
-            PKPD_D1_next_dose_time = 0.0;
-        }
-        else
-        {
-            PKPD_D1_confluence_check_time += phenotype_dt;
-        }
-    }
-
-    // set up first dose time for drug 2
-    if (parameters.bools("PKPD_D2_set_first_dose_time"))
-    {
-        PKPD_D2_next_dose_time = parameters.doubles("PKPD_D2_first_dose_time");
-    } else
-    {
-        if (confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition"))
-        {
-            PKPD_D2_next_dose_time = 0.0;
-        }
-        else
-        {
-            PKPD_D2_confluence_check_time += phenotype_dt;
-        }
-    }
-}
-
 void setup_pk(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
 {
     // set up first dose time for drug 1
@@ -614,24 +579,6 @@ void pk_explicit_euler( double dt, double &periphery_concentration, double &cent
     if (periphery_concentration < 0)
     {
         periphery_concentration = 0;
-    }
-}
-
-void pk_dose_old( double current_time, double &next_dose_time, int &dose_count, int max_number_doses, int number_loading_doses, double &central_concentration, double dose, double loading_dose, double dose_interval)
-{
-    if (current_time > next_dose_time - tolerance && dose_count < max_number_doses)
-    {
-        if (dose_count < number_loading_doses)
-        {
-            central_concentration += loading_dose;
-        }
-        else
-        {
-            central_concentration += dose;
-        }
-
-        next_dose_time += dose_interval;
-        dose_count++;
     }
 }
 
