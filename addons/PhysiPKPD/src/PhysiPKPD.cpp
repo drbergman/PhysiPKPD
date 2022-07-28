@@ -68,6 +68,41 @@
 #include <fstream>
 #include "./PhysiPKPD.h"
 
+void setup_pk(double &PKPD_D1_next_dose_time, double &PKPD_D1_confluence_check_time, double &PKPD_D2_next_dose_time, double &PKPD_D2_confluence_check_time)
+{
+    // set up first dose time for drug 1
+    if (parameters.bools("PKPD_D1_set_first_dose_time"))
+    {
+        PKPD_D1_next_dose_time = parameters.doubles("PKPD_D1_first_dose_time");
+    } else
+    {
+        if (confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition"))
+        {
+            PKPD_D1_next_dose_time = 0.0;
+        }
+        else
+        {
+            PKPD_D1_confluence_check_time += phenotype_dt;
+        }
+    }
+
+    // set up first dose time for drug 2
+    if (parameters.bools("PKPD_D2_set_first_dose_time"))
+    {
+        PKPD_D2_next_dose_time = parameters.doubles("PKPD_D2_first_dose_time");
+    } else
+    {
+        if (confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition"))
+        {
+            PKPD_D2_next_dose_time = 0.0;
+        }
+        else
+        {
+            PKPD_D2_confluence_check_time += phenotype_dt;
+        }
+    }
+}
+
 void pd_function(Cell *pC, Phenotype &p, double dt)
 {
     Cell_Definition *pCD = find_cell_definition(pC->type);
@@ -221,14 +256,14 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
 
     static double PKPD_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
 
-    // set up first dose time dor drug 1
-    if (std::isnan(PKPD_D1_next_dose_time))
+    static bool setup_done = false;
+    if( !setup_done )
     {
-        if (parameters.bools("PKPD_D1_set_first_dose_time"))
-        {
-            PKPD_D1_next_dose_time = parameters.doubles("PKPD_D1_first_dose_time");
-        }
-        else if ((current_time > PKPD_D1_confluence_check_time - tolerance)) // otherwise, using confluence to determine time of first dose
+        setup_pk(PKPD_D1_next_dose_time, PKPD_D1_confluence_check_time, PKPD_D2_next_dose_time, PKPD_D2_confluence_check_time);
+        setup_done = true;
+    } else 
+    {
+        if (std::isnan(PKPD_D1_next_dose_time) && (current_time > PKPD_D1_confluence_check_time - tolerance))
         {
             if (confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition"))
             {
@@ -239,16 +274,8 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
                 PKPD_D1_confluence_check_time += phenotype_dt;
             }
         }
-    }
 
-    // set up first dose time dor drug 2
-    if (std::isnan(PKPD_D2_next_dose_time))
-    {
-        if (parameters.bools("PKPD_D2_set_first_dose_time"))
-        {
-            PKPD_D2_next_dose_time = parameters.doubles("PKPD_D2_first_dose_time");
-        }
-        else if ((current_time > PKPD_D2_confluence_check_time - tolerance)) // otherwise, using confluence to determine time of first dose
+        if (std::isnan(PKPD_D2_next_dose_time) && (current_time > PKPD_D2_confluence_check_time - tolerance))
         {
             if (confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition"))
             {
@@ -259,6 +286,7 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
                 PKPD_D2_confluence_check_time += phenotype_dt;
             }
         }
+
     }
 
     // add doses if time for that
@@ -270,16 +298,6 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
     pk_explicit_euler( diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), PKPD_D1_flux_rate );
     // update PK model for drug 2
     pk_explicit_euler( diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), PKPD_D2_flux_rate );
-
-    // for (int i = 0; i < microenvironment.mesh.x_coordinates.size(); i++)
-    // {
-    //     // put drug 1 along the "floor" (y=0)
-    //     microenvironment.update_dirichlet_node(microenvironment.voxel_index(i, 0, 0),
-    //                                            nPKPD_D1, PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number"));
-    //     // put drug 2 also along the "floor" (y=0)
-    //     microenvironment.update_dirichlet_node(microenvironment.voxel_index(i, 0, 0),
-    //                                            nPKPD_D2, PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number"));
-    // }
 
     // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
     static std::vector<int> nPKPD_drugs{nPKPD_D1,nPKPD_D2};

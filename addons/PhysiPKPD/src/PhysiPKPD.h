@@ -77,6 +77,7 @@
 using namespace BioFVM;
 using namespace PhysiCell;
 
+void setup_pk(double &PKPD_D1_next_dose_time, double &PKPD_D1_confluence_check_time, double &PKPD_D2_next_dose_time, double &PKPD_D2_confluence_check_time);
 void PK_model( double current_time );
 void PD_model( double dt );
 void write_cell_data_for_plots( double current_time, char delim);
