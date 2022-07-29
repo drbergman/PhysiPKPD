@@ -15,7 +15,6 @@ void PK_model( double current_time );
 void PD_model( double dt );
 void write_cell_data_for_plots( double current_time, char delim);
 std::vector<std::string> damage_coloring( Cell* pCell );
-double Hill_function( double input, double Hill_power , double EC_50 );
 double confluence_computation( void );
 void pd_function( Cell* pC, Phenotype& p, double dt );
 void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2);

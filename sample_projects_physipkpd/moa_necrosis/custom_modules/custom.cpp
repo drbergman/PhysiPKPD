@@ -120,6 +120,19 @@ void create_cell_types(void)
     */
 
     build_cell_definitions_maps();
+
+	/*
+	   This intializes cell signal and response dictionaries 
+	*/
+
+	setup_signal_behavior_dictionaries(); 
+
+    /* 
+	   Put any modifications to individual cell definitions here. 
+	   
+	   This is a good place to set custom functions. 
+	*/ 
+
     display_cell_definitions(std::cout);
 
     return;
@@ -167,11 +180,11 @@ void setup_tissue(void)
     double max_distance = parameters.doubles("max_initial_distance");
     Cell_Definition *pCD = find_cell_definition("tumor");
 
-    static int nNec = pCD->phenotype.death.find_death_model_index("Necrosis");
-    if ((pCD->custom_data["PKPD_D1_moa_is_necrosis"] > 0.5 || pCD->custom_data["PKPD_D2_moa_is_necrosis"] > 0.5) && pCD->phenotype.death.rates[nNec] <= 0)
-    {
-        pCD->phenotype.death.rates[nNec] = 1e-16; // need a nonzero base rate to work with the factors. Using this as the base necrosis rate means that with 1e6 cells simulating for 1e6 minutes, you would get one instance of spontaneous necrosis every 10,000 simulations. If that's a problem, you can rework the necrosis computation to not use factors, but you would need to decide what to do if multiple drugs affected necrosis
-    }
+    // static int nNec = pCD->phenotype.death.find_death_model_index("Necrosis");
+    // if ((pCD->custom_data["PKPD_D1_moa_is_necrosis"] > 0.5 || pCD->custom_data["PKPD_D2_moa_is_necrosis"] > 0.5) && pCD->phenotype.death.rates[nNec] <= 0)
+    // {
+    //     pCD->phenotype.death.rates[nNec] = 1e-16; // need a nonzero base rate to work with the factors. Using this as the base necrosis rate means that with 1e6 cells simulating for 1e6 minutes, you would get one instance of spontaneous necrosis every 10,000 simulations. If that's a problem, you can rework the necrosis computation to not use factors, but you would need to decide what to do if multiple drugs affected necrosis
+    // }
 
     std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
     for (int n = 0; n < parameters.ints("number_of_tumor_cells"); n++)
