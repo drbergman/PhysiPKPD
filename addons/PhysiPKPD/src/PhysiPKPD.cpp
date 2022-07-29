@@ -100,9 +100,9 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
         if (get_single_behavior( pC, "custom:PKPD_D1_moa_is_prolif" ) > 0.5)
         {
             double fs_prolif_D1 = get_single_behavior( pC, "custom:PKPD_D1_prolif_saturation_rate" ) / get_single_base_behavior( pC, "cycle entry" ); // saturation factor of proliferation for drug 1
-            if (get_single_behavior(pC,nPKPD_D1_damage) > 0)
+            if (pC->custom_data[nPKPD_D1_damage] > 0)
             {
-                temp = Hill_response_function( get_single_behavior(pC,nPKPD_D1_damage), get_single_behavior(pC,"custom:PKPD_D1_prolif_EC50"), get_single_behavior(pC,"custom:PKPD_D1_prolif_hill_power") );
+                temp = Hill_response_function( pC->custom_data[nPKPD_D1_damage], get_single_behavior(pC,"custom:PKPD_D1_prolif_EC50"), get_single_behavior(pC,"custom:PKPD_D1_prolif_hill_power") );
                 factor_change *= 1 + (fs_prolif_D1 - 1) * temp;
             }
         }
@@ -110,9 +110,9 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
         if (get_single_behavior(pC,"custom:PKPD_D2_moa_is_prolif") > 0.5)
         {
             double fs_prolif_D2 = get_single_behavior(pC,"custom:PKPD_D2_prolif_saturation_rate") / get_single_base_behavior( pC, "cycle entry" ); // saturation factor of proliferation for drug 2
-            if (get_single_behavior(pC,nPKPD_D2_damage) > 0)
+            if (pC->custom_data[nPKPD_D2_damage] > 0)
             {
-                temp = Hill_response_function( get_single_behavior(pC,nPKPD_D2_damage), get_single_behavior(pC,"custom:PKPD_D2_prolif_EC50"), get_single_behavior(pC,"custom:PKPD_D2_prolif_hill_power") );
+                temp = Hill_response_function( pC->custom_data[nPKPD_D2_damage], get_single_behavior(pC,"custom:PKPD_D2_prolif_EC50"), get_single_behavior(pC,"custom:PKPD_D2_prolif_hill_power") );
                 factor_change *= 1 + (fs_prolif_D2 - 1) * temp;
             }
         }
@@ -124,9 +124,9 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
     if (get_single_behavior(pC,"custom:PKPD_D1_moa_is_apop") > 0.5)
     {
         double fs_apop_D1 = get_single_behavior(pC,"custom:PKPD_D1_apop_saturation_rate") / get_single_base_behavior( pC, "apoptosis" ); // saturation factor of apoptosis for drug 1
-        if (get_single_behavior(pC,nPKPD_D1_damage) > 0)
+        if (pC->custom_data[nPKPD_D1_damage] > 0)
         {
-            temp = Hill_response_function( get_single_behavior(pC,nPKPD_D1_damage), get_single_behavior(pC,"custom:PKPD_D1_apop_EC50"), get_single_behavior(pC,"custom:PKPD_D1_apop_hill_power") );
+            temp = Hill_response_function( pC->custom_data[nPKPD_D1_damage], get_single_behavior(pC,"custom:PKPD_D1_apop_EC50"), get_single_behavior(pC,"custom:PKPD_D1_apop_hill_power") );
             factor_change *= 1 + (fs_apop_D1 - 1) * temp;
         }
     }
@@ -134,9 +134,9 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
     if (get_single_behavior(pC,"custom:PKPD_D2_moa_is_apop") > 0.5)
     {
         double fs_apop_D2 = get_single_behavior(pC,"custom:PKPD_D2_apop_saturation_rate") / get_single_base_behavior( pC, "apoptosis" ); // saturation factor of apoptosis for drug 2
-        if (get_single_behavior(pC,nPKPD_D2_damage) > 0)
+        if (pC->custom_data[nPKPD_D2_damage] > 0)
         {
-            temp = Hill_response_function(get_single_behavior(pC,nPKPD_D2_damage), get_single_behavior(pC,"custom:PKPD_D2_apop_EC50"), get_single_behavior(pC,"custom:PKPD_D2_apop_hill_power"));
+            temp = Hill_response_function(pC->custom_data[nPKPD_D2_damage], get_single_behavior(pC,"custom:PKPD_D2_apop_EC50"), get_single_behavior(pC,"custom:PKPD_D2_apop_hill_power"));
             factor_change *= 1 + (fs_apop_D2 - 1) * temp;
         }
     }
@@ -148,11 +148,11 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
     {
         // double fs_necrosis_D1 = get_single_behavior(pC,"custom:PKPD_D1_necrosis_saturation_rate") / pCD->phenotype.death.rates[nNec]; // saturation factor of necrosis for drug 1
 
-        if (get_single_behavior(pC,nPKPD_D1_damage) > 0)
+        if (pC->custom_data[nPKPD_D1_damage] > 0)
         {
-            // temp = Hill_function(get_single_behavior(pC,nPKPD_D1_damage), get_single_behavior(pC,"custom:PKPD_D1_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D1_necrosis_hill_power"));
+            // temp = Hill_response_function(pC->custom_data[nPKPD_D1_damage], get_single_behavior(pC,"custom:PKPD_D1_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D1_necrosis_hill_power"));
             // factor_change *= 1 + (fs_necrosis_D1 - 1) * temp;
-            factor_change += get_single_behavior(pC,"custom:PKPD_D1_necrosis_saturation_rate") * Hill_response_function(get_single_behavior(pC,nPKPD_D1_damage), get_single_behavior(pC,"custom:PKPD_D1_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D1_necrosis_hill_power"));
+            factor_change += get_single_behavior(pC,"custom:PKPD_D1_necrosis_saturation_rate") * Hill_response_function(pC->custom_data[nPKPD_D1_damage], get_single_behavior(pC,"custom:PKPD_D1_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D1_necrosis_hill_power"));
         }
     }
 
@@ -160,26 +160,14 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
     {
         // double fs_necrosis_D2 = get_single_behavior(pC,"custom:PKPD_D2_necrosis_saturation_rate") / pCD->phenotype.death.rates[nNec]; // saturation factor of necrosis for drug 2
 
-        if (get_single_behavior(pC,nPKPD_D2_damage) > 0)
+        if (pC->custom_data[nPKPD_D2_damage] > 0)
         {
-            // temp = Hill_function(get_single_behavior(pC,nPKPD_D2_damage), get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"));
+            // temp = Hill_response_function(pC->custom_data[nPKPD_D2_damage], get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"));
             // factor_change *= 1 + (fs_necrosis_D2 - 1) * temp;
-            factor_change += get_single_behavior(pC,"custom:PKPD_D2_necrosis_saturation_rate") * Hill_response_function(get_single_behavior(pC,nPKPD_D2_damage), get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D2_necrosis_hill_power"));
+            factor_change += get_single_behavior(pC,"custom:PKPD_D2_necrosis_saturation_rate") * Hill_response_function(pC->custom_data[nPKPD_D2_damage], get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D2_necrosis_hill_power"));
         }
     }
     set_single_behavior( pC, "necrosis", get_single_behavior( pC, "necrosis") + factor_change );
-}
-
-double Hill_function(double input, double EC_50, double hill_power)
-{
-    double temp = input;               // x
-    temp /= EC_50;                     // x/g
-    temp = std::pow(temp, hill_power); // (x/g)^n
-    double output = temp;              // (x/g)^n
-    temp += 1.0;                       // 1 + (x/g)^n
-    output /= temp;                    // (x/g)^n / ( 1 + (x/g)^n )
-
-    return output;
 }
 
 static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots
@@ -339,15 +327,14 @@ void PD_model(double current_time)
 
             if (PKPD_D1 > 0) // if drug in cell, add to damage / AUC
             {
-                // set_single_behavior(pC,"custom:PKPD_D1_damage",get_single_behavior(pC,"custom:PKPD_D1_damage")+PKPD_D1 * dt;
+                // set_single_behavior(pC,"custom:PKPD_D1_damage",pC->custom_data[nPKPD_D1_damage]+PKPD_D1 * dt;
                 pC->custom_data[nPKPD_D1_damage] += PKPD_D1 * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
             }
 
-            // set_single_behavior(pC,nPKPD_D1_damage,get_single_behavior(pC,nPKPD_D1_damage) - get_single_behavior(pC,"custom:PKPD_D1_repair_rate") * dt); // repair damage at constant rate
             pC->custom_data[nPKPD_D1_damage] -= get_single_behavior(pC,"custom:PKPD_D1_repair_rate") * dt; // repair damage at constant rate
-            if (get_single_behavior(pC,nPKPD_D1_damage) <= 0)
+            if (pC->custom_data[nPKPD_D1_damage] <= 0)
             {
-                set_single_behavior(pC,nPKPD_D1_damage, 0); // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
+                pC->custom_data[nPKPD_D1_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
             }
 
             // internalized drug 2 causes damage
@@ -361,15 +348,14 @@ void PD_model(double current_time)
 
             if (PKPD_D2 > 0) // if drug in cell, add to damage / AUC
             {
-                // set_single_behavior(pC,"custom:PKPD_D2_damage",get_single_behavior(pC,"custom:PKPD_D2_damage")+PKPD_D2 * dt;
+                // set_single_behavior(pC,"custom:PKPD_D2_damage",pC->custom_data[nPKPD_D2_damage]+PKPD_D2 * dt;
                 pC->custom_data[nPKPD_D2_damage] += PKPD_D2 * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
             }
 
-            // set_single_behavior(pC,nPKPD_D2_damage,get_single_behavior(pC,nPKPD_D2_damage) - get_single_behavior(pC,"custom:PKPD_D2_repair_rate") * dt); // repair damage at constant rate
             pC->custom_data[nPKPD_D2_damage] -= get_single_behavior(pC,"custom:PKPD_D2_repair_rate") * dt; // repair damage at constant rate
-            if (get_single_behavior(pC,nPKPD_D2_damage) <= 0)
+            if (pC->custom_data[nPKPD_D2_damage] <= 0)
             {
-                set_single_behavior(pC,nPKPD_D2_damage,0); // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
+                pC->custom_data[nPKPD_D2_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
             }
         }
     }
@@ -457,8 +443,8 @@ std::vector<std::string> damage_coloring(Cell *pC)
     double d2_val;
     double d2_norm_val;
 
-    d1_val = get_single_behavior(pC,"custom:PKPD_D1_damage");
-    d1_norm_val = Hill_function(d1_val, parameters.doubles("d1_color_ec50"), parameters.doubles("d1_color_hp"));
+    d1_val = pC->custom_data[nPKPD_D1_damage];
+    d1_norm_val = Hill_response_function(d1_val, parameters.doubles("d1_color_ec50"), parameters.doubles("d1_color_hp"));
 
     int rd = (int)round(d1_norm_val * color_diffs_D1[pC->type][0]); // red differential
     int gd = (int)round(d1_norm_val * color_diffs_D1[pC->type][1]); // green differential
@@ -467,8 +453,8 @@ std::vector<std::string> damage_coloring(Cell *pC)
     sprintf(colorTempString, "rgb(%u, %u, %u)", default_color[0] + rd, default_color[1] + gd, default_color[2] + bd);
     output[0].assign(colorTempString); //cytoplasm
 
-    d2_val = get_single_behavior(pC,"custom:PKPD_D2_damage");
-    d2_norm_val = Hill_function(d2_val, parameters.doubles("d2_color_ec50"), parameters.doubles("d2_color_hp"));
+    d2_val = pC->custom_data[nPKPD_D2_damage];
+    d2_norm_val = Hill_response_function(d2_val, parameters.doubles("d2_color_ec50"), parameters.doubles("d2_color_hp"));
 
     rd = (int)round(d2_norm_val * color_diffs_D2[pC->type][0]); // red differential
     gd = (int)round(d2_norm_val * color_diffs_D2[pC->type][1]); // green differential
