@@ -205,7 +205,8 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
             factor_change *= 1 + (fs_apop_D2 - 1) * temp;
         }
     }
-    set_single_behavior( pC, "apoptosis", get_single_behavior( pC, "apoptosis") * factor_change );
+    p.death.rates[nApop] *= factor_change;
+    // set_single_behavior( pC, "apoptosis", get_single_behavior( pC, "apoptosis") * factor_change );
 
     // necrosis effect (we will assume that the necrosis rate is set to 0 for each cell type, so multiplying effects does not work, instead we will assume that effects on necrosis rates are additive)
     factor_change = 0.0; // in the case of necrosis, we will assume that the effects sum, so this "factor change" is actually just an increase
@@ -232,7 +233,8 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
             factor_change += get_single_behavior(pC,"custom:PKPD_D2_necrosis_saturation_rate") * Hill_response_function(pC->custom_data[nPKPD_D2_damage], get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D2_necrosis_hill_power"));
         }
     }
-    set_single_behavior( pC, "necrosis", get_single_behavior( pC, "necrosis") + factor_change );
+    p.death.rates[nNec] += factor_change;
+    // set_single_behavior( pC, "necrosis", get_single_behavior( pC, "necrosis") + factor_change );
 }
 
 void PD_model(double current_time)
