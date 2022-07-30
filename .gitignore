@@ -4,7 +4,8 @@
 output*.xml
 *.o
 .DS_Store
-project
+/project
+/ode_energy
 README_branch.md
 CITATION.txt
 /ALL_CITATIONS.txt

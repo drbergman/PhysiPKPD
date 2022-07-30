@@ -196,12 +196,6 @@ void setup_tissue(void)
     double max_distance = parameters.doubles("max_initial_distance");
     Cell_Definition *pCD = find_cell_definition("tumor");
 
-    static int nNec = pCD->phenotype.death.find_death_model_index("Necrosis");
-    if (pCD->custom_data["PKPD_D1_moa_is_necrosis"] > 0.5 && pCD->phenotype.death.rates[nNec] <= 0)
-    {
-        pCD->phenotype.death.rates[nNec] = 1e-16;
-    }
-
     std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
     for (int n = 0; n < parameters.ints("number_of_tumor_cells"); n++)
     {
