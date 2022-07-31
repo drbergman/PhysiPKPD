@@ -285,7 +285,7 @@ void PD_model(double current_time)
                 pC->custom_data[nPKPD_D1_damage] += PKPD_D1 * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
             }
 
-            pC->custom_data[nPKPD_D1_damage] -= get_single_behavior(pC,"custom:PKPD_D1_repair_rate") * dt; // repair damage at constant rate
+            pC->custom_data[nPKPD_D1_damage] -= get_single_behavior(pC,"custom:PKPD_D1_repair_rate_constant") * dt; // repair damage at constant rate
             if (pC->custom_data[nPKPD_D1_damage] <= 0)
             {
                 pC->custom_data[nPKPD_D1_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
@@ -306,7 +306,7 @@ void PD_model(double current_time)
                 pC->custom_data[nPKPD_D2_damage] += PKPD_D2 * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
             }
 
-            pC->custom_data[nPKPD_D2_damage] -= get_single_behavior(pC,"custom:PKPD_D2_repair_rate") * dt; // repair damage at constant rate
+            pC->custom_data[nPKPD_D2_damage] -= get_single_behavior(pC,"custom:PKPD_D2_repair_rate_constant") * dt; // repair damage at constant rate
             if (pC->custom_data[nPKPD_D2_damage] <= 0)
             {
                 pC->custom_data[nPKPD_D2_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)

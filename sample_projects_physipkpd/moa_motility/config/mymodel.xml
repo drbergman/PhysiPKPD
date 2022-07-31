@@ -246,7 +246,8 @@
                 <PKPD_D1_motility_hill_power>2</PKPD_D1_motility_hill_power>
 
                 <PKPD_D1_damage>0</PKPD_D1_damage>
-                <PKPD_D1_repair_rate>5e6</PKPD_D1_repair_rate>
+                <PKPD_D1_repair_rate_constant>5e6</PKPD_D1_repair_rate_constant>
+                <PKPD_D1_repair_rate_linear>1e-2</PKPD_D1_repair_rate_linear>
                 <PKPD_D1_metabolism_rate>0.05</PKPD_D1_metabolism_rate>
 
 
@@ -274,7 +275,8 @@
                 <PKPD_D2_motility_hill_power>2</PKPD_D2_motility_hill_power>
 
                 <PKPD_D2_damage>0</PKPD_D2_damage>
-                <PKPD_D2_repair_rate>1e7</PKPD_D2_repair_rate>
+                <PKPD_D2_repair_rate_constant>1e7</PKPD_D2_repair_rate_constant>
+                <PKPD_D2_repair_rate_linear>1e-2</PKPD_D2_repair_rate_linear>
                 <PKPD_D2_metabolism_rate>0.05</PKPD_D2_metabolism_rate>
 
                 <!-- <div_drugs type="divider" description="-Done with PD parameters-"/> -->
