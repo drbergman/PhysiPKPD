@@ -285,7 +285,7 @@ void PD_model(double current_time)
                 pC->custom_data[nPKPD_D1_damage] += PKPD_D1 * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
             }
 
-            pC->custom_data[nPKPD_D1_damage] -= get_single_behavior(pC,"custom:PKPD_D1_repair_rate_constant") * dt; // repair damage at constant rate
+            pC->custom_data[nPKPD_D1_damage] -= (get_single_behavior(pC,"custom:PKPD_D1_repair_rate_constant") + get_single_behavior(pC,"custom:PKPD_D1_repair_rate_linear") * pC->custom_data[nPKPD_D1_damage]) * dt; // repair damage at constant rate
             if (pC->custom_data[nPKPD_D1_damage] <= 0)
             {
                 pC->custom_data[nPKPD_D1_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
@@ -306,7 +306,7 @@ void PD_model(double current_time)
                 pC->custom_data[nPKPD_D2_damage] += PKPD_D2 * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
             }
 
-            pC->custom_data[nPKPD_D2_damage] -= get_single_behavior(pC,"custom:PKPD_D2_repair_rate_constant") * dt; // repair damage at constant rate
+            pC->custom_data[nPKPD_D2_damage] -= (get_single_behavior(pC,"custom:PKPD_D2_repair_rate_constant") + get_single_behavior(pC,"custom:PKPD_D2_repair_rate_linear") * pC->custom_data[nPKPD_D2_damage]) * dt; // repair damage at constant rate
             if (pC->custom_data[nPKPD_D2_damage] <= 0)
             {
                 pC->custom_data[nPKPD_D2_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
@@ -397,7 +397,8 @@ std::vector<std::string> damage_coloring(Cell *pC)
     double d2_val;
     double d2_norm_val;
 
-    d1_val = pC->custom_data[nPKPD_D1_damage];
+    // d1_val = pC->custom_data[nPKPD_D1_damage];
+    d1_val = get_single_behavior(pC, "custom:PKPD_D1_damage");
     d1_norm_val = Hill_response_function(d1_val, parameters.doubles("d1_color_ec50"), parameters.doubles("d1_color_hp"));
 
     int rd = (int)round(d1_norm_val * color_diffs_D1[pC->type][0]); // red differential
@@ -407,7 +408,8 @@ std::vector<std::string> damage_coloring(Cell *pC)
     sprintf(colorTempString, "rgb(%u, %u, %u)", default_color[0] + rd, default_color[1] + gd, default_color[2] + bd);
     output[0].assign(colorTempString); //cytoplasm
 
-    d2_val = pC->custom_data[nPKPD_D2_damage];
+    // d2_val = pC->custom_data[nPKPD_D2_damage];
+    d2_val = get_single_behavior(pC, "custom:PKPD_D2_damage");
     d2_norm_val = Hill_response_function(d2_val, parameters.doubles("d2_color_ec50"), parameters.doubles("d2_color_hp"));
 
     rd = (int)round(d2_norm_val * color_diffs_D2[pC->type][0]); // red differential
