@@ -398,7 +398,7 @@ std::vector<std::string> damage_coloring(Cell *pC)
     double d2_norm_val;
 
     // d1_val = pC->custom_data[nPKPD_D1_damage];
-    d1_val = get_single_behavior(pC, "PKPD_D1_damage");
+    d1_val = get_single_behavior(pC, "custom:PKPD_D1_damage");
     d1_norm_val = Hill_response_function(d1_val, parameters.doubles("d1_color_ec50"), parameters.doubles("d1_color_hp"));
 
     int rd = (int)round(d1_norm_val * color_diffs_D1[pC->type][0]); // red differential
@@ -409,7 +409,7 @@ std::vector<std::string> damage_coloring(Cell *pC)
     output[0].assign(colorTempString); //cytoplasm
 
     // d2_val = pC->custom_data[nPKPD_D2_damage];
-    d2_val = get_single_behavior(pC, "PKPD_D2_damage");
+    d2_val = get_single_behavior(pC, "custom:PKPD_D2_damage");
     d2_norm_val = Hill_response_function(d2_val, parameters.doubles("d2_color_ec50"), parameters.doubles("d2_color_hp"));
 
     rd = (int)round(d2_norm_val * color_diffs_D2[pC->type][0]); // red differential
