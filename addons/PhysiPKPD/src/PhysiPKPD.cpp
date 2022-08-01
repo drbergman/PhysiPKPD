@@ -244,8 +244,8 @@ void PD_model(double current_time)
     static double dt;
 
     // setup variables for analytic solutions for each cell type
-    static bool use_analytic_pd_solutions = parameters.bools("PKPD_use_analytic_pd_solutions"); // whether to use analytic pd solutions
-    static bool use_precomputed_quantities = parameters.bools("PKPD_precompute_pd_quantities"); // whether to precompute pd quantities (should not be done if pd parameters can vary within the cell type)
+    static bool use_analytic_pd_solutions; // whether to use analytic pd solutions
+    static bool use_precomputed_quantities; // whether to precompute pd quantities (should not be done if pd parameters can vary within the cell type)
     static bool analytic_pd_solution_setup_done = false;
 
     static std::vector<double> metabolism_reduction_factor_D1;
@@ -256,6 +256,35 @@ void PD_model(double current_time)
     static std::vector<double> damage_initial_drug_term_D2;
     static std::vector<double> damage_initial_damage_term_D1;
     static std::vector<double> damage_initial_damage_term_D2;
+
+    static bool need_to_check_backwards_compatibility = true;
+
+    if (need_to_check_backwards_compatibility)
+    {
+        try {use_analytic_pd_solutions = parameters.bools("PKPD_use_analytic_pd_solutions"); throw false;}
+        catch (bool dummy_input) {use_analytic_pd_solutions = false;} // the previous behavior had been to use the direct Euler method
+        try {use_precomputed_quantities = parameters.bools("PKPD_precompute_pd_quantities"); throw false;}
+        catch (bool dummy_input) {use_precomputed_quantities = false;} // the previous behavior had been to use the direct Euler method
+
+        for (int k = 0; k < cell_definitions_by_index.size(); k++)
+        {
+            Cell_Definition *pCD = cell_definitions_by_index[k];
+
+            // add backwards compatibility for usinge PKPD_D1_repair_rate to mean the constant repair rate
+            if (pCD->custom_data.find_variable_index("PKPD_D1_repair_rate") != -1 && (pCD->custom_data.find_variable_index("PKPD_D1_repair_rate_constant") == -1 || pCD->custom_data.find_variable_index("PKPD_D1_repair_rate_linear") == -1))
+            {
+                pCD->custom_data.add_variable("PKPD_D1_repair_rate_constant", "damage/min", pCD->custom_data["PKPD_D1_repair_rate"]);
+                pCD->custom_data.add_variable("PKPD_D1_repair_rate_linear", "1/min", 0.0);
+            }
+
+            if (pCD->custom_data.find_variable_index("PKPD_D2_repair_rate") != -1 && (pCD->custom_data.find_variable_index("PKPD_D2_repair_rate_constant") == -1 || pCD->custom_data.find_variable_index("PKPD_D2_repair_rate_linear") == -1))
+            {
+                pCD->custom_data.add_variable("PKPD_D2_repair_rate_constant", "damage/min", pCD->custom_data["PKPD_D2_repair_rate"]);
+                pCD->custom_data.add_variable("PKPD_D2_repair_rate_linear", "1/min", 0.0);
+            }
+        }
+        need_to_check_backwards_compatibility = false;
+    }
 
     if (use_analytic_pd_solutions && !analytic_pd_solution_setup_done) //
     {
@@ -280,6 +309,7 @@ void PD_model(double current_time)
             for (int k = 0; k < cell_definitions_by_index.size(); k++)
             {
                 Cell_Definition *pCD = cell_definitions_by_index[k];
+
                 // internalized drug amount (or concentration) simply decreases as A(dt) = A0 * exp(-metabolism_rate * dt);
                 metabolism_reduction_factor_D1[k] = exp(-pCD->custom_data["PKPD_D1_metabolism_rate"] * mechanics_dt);
                 metabolism_reduction_factor_D2[k] = exp(-pCD->custom_data["PKPD_D2_metabolism_rate"] * mechanics_dt);
