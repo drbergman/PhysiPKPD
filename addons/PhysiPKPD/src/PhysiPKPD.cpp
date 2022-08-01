@@ -244,8 +244,8 @@ void PD_model(double current_time)
     static double dt;
 
     // setup variables for analytic solutions for each cell type
-    static bool use_analytic_pd_solutions; // whether to use analytic pd solutions
-    static bool use_precomputed_quantities; // whether to precompute pd quantities (should not be done if pd parameters can vary within the cell type)
+    static bool use_analytic_pd_solutions; // whether to use analytic pd solutions (note this initializes to false, which backwards compatibility checks take advantage of)
+    static bool use_precomputed_quantities; // whether to precompute pd quantities (should not be done if pd parameters can vary within the cell type) (note this initializes to false, which backwards compatibility checks take advantage of)
     static bool analytic_pd_solution_setup_done = false;
 
     static std::vector<double> metabolism_reduction_factor_D1;
@@ -261,10 +261,10 @@ void PD_model(double current_time)
 
     if (need_to_check_backwards_compatibility)
     {
-        try {use_analytic_pd_solutions = parameters.bools("PKPD_use_analytic_pd_solutions"); throw false;}
-        catch (bool dummy_input) {use_analytic_pd_solutions = false;} // the previous behavior had been to use the direct Euler method
-        try {use_precomputed_quantities = parameters.bools("PKPD_precompute_pd_quantities"); throw false;}
-        catch (bool dummy_input) {use_precomputed_quantities = false;} // the previous behavior had been to use the direct Euler method
+        try {use_analytic_pd_solutions = parameters.bools("PKPD_use_analytic_pd_solutions");} 
+        catch (bool dummy_input) {}; // the previous behavior had been to use the direct Euler method
+        try {use_precomputed_quantities = parameters.bools("PKPD_precompute_pd_quantities");}
+        catch (bool dummy_input) {}; // the previous behavior had been to use the direct Euler method
 
         for (int k = 0; k < cell_definitions_by_index.size(); k++)
         {
@@ -286,69 +286,70 @@ void PD_model(double current_time)
         need_to_check_backwards_compatibility = false;
     }
 
-    if (use_analytic_pd_solutions && !analytic_pd_solution_setup_done) //
+    if (use_analytic_pd_solutions && use_precomputed_quantities && !analytic_pd_solution_setup_done) // time to setup precomputed quanities (if not using precomputed quantities, there is currently nothing to set up)
     {
-        if (use_precomputed_quantities)
+        if (fabs(round(mechanics_dt / diffusion_dt) - mechanics_dt / diffusion_dt) > 0.0001)
         {
-            if (fabs(round(mechanics_dt / diffusion_dt) - mechanics_dt / diffusion_dt) > 0.0001)
+            std::cout << "Error: Your mechanics time step does not appear to be a multiple of your diffusion time step" << std::endl;
+            std::cout << "  This will cause errors in solving the PD model using precomputed quantities because it assumes that the time step is constant across the simulation" << std::endl;
+            std::cout << "  If you really want these time steps, restart the simulation with the user parameter PKPD_precompute_pd_quantities set to False" << std::endl
+                      << std::endl;
+            exit(-1);
+        }
+
+        static int n_types = cell_definitions_by_index.size();
+
+        metabolism_reduction_factor_D1.resize(n_types, 0.0);
+        metabolism_reduction_factor_D2.resize(n_types, 0.0);
+        damage_contant_D1.resize(n_types, 0.0);
+        damage_contant_D2.resize(n_types, 0.0);
+        damage_initial_drug_term_D1.resize(n_types, 0.0);
+        damage_initial_drug_term_D2.resize(n_types, 0.0);
+        damage_initial_damage_term_D1.resize(n_types, 0.0);
+        damage_initial_damage_term_D2.resize(n_types, 0.0);
+
+        for (int k = 0; k < cell_definitions_by_index.size(); k++)
+        {
+            Cell_Definition *pCD = cell_definitions_by_index[k];
+
+            // internalized drug amount (or concentration) simply decreases as A(dt) = A0 * exp(-metabolism_rate * dt);
+            metabolism_reduction_factor_D1[k] = exp(-pCD->custom_data["PKPD_D1_metabolism_rate"] * mechanics_dt);
+            metabolism_reduction_factor_D2[k] = exp(-pCD->custom_data["PKPD_D2_metabolism_rate"] * mechanics_dt);
+
+            // Damage (D) follows D' = A - linear_rate * D - constant_rate ==> D(dt) = d_00 + d_10 * A0 + d_01 * D0; defining d_00, d_10, and d_01 here
+            damage_initial_damage_term_D1[k] = exp(-pCD->custom_data["PKPD_D1_repair_rate_linear"] * mechanics_dt);
+            damage_initial_damage_term_D2[k] = exp(-pCD->custom_data["PKPD_D2_repair_rate_linear"] * mechanics_dt);
+
+            damage_contant_D1[k] = pCD->custom_data["PKPD_D1_repair_rate_constant"];
+            damage_contant_D1[k] /= pCD->custom_data["PKPD_D1_repair_rate_linear"];
+            damage_contant_D1[k] *= damage_initial_damage_term_D1[k] - 1;
+            damage_contant_D2[k] = pCD->custom_data["PKPD_D2_repair_rate_constant"];
+            damage_contant_D2[k] /= pCD->custom_data["PKPD_D2_repair_rate_linear"];
+            damage_contant_D2[k] *= damage_initial_damage_term_D2[k] - 1;
+
+            // if the metabolism and repair rates are equal, then the system has repeated eigenvalues and the analytic solution is qualitatively different; notice the division by the difference of these rates in the first case
+            if (pCD->custom_data["PKPD_D1_metabolism_rate"] != pCD->custom_data["PKPD_D1_repair_rate_linear"])
             {
-                std::cout << "WARNING: Your mechanics time step does not appear to be a multiple of your diffusion time step" << std::endl;
-                std::cout << "  This will cause errors in solving the PD model because it assumes that the time step is constant across the simulation" << std::endl;
+                damage_initial_drug_term_D1[k] = metabolism_reduction_factor_D1[k];
+                damage_initial_drug_term_D1[k] -= damage_initial_damage_term_D1[k];
+                damage_initial_drug_term_D1[k] /= pCD->custom_data["PKPD_D1_repair_rate_linear"] - pCD->custom_data["PKPD_D1_metabolism_rate"]; // this would be bad if these rates were equal!
             }
-            static int n_types = cell_definitions_by_index.size();
-
-            metabolism_reduction_factor_D1.resize(n_types, 0.0);
-            metabolism_reduction_factor_D2.resize(n_types, 0.0);
-            damage_contant_D1.resize(n_types, 0.0);
-            damage_contant_D2.resize(n_types, 0.0);
-            damage_initial_drug_term_D1.resize(n_types, 0.0);
-            damage_initial_drug_term_D2.resize(n_types, 0.0);
-            damage_initial_damage_term_D1.resize(n_types, 0.0);
-            damage_initial_damage_term_D2.resize(n_types, 0.0);
-
-            for (int k = 0; k < cell_definitions_by_index.size(); k++)
+            else
             {
-                Cell_Definition *pCD = cell_definitions_by_index[k];
+                damage_initial_drug_term_D1[k] = mechanics_dt;
+                damage_initial_drug_term_D1[k] *= damage_initial_damage_term_D1[k];
+            }
 
-                // internalized drug amount (or concentration) simply decreases as A(dt) = A0 * exp(-metabolism_rate * dt);
-                metabolism_reduction_factor_D1[k] = exp(-pCD->custom_data["PKPD_D1_metabolism_rate"] * mechanics_dt);
-                metabolism_reduction_factor_D2[k] = exp(-pCD->custom_data["PKPD_D2_metabolism_rate"] * mechanics_dt);
-
-                // Damage (D) follows D' = A - linear_rate * D - constant_rate ==> D(dt) = d_00 + d_10 * A0 + d_01 * D0; defining d_00, d_10, and d_01 here
-                damage_initial_damage_term_D1[k] = exp(-pCD->custom_data["PKPD_D1_repair_rate_linear"] * mechanics_dt);
-                damage_initial_damage_term_D2[k] = exp(-pCD->custom_data["PKPD_D2_repair_rate_linear"] * mechanics_dt);
-                
-                damage_contant_D1[k] = pCD->custom_data["PKPD_D1_repair_rate_constant"];
-                damage_contant_D1[k] /= pCD->custom_data["PKPD_D1_repair_rate_linear"];
-                damage_contant_D1[k] *= damage_initial_damage_term_D1[k]-1;
-                damage_contant_D2[k] = pCD->custom_data["PKPD_D2_repair_rate_constant"];
-                damage_contant_D2[k] /= pCD->custom_data["PKPD_D2_repair_rate_linear"];
-                damage_contant_D2[k] *= damage_initial_damage_term_D1[k]-1;
-
-                // if the metabolism and repair rates are equal, then the system has repeated eigenvalues and the analytic solution is qualitatively different; notice the division by the difference of these rates in the first case
-                if (pCD->custom_data["PKPD_D1_metabolism_rate"] != pCD->custom_data["PKPD_D1_repair_rate_linear"])
-                {
-                    damage_initial_drug_term_D1[k] = metabolism_reduction_factor_D1[k];
-                    damage_initial_drug_term_D1[k] -= damage_initial_damage_term_D1[k];
-                    damage_initial_drug_term_D1[k] /= pCD->custom_data["PKPD_D1_repair_rate_linear"] - pCD->custom_data["PKPD_D1_metabolism_rate"]; // this would be bad if these rates were equal!
-                }
-                else
-                {
-                    damage_initial_drug_term_D1[k] = mechanics_dt;
-                    damage_initial_drug_term_D1[k] *= damage_initial_damage_term_D1[k];
-                }
-
-                if (pCD->custom_data["PKPD_D2_metabolism_rate"] != pCD->custom_data["PKPD_D2_repair_rate_linear"])
-                {
-                    damage_initial_drug_term_D2[k] = metabolism_reduction_factor_D2[k];
-                    damage_initial_drug_term_D2[k] -= damage_initial_damage_term_D1[k];
-                    damage_initial_drug_term_D2[k] /= pCD->custom_data["PKPD_D2_repair_rate_linear"] - pCD->custom_data["PKPD_D2_metabolism_rate"]; // this would be bad if these rates were equal!
-                }
-                else
-                {
-                    damage_initial_drug_term_D2[k] = mechanics_dt;
-                    damage_initial_drug_term_D2[k] *= damage_initial_damage_term_D1[k];
-                }
+            if (pCD->custom_data["PKPD_D2_metabolism_rate"] != pCD->custom_data["PKPD_D2_repair_rate_linear"])
+            {
+                damage_initial_drug_term_D2[k] = metabolism_reduction_factor_D2[k];
+                damage_initial_drug_term_D2[k] -= damage_initial_damage_term_D2[k];
+                damage_initial_drug_term_D2[k] /= pCD->custom_data["PKPD_D2_repair_rate_linear"] - pCD->custom_data["PKPD_D2_metabolism_rate"]; // this would be bad if these rates were equal!
+            }
+            else
+            {
+                damage_initial_drug_term_D2[k] = mechanics_dt;
+                damage_initial_drug_term_D2[k] *= damage_initial_damage_term_D2[k];
             }
         }
         analytic_pd_solution_setup_done = true;
@@ -375,48 +376,34 @@ void PD_model(double current_time)
             // find index of damage variable for drug 2
             int nPKPD_D2_damage = pC->custom_data.find_variable_index("PKPD_D2_damage");
 
-            if (!use_analytic_pd_solutions)
+            if (!use_analytic_pd_solutions)  // Using a Euler direct here to solve.
             {
                 // internalized drug 1 causes damage
-                double PKPD_D1 = p.molecular.internalized_total_substrates[nPKPD_D1];
-                PKPD_D1 -= get_single_behavior(pC, "custom:PKPD_D1_metabolism_rate") * PKPD_D1 * dt; // metabolism within cell to clear drug 1
-                if (PKPD_D1 < 0)
-                {
-                    PKPD_D1 = 0;
-                }
-                p.molecular.internalized_total_substrates[nPKPD_D1] = PKPD_D1; // set PKPD_drug_number_1 based on this
-
-                if (PKPD_D1 > 0) // if drug in cell, add to damage / AUC
-                {
-                    // set_single_behavior(pC,"custom:PKPD_D1_damage",pC->custom_data[nPKPD_D1_damage]+PKPD_D1 * dt;
-                    pC->custom_data[nPKPD_D1_damage] += PKPD_D1 * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
-                }
-
-                pC->custom_data[nPKPD_D1_damage] -= (get_single_behavior(pC, "custom:PKPD_D1_repair_rate_constant") + get_single_behavior(pC, "custom:PKPD_D1_repair_rate_linear") * pC->custom_data[nPKPD_D1_damage]) * dt; // repair damage at constant rate
+                pC->custom_data[nPKPD_D1_damage] -= (pC->custom_data["PKPD_D1_repair_rate_constant"] + pC->custom_data["PKPD_D1_repair_rate_linear"] * pC->custom_data[nPKPD_D1_damage]) * dt; // repair damage
+                pC->custom_data[nPKPD_D1_damage] += p.molecular.internalized_total_substrates[nPKPD_D1] * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
                 if (pC->custom_data[nPKPD_D1_damage] <= 0)
                 {
                     pC->custom_data[nPKPD_D1_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
                 }
 
+                p.molecular.internalized_total_substrates[nPKPD_D1] -= pC->custom_data["PKPD_D1_metabolism_rate"] * p.molecular.internalized_total_substrates[nPKPD_D1] * dt; // metabolism within cell to clear drug 1
+                if (p.molecular.internalized_total_substrates[nPKPD_D1] < 0)
+                {
+                    p.molecular.internalized_total_substrates[nPKPD_D1] = 0;
+                }
+
                 // internalized drug 2 causes damage
-                double PKPD_D2 = p.molecular.internalized_total_substrates[nPKPD_D2];
-                PKPD_D2 -= get_single_behavior(pC, "custom:PKPD_D2_metabolism_rate") * PKPD_D2 * dt; // metabolism within cell to clear drug 2
-                if (PKPD_D2 < 0)
-                {
-                    PKPD_D2 = 0;
-                }
-                p.molecular.internalized_total_substrates[nPKPD_D2] = PKPD_D2; // set PKPD_drug_number_2 based on this
-
-                if (PKPD_D2 > 0) // if drug in cell, add to damage / AUC
-                {
-                    // set_single_behavior(pC,"custom:PKPD_D2_damage",pC->custom_data[nPKPD_D2_damage]+PKPD_D2 * dt;
-                    pC->custom_data[nPKPD_D2_damage] += PKPD_D2 * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
-                }
-
-                pC->custom_data[nPKPD_D2_damage] -= (get_single_behavior(pC, "custom:PKPD_D2_repair_rate_constant") + get_single_behavior(pC, "custom:PKPD_D2_repair_rate_linear") * pC->custom_data[nPKPD_D2_damage]) * dt; // repair damage at constant rate
+                pC->custom_data[nPKPD_D2_damage] -= (pC->custom_data["PKPD_D2_repair_rate_constant"] + pC->custom_data["PKPD_D2_repair_rate_linear"] * pC->custom_data[nPKPD_D2_damage]) * dt; // repair damage
+                pC->custom_data[nPKPD_D2_damage] += p.molecular.internalized_total_substrates[nPKPD_D2] * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
                 if (pC->custom_data[nPKPD_D2_damage] <= 0)
                 {
                     pC->custom_data[nPKPD_D2_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
+                }
+
+                p.molecular.internalized_total_substrates[nPKPD_D2] -= pC->custom_data["PKPD_D2_metabolism_rate"] * p.molecular.internalized_total_substrates[nPKPD_D2] * dt; // metabolism within cell to clear drug 2
+                if (p.molecular.internalized_total_substrates[nPKPD_D2] < 0)
+                {
+                    p.molecular.internalized_total_substrates[nPKPD_D2] = 0;
                 }
             }
             else // using analytic solutions
@@ -440,11 +427,11 @@ void PD_model(double current_time)
                         pC->custom_data[nPKPD_D2_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
                     }
                     p.molecular.internalized_total_substrates[nPKPD_D2] *= metabolism_reduction_factor_D2[pC->type];
-                } else
+                } else // solve it analytically without precomputed quantities here (good for arbitrary dts rather than fixed mechanics_dt)
                 {
-                    // solve it from scratch here
-                    double repair_decay = exp(-pC->custom_data["PKPD_D1_repair_rate_linear"] * mechanics_dt);
-                    double metabolism_decay = exp(-pC->custom_data["PKPD_D1_metabolism_rate"] * mechanics_dt);
+                    
+                    double repair_decay = exp(-pC->custom_data["PKPD_D1_repair_rate_linear"] * dt);
+                    double metabolism_decay = exp(-pC->custom_data["PKPD_D1_metabolism_rate"] * dt);
                     pC->custom_data[nPKPD_D1_damage] *= repair_decay; // D(dt) = d_01*D0...
                     pC->custom_data[nPKPD_D1_damage] += pC->custom_data["PKPD_D1_repair_rate_constant"] / pC->custom_data["PKPD_D1_repair_rate_linear"] * (repair_decay - 1); // +d_00...
                     if (pC->custom_data["PKPD_D1_metabolism_rate"] != pC->custom_data["PKPD_D1_repair_rate_linear"]) // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
@@ -453,12 +440,12 @@ void PD_model(double current_time)
                     }
                     else
                     {
-                        pC->custom_data[nPKPD_D1_damage] += mechanics_dt * metabolism_decay * p.molecular.internalized_total_substrates[nPKPD_D1]; // in this case, metabolism_decay = repair_decay
+                        pC->custom_data[nPKPD_D1_damage] += dt * metabolism_decay * p.molecular.internalized_total_substrates[nPKPD_D1]; // in this case, metabolism_decay = repair_decay
                     }
                     p.molecular.internalized_total_substrates[nPKPD_D1] *=metabolism_decay;
 
-                    repair_decay = exp(-pC->custom_data["PKPD_D2_repair_rate_linear"] * mechanics_dt);
-                    metabolism_decay = exp(-pC->custom_data["PKPD_D2_metabolism_rate"] * mechanics_dt);
+                    repair_decay = exp(-pC->custom_data["PKPD_D2_repair_rate_linear"] * dt);
+                    metabolism_decay = exp(-pC->custom_data["PKPD_D2_metabolism_rate"] * dt);
                     pC->custom_data[nPKPD_D2_damage] *= repair_decay; // D(dt) = d_01*D0...
                     pC->custom_data[nPKPD_D2_damage] += pC->custom_data["PKPD_D2_repair_rate_constant"] / pC->custom_data["PKPD_D2_repair_rate_linear"] * (repair_decay - 1); // +d_00...
                     if (pC->custom_data["PKPD_D2_metabolism_rate"] != pC->custom_data["PKPD_D2_repair_rate_linear"]) // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
@@ -467,7 +454,7 @@ void PD_model(double current_time)
                     }
                     else
                     {
-                        pC->custom_data[nPKPD_D2_damage] += mechanics_dt * metabolism_decay * p.molecular.internalized_total_substrates[nPKPD_D2]; // in this case, metabolism_decay = repair_decay
+                        pC->custom_data[nPKPD_D2_damage] += dt * metabolism_decay * p.molecular.internalized_total_substrates[nPKPD_D2]; // in this case, metabolism_decay = repair_decay
                     }
                     p.molecular.internalized_total_substrates[nPKPD_D2] *= metabolism_decay;
                 }
