@@ -325,6 +325,7 @@
         <div_generalPK type="divider" description="---PK---"/>
 
         <central_to_periphery_volume_ratio type="double" units="dimensionless" description="ratio of volume in systemic circulation to the volume of the periphery">1.0</central_to_periphery_volume_ratio>
+        <PKPD_use_analytic_pk_solutions type="bool" units="dimensionless" description="whether to use analytic solution to the pk model">True</PKPD_use_analytic_pk_solutions>
         <PKPD_use_analytic_pd_solutions type="bool" units="dimensionless" description="whether to use analytic solutions for PD dynamics (true) or approximate using numerical methods (false)">True></PKPD_use_analytic_pd_solutions>
         <PKPD_precompute_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True></PKPD_precompute_pd_quantities>
     </user_parameters>
