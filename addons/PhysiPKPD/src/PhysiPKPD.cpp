@@ -3,18 +3,20 @@
 #include "./PhysiPKPD.h"
 
 // find index of drug 1 in the microenvironment for use in basically all these functions
-static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
+static int nPKPD_D1;
 // find index of drug 2 in the microenvironment for use in basically all these functions
-static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
+static int nPKPD_D2;
 
 static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots for determining when to do these
 
 void setup_pk(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
 {
+    nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
+    nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
     // set up first dose time for drug 1
     if (!setup_done[0])
     {
-        if (parameters.bools("PKPD_D1_set_first_dose_time") || confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition"))
+        if (parameters.bools("PKPD_D1_set_first_dose_time") || ( current_time > PKPD_D1_confluence_check_time - tolerance && confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition")))
         {
             PKPD_D1_dose_times.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
             PKPD_D1_dose_values.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
@@ -38,7 +40,7 @@ void setup_pk(std::vector<bool> &setup_done, double current_time, std::vector<do
     // set up first dose time for drug 2
     if (!setup_done[1])
     {
-        if (parameters.bools("PKPD_D2_set_first_dose_time") || confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition"))
+        if (parameters.bools("PKPD_D2_set_first_dose_time") || ( current_time > PKPD_D2_confluence_check_time - tolerance && confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition")))
         {
             PKPD_D2_dose_times.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
             PKPD_D2_dose_values.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
