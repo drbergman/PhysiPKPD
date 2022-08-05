@@ -9,7 +9,21 @@ static int nPKPD_D2;
 
 static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots for determining when to do these
 
-void setup_pk(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
+void PK_model( double current_time )
+{
+    static void (*update_function)(double);
+    static bool need_to_setup = true;
+
+    if (need_to_setup)
+    {
+        update_function = &pk_model_original;
+        need_to_setup = false;
+    }
+
+    update_function(current_time);
+}
+
+void setup_pk_original_model(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
 {
     nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
     nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
@@ -62,7 +76,7 @@ void setup_pk(std::vector<bool> &setup_done, double current_time, std::vector<do
     }
 }
 
-void PK_model(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
+void pk_model_original(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
 {
     // Set up drug 1
     static int PKPD_D1_dose_count = 0;
@@ -93,7 +107,7 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
         setup_done[0] = parameters.ints("PKPD_D1_max_number_doses")==0; 
         setup_done[1] = parameters.ints("PKPD_D2_max_number_doses")==0;
 
-        setup_pk(setup_done, current_time, PKPD_D1_dose_times, PKPD_D1_dose_values, PKPD_D1_confluence_check_time, PKPD_D2_dose_times, PKPD_D2_dose_values, PKPD_D2_confluence_check_time);
+        setup_pk_original_model(setup_done, current_time, PKPD_D1_dose_times, PKPD_D1_dose_values, PKPD_D1_confluence_check_time, PKPD_D2_dose_times, PKPD_D2_dose_values, PKPD_D2_confluence_check_time);
     }
 
     // add doses if time for that
