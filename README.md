@@ -120,9 +120,9 @@ If anything the analtyic methods are faster.
 But you do you!
 |Parameter|Description|
 |---|---|
-| `PKPD_use_analytic_pk_solutions` | Boolean to determine whether to use analytic (matrix exponential) or numerical (explicit Euler) methods to solve PK dynamics; defaults to `True` |
-| `PKPD_use_analytic_pd_solutions` | Boolean to determine whether to use analytic (matrix exponential) or numerical (explicit Euler) methods to solve PD dynamics; defaults to `False` |
-| `PKPD_precompute_pd_quantities` | Boolean to determine whether to pre-compute values used to analytically solve PD dynamics; **turn this off if PD parameters can vary within a cell type OR if your `mechanics_dt` is not a multiple of your `diffusion_dt`**; defaults to `False` |
+| `PKPD_use_analytic_pk_solutions` | Boolean to determine whether to use analytic (matrix exponential) or numerical (explicit Euler) methods to solve PK dynamics; defaults to `True` if not set |
+| `PKPD_use_analytic_pd_solutions` | Boolean to determine whether to use analytic (matrix exponential) or numerical (explicit Euler) methods to solve PD dynamics; defaults to `False` if not set |
+| `PKPD_precompute_pd_quantities` | Boolean to determine whether to pre-compute values used to analytically solve PD dynamics; **turn this off if PD parameters can vary within a cell type OR if your `mechanics_dt` is not a multiple of your `diffusion_dt`**; defaults to `False` if not set |
 
 ## Making your own project using PhysiPKPD
 If you wish to make your own project that uses PhysiPKPD (and not just one of the pre-built sample projects), this is how you can proceed.
