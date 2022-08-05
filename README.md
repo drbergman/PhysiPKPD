@@ -69,19 +69,18 @@ For each drug, you can set the following parameters in `user_parameters`:
 | `d2_color_hp` | If `damage_coloring` is used for plotting, this is the Hill coefficient used to calculate the amount of blueshift in the nucleus |
 | `PKPD_D1_central_increase_on_loading_dose` | Increase in concentration in central compartment after a loading dose |
 | `PKPD_D1_central_increase_on_dose` | Increase in concentration in central compartment after a regular dose |
-| `PKPD_D1_central_elimination_rate` | Elimination rate in central compartment (in mintues<sup>-1</sup>) |
-| `PKPD_D1_flux_across_capillaries` | Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) |
+| `PKPD_D1_central_elimination_rate` | Linear elimination rate in central compartment (in mintues<sup>-1</sup>) |
+| `PKPD_D1_flux_across_capillaries` | **While this is still allowed, consider using the following two parameters to quantify intercompartmental clearance rates.** Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) |
+| `PKPD_D1_central_to_periphery_clearance_rate` ($k_{12}$) | Rate of change in concentration in central compartment due to distribution (in minutes<sup>-1</sup>) |
+| `PKPD_D1_periphery_to_central_clearance_rate` ($k_{21}$) | Rate of change in concentration in periphery compartment due to redistribution (in minutes<sup>-1</sup>) |
 | `PKPD_D1_biot_number` | Ratio of drug concentration on boundary of microenvironment (Dirichlet condition) and concentration in systemic circulation |
-|`central_to_periphery_volume_ratio` | Ratio of central compartment to periphery compartment to determine effects of distribution and redistribution on periphery |
+|`central_to_periphery_volume_ratio` ($V_1/V_2$ or $V_C/V_P$) | Ratio of central compartment to periphery compartment |
 
 You can also set the following parameters in `microenvironment_setup` for each drug:
 | Parameter | Description |
 | ---| --- |
 | `diffusion_coefficient` | Diffusion rate in the microenvironment |
 | `decay_rate` | Rate of decay in the microenvironment |
-
-As of now, there is only one way for the drug to enter the microenvironment: through the ymin boundary.
-Thus, do not change the `Dirichlet_options` without also changing `PK_model` in `PhysiCell/addons/PhysiPKPD/src/PhsyiPKPD.cpp`.
 
 ### PD parameters <a name="pd_pars"></a>
 For each cell type, all of the PD parameters are in `custom_data` for each cell type.
