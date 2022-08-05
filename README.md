@@ -71,10 +71,10 @@ For each drug, you can set the following parameters in `user_parameters`:
 | `PKPD_D1_central_increase_on_dose` | Increase in concentration in central compartment after a regular dose |
 | `PKPD_D1_central_elimination_rate` | Linear elimination rate in central compartment (in mintues<sup>-1</sup>) |
 | `PKPD_D1_flux_across_capillaries` | **While this is still allowed, consider using the following two parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) |
-| `PKPD_D1_central_to_periphery_clearance_rate` ($k_{12}$) | Rate of change in concentration in central compartment due to distribution (in minutes<sup>-1</sup>) |
-| `PKPD_D1_periphery_to_central_clearance_rate` ($k_{21}$) | Rate of change in concentration in periphery compartment due to redistribution (in minutes<sup>-1</sup>) |
+| `PKPD_D1_central_to_periphery_clearance_rate` $(k_{12})$ | Rate of change in concentration in central compartment due to distribution (in minutes<sup>-1</sup>) |
+| `PKPD_D1_periphery_to_central_clearance_rate` $(k_{21})$ | Rate of change in concentration in periphery compartment due to redistribution (in minutes<sup>-1</sup>) |
 | `PKPD_D1_biot_number` | Ratio of drug concentration on boundary of microenvironment (Dirichlet condition) and concentration in systemic circulation |
-|`central_to_periphery_volume_ratio` ($V_1/V_2$ or $V_C/V_P$) | Ratio of central compartment to periphery compartment |
+|`central_to_periphery_volume_ratio` $(V_1/V_2 \text{ or } V_C/V_P)$ | Ratio of central compartment to periphery compartment |
 
 [^1]: To use these new parameters, you will want to set $k_{12}$ as your original flux rate and $k_{21}$ as `PKPD_D1_flux_across_capillaries * central_to_periphery_volume_ratio`.
 
