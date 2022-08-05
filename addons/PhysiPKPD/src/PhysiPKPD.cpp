@@ -2,56 +2,67 @@
 #include <fstream>
 #include "./PhysiPKPD.h"
 
+// find index of drug 1 in the microenvironment for use in basically all these functions
+static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
+// find index of drug 2 in the microenvironment for use in basically all these functions
+static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
+
+static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots for determining when to do these
+
 void setup_pk(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
 {
     // set up first dose time for drug 1
-    if (!setup_done[0] && (parameters.bools("PKPD_D1_set_first_dose_time") || confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition")))
+    if (!setup_done[0])
     {
-        PKPD_D1_dose_times.resize( parameters.ints("PKPD_D1_max_number_doses"), 0 );
-        PKPD_D1_dose_values.resize( parameters.ints("PKPD_D1_max_number_doses"), 0 );
-        PKPD_D1_dose_times[0] = parameters.bools("PKPD_D1_set_first_dose_time") ? parameters.doubles("PKPD_D1_first_dose_time") : current_time;
-        for( unsigned int i=1 ; i < parameters.ints("PKPD_D1_max_number_doses") ;i++ )
+        if (parameters.bools("PKPD_D1_set_first_dose_time") || confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition"))
         {
-            PKPD_D1_dose_times[i] = PKPD_D1_dose_times[i-1] + parameters.doubles("PKPD_D1_dose_interval");
+            PKPD_D1_dose_times.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
+            PKPD_D1_dose_values.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
+            PKPD_D1_dose_times[0] = parameters.bools("PKPD_D1_set_first_dose_time") ? parameters.doubles("PKPD_D1_first_dose_time") : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now
+            for (unsigned int i = 1; i < parameters.ints("PKPD_D1_max_number_doses"); i++)
+            {
+                PKPD_D1_dose_times[i] = PKPD_D1_dose_times[i - 1] + parameters.doubles("PKPD_D1_dose_interval");
+            }
+            for (unsigned int i = 0; i < parameters.ints("PKPD_D1_max_number_doses"); i++)
+            {
+                PKPD_D1_dose_values[i] = i < parameters.ints("PKPD_D1_number_loading_doses") ? parameters.doubles("PKPD_D1_central_increase_on_loading_dose") : parameters.doubles("PKPD_D1_central_increase_on_dose");
+            }
+            setup_done[0] = true;
         }
-        for( unsigned int i=0 ; i < parameters.ints("PKPD_D1_max_number_doses") ;i++ )
+        else
         {
-            PKPD_D1_dose_values[i] = i < parameters.ints("PKPD_D1_number_loading_doses") ? parameters.doubles("PKPD_D1_central_increase_on_loading_dose") : parameters.doubles("PKPD_D1_central_increase_on_dose");
+            PKPD_D1_confluence_check_time += phenotype_dt;
         }
-        setup_done[0] = true;
-    } else
-    {
-        PKPD_D1_confluence_check_time += phenotype_dt;
     }
 
     // set up first dose time for drug 2
-    if (!setup_done[1] && (parameters.bools("PKPD_D2_set_first_dose_time") || confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition")))
+    if (!setup_done[1])
     {
-        PKPD_D2_dose_times.resize( parameters.ints("PKPD_D2_max_number_doses"), 0 );
-        PKPD_D2_dose_values.resize( parameters.ints("PKPD_D2_max_number_doses"), 0 );
-        PKPD_D2_dose_times[0] = parameters.bools("PKPD_D2_set_first_dose_time") ? parameters.doubles("PKPD_D2_first_dose_time") : current_time;
-        for( unsigned int i=1 ; i < parameters.ints("PKPD_D2_max_number_doses") ;i++ )
+        if (parameters.bools("PKPD_D2_set_first_dose_time") || confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition"))
         {
-            PKPD_D2_dose_times[i] = PKPD_D2_dose_times[i-1] + parameters.doubles("PKPD_D2_dose_interval");
+            PKPD_D2_dose_times.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
+            PKPD_D2_dose_values.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
+            PKPD_D2_dose_times[0] = parameters.bools("PKPD_D2_set_first_dose_time") ? parameters.doubles("PKPD_D2_first_dose_time") : current_time;
+            for (unsigned int i = 1; i < parameters.ints("PKPD_D2_max_number_doses"); i++)
+            {
+                PKPD_D2_dose_times[i] = PKPD_D2_dose_times[i - 1] + parameters.doubles("PKPD_D2_dose_interval");
+            }
+            for (unsigned int i = 0; i < parameters.ints("PKPD_D2_max_number_doses"); i++)
+            {
+                PKPD_D2_dose_values[i] = i < parameters.ints("PKPD_D2_number_loading_doses") ? parameters.doubles("PKPD_D2_central_increase_on_loading_dose") : parameters.doubles("PKPD_D2_central_increase_on_dose");
+            }
+            setup_done[1] = true;
         }
-        for( unsigned int i=0 ; i < parameters.ints("PKPD_D2_max_number_doses") ;i++ )
+        else
         {
-            PKPD_D2_dose_values[i] = i < parameters.ints("PKPD_D2_number_loading_doses") ? parameters.doubles("PKPD_D2_central_increase_on_loading_dose") : parameters.doubles("PKPD_D2_central_increase_on_dose");
+            PKPD_D2_confluence_check_time += phenotype_dt;
         }
-        setup_done[1] = true;
-    } else
-    {
-        PKPD_D2_confluence_check_time += phenotype_dt;
     }
 }
-
-static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots
 
 void PK_model(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
 {
     // Set up drug 1
-    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
-    // static double PKPD_D1_next_dose_time = NAN; // set to NAN for checking when to start a confluence-based therapy
     static int PKPD_D1_dose_count = 0;
     static std::vector<double> PKPD_D1_dose_times;
     static std::vector<double> PKPD_D1_dose_values;
@@ -62,8 +73,6 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
     static double PKPD_D1_confluence_check_time = 0.0; // next time to check for confluence
 
     // Set up drug 2
-    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
-    // static double PKPD_D2_next_dose_time = NAN; // set to NAN for checking when to start a confluence-based therapy
     static int PKPD_D2_dose_count = 0;
     static std::vector<double> PKPD_D2_dose_times;
     static std::vector<double> PKPD_D2_dose_values;
@@ -259,12 +268,6 @@ void pk_dose(double next_dose, double &central_concentration)
 void pd_function(Cell *pC, Phenotype &p, double dt)
 {
     Cell_Definition *pCD = find_cell_definition(pC->type);
-
-    // find index of drug 1 in the microenvironment
-    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
-    // find index of drug 2 in the microenvironment
-    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
-
     // find index of damage variable for drug 1
     int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
     // find index of damage variable for drug 2
@@ -489,11 +492,6 @@ void PD_model(double current_time)
         {
             Cell *pC = (*all_cells)[i];
             Phenotype &p = pC->phenotype;
-            // find index of drug 1 in the microenvironment
-            static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
-            // find index of drug 2 in the microenvironment
-            static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
-
             // find index of damage variable for drug 1
             int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
             // find index of damage variable for drug 2
