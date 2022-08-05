@@ -89,9 +89,6 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
 
     // add doses if time for that
     // it should be possible to report that the dosing is all done by setting these update functions to null; something like pk_dose_fn = pk_dose; if( dose_count>max_number_doses ) {pk_dose_fn = null;}
-    // pk_dose_old(current_time, PKPD_D1_next_dose_time, PKPD_D1_dose_count, parameters.ints("PKPD_D1_max_number_doses"), parameters.ints("PKPD_D1_number_loading_doses"), PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_increase_on_dose"), parameters.doubles("PKPD_D1_central_increase_on_loading_dose"), parameters.doubles("PKPD_D1_dose_interval"));
-    // pk_dose_old(current_time, PKPD_D2_next_dose_time, PKPD_D2_dose_count, parameters.ints("PKPD_D2_max_number_doses"), parameters.ints("PKPD_D2_number_loading_doses"), PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_increase_on_dose"), parameters.doubles("PKPD_D2_central_increase_on_loading_dose"), parameters.doubles("PKPD_D2_dose_interval"));
-
     if (PKPD_D1_dose_count < parameters.ints("PKPD_D1_max_number_doses") && current_time > PKPD_D1_dose_times[PKPD_D1_dose_count] - tolerance )
     {
         pk_dose(PKPD_D1_dose_values[PKPD_D1_dose_count],PKPD_D1_central_concentration);
@@ -103,10 +100,82 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
         pk_dose(PKPD_D2_dose_values[PKPD_D2_dose_count],PKPD_D2_central_concentration);
         PKPD_D2_dose_count++;
     }
-    // update PK model for drug 1
-    pk_explicit_euler( diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), PKPD_D1_flux_rate );
-    // update PK model for drug 2
-    pk_explicit_euler( diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), PKPD_D2_flux_rate );
+
+    static bool need_to_check_backwards_compatibility = true; // for the pk solver
+    static bool use_analytic_pk_solutions = true; // set this to true by default
+
+    if (need_to_check_backwards_compatibility)
+    {
+        try { use_analytic_pk_solutions = parameters.bools("PKPD_use_analytic_pk_solutions"); }
+        catch (bool dummy_input) {}
+        need_to_check_backwards_compatibility = false;
+    }
+
+    if (use_analytic_pk_solutions)
+    {
+        // pk parameters
+        static double R = parameters.doubles("central_to_periphery_volume_ratio");
+        static double k1 = parameters.doubles("PKPD_D1_flux_across_capillaries");
+        static double k2 = parameters.doubles("PKPD_D2_flux_across_capillaries");
+        static double l1 = parameters.doubles("PKPD_D1_central_elimination_rate");
+        static double l2 = parameters.doubles("PKPD_D2_central_elimination_rate");
+
+        // pre-computed quantities to express solution to matrix exponential
+        static bool analytic_pk_solution_setup_done = false;
+
+        static double alpha1 = k1 + l1 - R*k1;
+        static double beta1 = sqrt(k1*k1*(R+1)*(R+1)-2*k1*l1*R+2*k1*l1+l1*l1);
+        static double a1 = -0.5*(k1*(R+1)+l1);
+        static double b1 = 0.5*beta1;
+        static double gamma1 = 2*R*k1;
+        static std::vector<double> ev1 = {a1-b1,a1+b1};
+        static std::vector<double> decay1 = {exp(ev1[0]*diffusion_dt),exp(ev1[1]*diffusion_dt)};
+        static std::vector<std::vector<double>> M1 = { {0.0,0.0}, {0.0,0.0} };
+
+        static double alpha2 = k2 + l2 - R*k2;
+        static double beta2 = sqrt(k2*k2*(R+1)*(R+1)-2*k2*l2*R+2*k2*l2+l2*l2);
+        static double a2 = -0.5*(k2*(R+1)+l2);
+        static double b2 = 0.5*beta2;
+        static double gamma2 = 2*R*k2;
+        static std::vector<double> ev2 = {a2-b2,a2+b2};
+        static std::vector<double> decay2 = {exp(ev2[0]*diffusion_dt),exp(ev2[1]*diffusion_dt)};
+        static std::vector<std::vector<double>> M2 = { {0.0,0.0}, {0.0,0.0} };
+
+        // store previous quantities for computation
+        double PKPD_D1_central_concentration_previous = PKPD_D1_central_concentration;
+        double PKPD_D1_periphery_concentration_previous = PKPD_D1_periphery_concentration;
+
+        double PKPD_D2_central_concentration_previous = PKPD_D2_central_concentration;
+        double PKPD_D2_periphery_concentration_previous = PKPD_D2_periphery_concentration;
+    
+        if (!analytic_pk_solution_setup_done)
+        {
+            M1[0][0] = -0.5 * (alpha1 * gamma1 * (decay1[1] - decay1[0]) - beta1 * gamma1 * (decay1[0] + decay1[1])) / (beta1 * gamma1);
+            M1[0][1] = -0.5 * (alpha1*alpha1 - beta1*beta1) * (decay1[1] - decay1[0]) / (beta1 * gamma1);
+            M1[1][0] = -0.5 * gamma1*gamma1 * (decay1[0] - decay1[1]) / (beta1 * gamma1);
+            M1[1][1] = -0.5 * gamma1 * (alpha1 * (decay1[0] - decay1[1]) - beta1 * (decay1[0] + decay1[1])) / (beta1 * gamma1);
+
+            M2[0][0] = -0.5 * (alpha2 * gamma2 * (decay2[1] - decay2[0]) - beta2 * gamma2 * (decay2[0] + decay2[1])) / (beta2 * gamma2);
+            M2[0][1] = -0.5 * (alpha2*alpha2 - beta2*beta2) * (decay2[1] - decay2[0]) / (beta2 * gamma2);
+            M2[1][0] = -0.5 * gamma2*gamma2 * (decay2[0] - decay2[1]) / (beta2 * gamma2);
+            M2[1][1] = -0.5 * gamma2 * (alpha2 * (decay2[0] - decay2[1]) - beta2 * (decay2[0] + decay2[1])) / (beta2 * gamma2);
+
+            analytic_pk_solution_setup_done = true;
+        }
+
+        PKPD_D1_central_concentration = M1[0][0] * PKPD_D1_central_concentration_previous + M1[0][1] * PKPD_D1_periphery_concentration_previous;
+        PKPD_D1_periphery_concentration = M1[1][0] * PKPD_D1_central_concentration_previous + M1[1][1] * PKPD_D1_periphery_concentration_previous;
+
+        PKPD_D2_central_concentration = M2[0][0] * PKPD_D2_central_concentration_previous + M2[0][1] * PKPD_D2_periphery_concentration_previous;
+        PKPD_D2_periphery_concentration = M2[1][0] * PKPD_D2_central_concentration_previous + M2[1][1] * PKPD_D2_periphery_concentration_previous;
+    }
+    else // use direct euler
+    {
+        // update PK model for drug 1
+        pk_explicit_euler(diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), PKPD_D1_flux_rate);
+        // update PK model for drug 2
+        pk_explicit_euler(diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), PKPD_D2_flux_rate);
+    }
 
     // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
     static std::vector<int> nPKPD_drugs{nPKPD_D1, nPKPD_D2};
