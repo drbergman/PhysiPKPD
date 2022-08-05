@@ -59,7 +59,6 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
     static double PKPD_D1_central_concentration = 0.0;
     static double PKPD_D1_periphery_concentration = 0.0; // just a bucket to model drug distributing into the entire periphery; TME is not linked to this!!!
 
-    static double PKPD_D1_flux_rate = parameters.doubles("PKPD_D1_flux_across_capillaries");
     static double PKPD_D1_confluence_check_time = 0.0; // next time to check for confluence
 
     // Set up drug 2
@@ -72,7 +71,6 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
     static double PKPD_D2_central_concentration = 0.0;
     static double PKPD_D2_periphery_concentration = 0.0; // just a bucket to model drug distributing into the entire periphery; TME is not linked to this!!!
 
-    static double PKPD_D2_flux_rate = parameters.doubles("PKPD_D2_flux_across_capillaries");
     static double PKPD_D2_confluence_check_time = 0.0; // next time to check for confluence
 
     static double PKPD_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
@@ -104,10 +102,39 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
     static bool need_to_check_backwards_compatibility = true; // for the pk solver
     static bool use_analytic_pk_solutions = true; // set this to true by default
 
+    static double k12_1;
+    static double k21_1;
+
+    static double k12_2;
+    static double k21_2;
+
     if (need_to_check_backwards_compatibility)
     {
         try { use_analytic_pk_solutions = parameters.bools("PKPD_use_analytic_pk_solutions"); }
         catch (bool dummy_input) {}
+
+        if (parameters.doubles("PKPD_D1_central_to_periphery_clearance_rate")!=0 || parameters.doubles("PKPD_D1_periphery_to_central_clearance_rate")!=0 ||
+            parameters.doubles("PKPD_D2_central_to_periphery_clearance_rate")!=0 || parameters.doubles("PKPD_D2_periphery_to_central_clearance_rate")!=0 ||
+            (parameters.doubles("PKPD_D1_flux_across_capillaries")==0 && parameters.doubles("PKPD_D2_flux_across_capillaries")==0))
+        {
+            // then do not need to worry about backwards compatibility
+            k12_1 = parameters.doubles("PKPD_D1_central_to_periphery_clearance_rate");
+            k21_1 = parameters.doubles("PKPD_D1_periphery_to_central_clearance_rate");
+
+            k12_2 = parameters.doubles("PKPD_D2_central_to_periphery_clearance_rate");
+            k21_2 = parameters.doubles("PKPD_D2_periphery_to_central_clearance_rate");
+        } else // the new clearance rates are all 0 and one of the old flux rates is nonzero, so it seems like they are using the old pk model syntax
+        {
+            std::cout << "You seem to be using the simplified PK dynamics with 2 compartments" << std::endl;
+            std::cout << "  You can achieve the same thing using PKPD_D1_central_to_periphery_clearance_rate = PKPD_D1_flux_across_capillaries" << std::endl;
+            std::cout << "  and PKPD_D1_periphery_to_central_clearance_rate = PKPD_D1_flux_across_capillaries * central_to_periphery_volume_ratio" << std::endl << std::endl;
+
+            k12_1 = parameters.doubles("PKPD_D1_flux_across_capillaries");
+            k21_1 = parameters.doubles("PKPD_D1_flux_across_capillaries") * parameters.doubles("central_to_periphery_volume_ratio");
+
+            k12_2 = parameters.doubles("PKPD_D2_flux_across_capillaries");
+            k21_2 = parameters.doubles("PKPD_D2_flux_across_capillaries") * parameters.doubles("central_to_periphery_volume_ratio");
+        }
         need_to_check_backwards_compatibility = false;
     }
 
@@ -115,31 +142,31 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
     {
         // pk parameters
         static double R = parameters.doubles("central_to_periphery_volume_ratio");
-        static double k1 = parameters.doubles("PKPD_D1_flux_across_capillaries");
-        static double k2 = parameters.doubles("PKPD_D2_flux_across_capillaries");
-        static double l1 = parameters.doubles("PKPD_D1_central_elimination_rate");
-        static double l2 = parameters.doubles("PKPD_D2_central_elimination_rate");
+        static double l_1 = parameters.doubles("PKPD_D1_central_elimination_rate");
+        static double l_2 = parameters.doubles("PKPD_D2_central_elimination_rate");
 
         // pre-computed quantities to express solution to matrix exponential
         static bool analytic_pk_solution_setup_done = false;
 
-        static double alpha1 = k1 + l1 - R*k1;
-        static double beta1 = sqrt(k1*k1*(R+1)*(R+1)-2*k1*l1*R+2*k1*l1+l1*l1);
-        static double a1 = -0.5*(k1*(R+1)+l1);
-        static double b1 = 0.5*beta1;
-        static double gamma1 = 2*R*k1;
-        static std::vector<double> ev1 = {a1-b1,a1+b1};
-        static std::vector<double> decay1 = {exp(ev1[0]*diffusion_dt),exp(ev1[1]*diffusion_dt)};
-        static std::vector<std::vector<double>> M1 = { {0.0,0.0}, {0.0,0.0} };
+        static double f_1 = k21_1 / k12_1;
+        static double alpha_1 = k12_1 + l_1 - f_1*k12_1;
+        static double beta_1 = sqrt(k12_1*k12_1*(f_1+1)*(f_1+1)-2*k12_1*l_1*f_1+2*k12_1*l_1+l_1*l_1);
+        static double a_1 = -0.5*(k12_1*(f_1+1)+l_1);
+        static double b_1 = 0.5*beta_1;
+        static double gamma_1 = 2*f_1*k12_1;
+        static std::vector<double> ev_1 = {a_1-b_1,a_1+b_1}; // eigenvalues
+        static std::vector<double> decay_1 = {exp(ev_1[0]*diffusion_dt),exp(ev_1[1]*diffusion_dt)};
+        static std::vector<std::vector<double>> M_1 = { {0.0,0.0}, {0.0,0.0} };
 
-        static double alpha2 = k2 + l2 - R*k2;
-        static double beta2 = sqrt(k2*k2*(R+1)*(R+1)-2*k2*l2*R+2*k2*l2+l2*l2);
-        static double a2 = -0.5*(k2*(R+1)+l2);
-        static double b2 = 0.5*beta2;
-        static double gamma2 = 2*R*k2;
-        static std::vector<double> ev2 = {a2-b2,a2+b2};
-        static std::vector<double> decay2 = {exp(ev2[0]*diffusion_dt),exp(ev2[1]*diffusion_dt)};
-        static std::vector<std::vector<double>> M2 = { {0.0,0.0}, {0.0,0.0} };
+        static double f_2 = k21_2 / k12_2;
+        static double alpha_2 = k12_2 + l_2 - f_2*k12_2;
+        static double beta_2 = sqrt(k12_2*k12_2*(f_2+1)*(f_2+1)-2*k12_2*l_2*f_2+2*k12_2*l_2+l_2*l_2);
+        static double a_2 = -0.5*(k12_2*(f_2+1)+l_2);
+        static double b_2 = 0.5*beta_2;
+        static double gamma_2 = 2*f_2*k12_2;
+        static std::vector<double> ev_2 = {a_2-b_2,a_2+b_2}; // eigenvalues
+        static std::vector<double> decay2 = {exp(ev_2[0]*diffusion_dt),exp(ev_2[1]*diffusion_dt)};
+        static std::vector<std::vector<double>> M_2 = { {0.0,0.0}, {0.0,0.0} };
 
         // store previous quantities for computation
         double PKPD_D1_central_concentration_previous = PKPD_D1_central_concentration;
@@ -150,31 +177,35 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
     
         if (!analytic_pk_solution_setup_done)
         {
-            M1[0][0] = -0.5 * (alpha1 * gamma1 * (decay1[1] - decay1[0]) - beta1 * gamma1 * (decay1[0] + decay1[1])) / (beta1 * gamma1);
-            M1[0][1] = -0.5 * (alpha1*alpha1 - beta1*beta1) * (decay1[1] - decay1[0]) / (beta1 * gamma1);
-            M1[1][0] = -0.5 * gamma1*gamma1 * (decay1[0] - decay1[1]) / (beta1 * gamma1);
-            M1[1][1] = -0.5 * gamma1 * (alpha1 * (decay1[0] - decay1[1]) - beta1 * (decay1[0] + decay1[1])) / (beta1 * gamma1);
+            M_1[0][0] = -0.5 * (alpha_1 * gamma_1 * (decay_1[1] - decay_1[0]) - beta_1 * gamma_1 * (decay_1[0] + decay_1[1])) / (beta_1 * gamma_1);
+            M_1[0][1] = -0.5 * f_1 * (alpha_1*alpha_1 - beta_1*beta_1) * (decay_1[1] - decay_1[0]) / (beta_1 * gamma_1 * R);
+            M_1[1][0] = -0.5 * R * gamma_1*gamma_1 * (decay_1[0] - decay_1[1]) / (beta_1 * gamma_1 * f_1);
+            M_1[1][1] = -0.5 * gamma_1 * (alpha_1 * (decay_1[0] - decay_1[1]) - beta_1 * (decay_1[0] + decay_1[1])) / (beta_1 * gamma_1);
 
-            M2[0][0] = -0.5 * (alpha2 * gamma2 * (decay2[1] - decay2[0]) - beta2 * gamma2 * (decay2[0] + decay2[1])) / (beta2 * gamma2);
-            M2[0][1] = -0.5 * (alpha2*alpha2 - beta2*beta2) * (decay2[1] - decay2[0]) / (beta2 * gamma2);
-            M2[1][0] = -0.5 * gamma2*gamma2 * (decay2[0] - decay2[1]) / (beta2 * gamma2);
-            M2[1][1] = -0.5 * gamma2 * (alpha2 * (decay2[0] - decay2[1]) - beta2 * (decay2[0] + decay2[1])) / (beta2 * gamma2);
+            // std::cout << "M_1 = [" << M_1[0][0] << "," << M_1[0][1] << ";" << M_1[1][0] << "," << M_1[1][1] << "]" << std::endl;
+
+            M_2[0][0] = -0.5 * (alpha_2 * gamma_2 * (decay2[1] - decay2[0]) - beta_2 * gamma_2 * (decay2[0] + decay2[1])) / (beta_2 * gamma_2);
+            M_2[0][1] = -0.5 * f_2 * (alpha_2*alpha_2 - beta_2*beta_2) * (decay2[1] - decay2[0]) / (beta_2 * gamma_2 * R);
+            M_2[1][0] = -0.5 * R * gamma_2*gamma_2 * (decay2[0] - decay2[1]) / (beta_2 * gamma_2 * f_2);
+            M_2[1][1] = -0.5 * gamma_2 * (alpha_2 * (decay2[0] - decay2[1]) - beta_2 * (decay2[0] + decay2[1])) / (beta_2 * gamma_2);
+
+            // std::cout << "M_2 = [" << M_2[0][0] << "," << M_2[0][1] << ";" << M_2[1][0] << "," << M_2[1][1] << "]" << std::endl;
 
             analytic_pk_solution_setup_done = true;
         }
 
-        PKPD_D1_central_concentration = M1[0][0] * PKPD_D1_central_concentration_previous + M1[0][1] * PKPD_D1_periphery_concentration_previous;
-        PKPD_D1_periphery_concentration = M1[1][0] * PKPD_D1_central_concentration_previous + M1[1][1] * PKPD_D1_periphery_concentration_previous;
+        PKPD_D1_central_concentration = M_1[0][0] * PKPD_D1_central_concentration_previous + M_1[0][1] * PKPD_D1_periphery_concentration_previous;
+        PKPD_D1_periphery_concentration = M_1[1][0] * PKPD_D1_central_concentration_previous + M_1[1][1] * PKPD_D1_periphery_concentration_previous;
 
-        PKPD_D2_central_concentration = M2[0][0] * PKPD_D2_central_concentration_previous + M2[0][1] * PKPD_D2_periphery_concentration_previous;
-        PKPD_D2_periphery_concentration = M2[1][0] * PKPD_D2_central_concentration_previous + M2[1][1] * PKPD_D2_periphery_concentration_previous;
+        PKPD_D2_central_concentration = M_2[0][0] * PKPD_D2_central_concentration_previous + M_2[0][1] * PKPD_D2_periphery_concentration_previous;
+        PKPD_D2_periphery_concentration = M_2[1][0] * PKPD_D2_central_concentration_previous + M_2[1][1] * PKPD_D2_periphery_concentration_previous;
     }
     else // use direct euler
     {
         // update PK model for drug 1
-        pk_explicit_euler(diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), PKPD_D1_flux_rate);
+        pk_explicit_euler(diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), k12_1, k21_1);
         // update PK model for drug 2
-        pk_explicit_euler(diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), PKPD_D2_flux_rate);
+        pk_explicit_euler(diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), k12_2, k21_2);
     }
 
     // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
@@ -200,6 +231,29 @@ void PK_model(double current_time) // update the Dirichlet boundary conditions a
 	}
 
     return;
+}
+
+void pk_explicit_euler( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double k12, double k21 )
+{
+    static double central_to_periphery_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
+    // update PK model for drug 1
+    double central_change_rate = -1 * elimination_rate * central_concentration;
+    central_change_rate -= k12 * central_concentration;
+    central_change_rate += k21 * periphery_concentration / central_to_periphery_volume_ratio;
+
+    double periphery_change_rate = -k21 * periphery_concentration;
+    periphery_change_rate += k12 * central_to_periphery_volume_ratio * central_concentration;
+
+    central_concentration += central_change_rate * dt;
+    periphery_concentration += periphery_change_rate * dt;
+
+    if (central_concentration < 0) {central_concentration = 0;}
+    if (periphery_concentration < 0) {periphery_concentration = 0;}
+}
+
+void pk_dose(double next_dose, double &central_concentration)
+{
+    central_concentration += next_dose;
 }
 
 void pd_function(Cell *pC, Phenotype &p, double dt)
@@ -533,49 +587,32 @@ void PD_model(double current_time)
     return;
 }
 
-void write_cell_data_for_plots(double current_time, char delim = ',')
+void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2)
 {
-    // Write cell number data to a CSV file format time,tumor_cell_count
-    // Can add different classes of tumor cells - apoptotic, necrotic, hypoxic, etc to this
-
-    static double next_write_time = 0;
-    if (current_time > next_write_time - tolerance)
+    for (int i = 0; i < nCD; i++)
     {
-        //std::cout << "TIMEEEE" << current_time << std::endl;
-        double data_time = current_time;
-        char dataFilename[256];
-        sprintf(dataFilename, "%s/cell_counts.csv", PhysiCell_settings.folder.c_str());
+        int grey = (int)round(255 * (i + 1) / (nCD + 1)); // all cell types get their own shade of grey when undamaged
+        default_colors.push_back({grey, grey, grey});
+        default_colors[i].resize(3, grey);
 
-        int tumorCount = 0;
-        Cell *pC = NULL;
-
-        for (int i = 0; i < (*all_cells).size(); i++)
+        if (cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_prolif"] || cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_apop"] || cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_necrosis"] || cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_motility"])
         {
-            pC = (*all_cells)[i];
-            if ((pC->type == 0 || pC->type == 1) && get_single_signal( pC, "dead") == false)
-            {
-                tumorCount += 1;
-            }
+            color_diffs_D1.push_back({(int)round((255 - grey) / 2), (int)round(-grey / 2), (int)round(-grey / 2)}); // if drug 1 affects cell type i, then set a red shift in the cytoplasm color
+        }
+        else
+        {
+            color_diffs_D1.push_back({0, 0, 0}); // if drug 1 does NOT affect cell type i, do not change the cytoplasm color
         }
 
-        char dataToAppend[1024];
-        sprintf(dataToAppend, "%0.2f%c%d", data_time, delim, tumorCount);
-        //std::cout << "DATAAAAAA::: " << dataToAppend << std::endl;
-
-        // append to file
-        std::ofstream file_out;
-
-        file_out.open(dataFilename, std::ios_base::app);
-        if (!file_out)
+        if (cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_prolif"] || cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_apop"] || cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_necrosis"] || cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_motility"])
         {
-            std::cout << "Error: could not open file " << dataFilename << "!" << std::endl;
-            return;
+            color_diffs_D2.push_back({(int)round(-grey / 2), (int)round(-grey / 2), (int)round((255 - grey) / 2)}); // if drug 2 affects cell type i, then set a blue shift in the nucleus color
         }
-        file_out << dataToAppend << std::endl;
-        file_out.close();
-        next_write_time += parameters.doubles("csv_data_interval");
+        else
+        {
+            color_diffs_D2.push_back({0, 0, 0}); // if drug 2 does NOT affect cell type i, do not change the nucleus color
+        }
     }
-    return;
 }
 
 std::vector<std::string> damage_coloring(Cell *pC)
@@ -639,34 +676,6 @@ std::vector<std::string> damage_coloring(Cell *pC)
     return output;
 }
 
-void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2)
-{
-    for (int i = 0; i < nCD; i++)
-    {
-        int grey = (int)round(255 * (i + 1) / (nCD + 1)); // all cell types get their own shade of grey when undamaged
-        default_colors.push_back({grey, grey, grey});
-        default_colors[i].resize(3, grey);
-
-        if (cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_prolif"] || cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_apop"] || cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_necrosis"] || cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_motility"])
-        {
-            color_diffs_D1.push_back({(int)round((255 - grey) / 2), (int)round(-grey / 2), (int)round(-grey / 2)}); // if drug 1 affects cell type i, then set a red shift in the cytoplasm color
-        }
-        else
-        {
-            color_diffs_D1.push_back({0, 0, 0}); // if drug 1 does NOT affect cell type i, do not change the cytoplasm color
-        }
-
-        if (cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_prolif"] || cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_apop"] || cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_necrosis"] || cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_motility"])
-        {
-            color_diffs_D2.push_back({(int)round(-grey / 2), (int)round(-grey / 2), (int)round((255 - grey) / 2)}); // if drug 2 affects cell type i, then set a blue shift in the nucleus color
-        }
-        else
-        {
-            color_diffs_D2.push_back({0, 0, 0}); // if drug 2 does NOT affect cell type i, do not change the nucleus color
-        }
-    }
-}
-
 // compute confluence as total cellular volume divided by 2D area of TME
 double confluence_computation(void)
 {
@@ -693,30 +702,47 @@ double confluence_computation(void)
     return output;
 }
 
-void pk_explicit_euler( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double flux_rate )
+void write_cell_data_for_plots(double current_time, char delim = ',')
 {
-    static double central_to_periphery_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
-    // update PK model for drug 1
-    double central_change_rate = -1 * elimination_rate * central_concentration;
-    double concentration_gradient = central_concentration - periphery_concentration;
+    // Write cell number data to a CSV file format time,tumor_cell_count
+    // Can add different classes of tumor cells - apoptotic, necrotic, hypoxic, etc to this
 
-    central_change_rate -= flux_rate * concentration_gradient;
-
-    central_concentration += central_change_rate * dt;
-    periphery_concentration += flux_rate * central_to_periphery_volume_ratio * concentration_gradient * dt;
-
-    if (central_concentration < 0)
+    static double next_write_time = 0;
+    if (current_time > next_write_time - tolerance)
     {
-        central_concentration = 0;
-    }
+        //std::cout << "TIMEEEE" << current_time << std::endl;
+        double data_time = current_time;
+        char dataFilename[256];
+        sprintf(dataFilename, "%s/cell_counts.csv", PhysiCell_settings.folder.c_str());
 
-    if (periphery_concentration < 0)
-    {
-        periphery_concentration = 0;
-    }
-}
+        int tumorCount = 0;
+        Cell *pC = NULL;
 
-void pk_dose(double next_dose, double &central_concentration)
-{
-    central_concentration += next_dose;
+        for (int i = 0; i < (*all_cells).size(); i++)
+        {
+            pC = (*all_cells)[i];
+            if ((pC->type == 0 || pC->type == 1) && get_single_signal( pC, "dead") == false)
+            {
+                tumorCount += 1;
+            }
+        }
+
+        char dataToAppend[1024];
+        sprintf(dataToAppend, "%0.2f%c%d", data_time, delim, tumorCount);
+        //std::cout << "DATAAAAAA::: " << dataToAppend << std::endl;
+
+        // append to file
+        std::ofstream file_out;
+
+        file_out.open(dataFilename, std::ios_base::app);
+        if (!file_out)
+        {
+            std::cout << "Error: could not open file " << dataFilename << "!" << std::endl;
+            return;
+        }
+        file_out << dataToAppend << std::endl;
+        file_out.close();
+        next_write_time += parameters.doubles("csv_data_interval");
+    }
+    return;
 }

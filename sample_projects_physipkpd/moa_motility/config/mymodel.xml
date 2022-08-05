@@ -330,7 +330,8 @@
         <PKPD_D1_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">400.0</PKPD_D1_central_increase_on_loading_dose>
         <PKPD_D1_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">2e3</PKPD_D1_central_increase_on_dose>
         <PKPD_D1_central_elimination_rate type="double" units="1/min" description="decay rate of drug 1 in systemic circulation">0.0027</PKPD_D1_central_elimination_rate>
-        <PKPD_D1_flux_across_capillaries type="double" units="1/min" description="rate of central concentration change of drug 1 due to distribution and redistribution">0.0048</PKPD_D1_flux_across_capillaries>
+        <PKPD_D1_central_to_periphery_clearance_rate type="double" units="1/min" description="rate of central concentration change of drug 1 due to distribution">0.0048</PKPD_D1_central_to_periphery_clearance_rate>
+        <PKPD_D1_periphery_to_central_clearance_rate type="double" units="1/min" description="rate of periphery concentration change of drug 1 due to redistribution">0.0048</PKPD_D1_periphery_to_central_clearance_rate>
         <PKPD_D1_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D1_biot_number>
 
 
@@ -353,7 +354,8 @@
         <PKPD_D2_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 2">400.0</PKPD_D2_central_increase_on_loading_dose>
         <PKPD_D2_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 2">150.0</PKPD_D2_central_increase_on_dose>
         <PKPD_D2_central_elimination_rate type="double" units="1/min" description="decay rate of drug 2 in systemic circulation">0.0027</PKPD_D2_central_elimination_rate>
-        <PKPD_D2_flux_across_capillaries type="double" units="1/min" description="rate of central concentration change of drug 2 due to distribution and redistribution">0.0048</PKPD_D2_flux_across_capillaries>
+        <PKPD_D2_central_to_periphery_clearance_rate type="double" units="1/min" description="rate of central concentration change of drug 2 due to distribution">0.0048</PKPD_D2_central_to_periphery_clearance_rate>
+        <PKPD_D2_periphery_to_central_clearance_rate type="double" units="1/min" description="rate of periphery concentration change of drug 2 due to redistribution">0.0048</PKPD_D2_periphery_to_central_clearance_rate>
         <PKPD_D2_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D2_biot_number>
 
 

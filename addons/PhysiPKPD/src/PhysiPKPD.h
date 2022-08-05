@@ -18,6 +18,6 @@ std::vector<std::string> damage_coloring( Cell* pCell );
 double confluence_computation( void );
 void pd_function( Cell* pC, Phenotype& p, double dt );
 void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2);
-void pk_explicit_euler( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double flux_rate );
+void pk_explicit_euler( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double k12, double k21 );
 void pk_dose(double next_dose, double &central_concentration);
 #endif
