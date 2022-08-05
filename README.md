@@ -70,11 +70,13 @@ For each drug, you can set the following parameters in `user_parameters`:
 | `PKPD_D1_central_increase_on_loading_dose` | Increase in concentration in central compartment after a loading dose |
 | `PKPD_D1_central_increase_on_dose` | Increase in concentration in central compartment after a regular dose |
 | `PKPD_D1_central_elimination_rate` | Linear elimination rate in central compartment (in mintues<sup>-1</sup>) |
-| `PKPD_D1_flux_across_capillaries` | **While this is still allowed, consider using the following two parameters to quantify intercompartmental clearance rates.** Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) |
+| `PKPD_D1_flux_across_capillaries` | **While this is still allowed, consider using the following two parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) |
 | `PKPD_D1_central_to_periphery_clearance_rate` ($k_{12}$) | Rate of change in concentration in central compartment due to distribution (in minutes<sup>-1</sup>) |
 | `PKPD_D1_periphery_to_central_clearance_rate` ($k_{21}$) | Rate of change in concentration in periphery compartment due to redistribution (in minutes<sup>-1</sup>) |
 | `PKPD_D1_biot_number` | Ratio of drug concentration on boundary of microenvironment (Dirichlet condition) and concentration in systemic circulation |
 |`central_to_periphery_volume_ratio` ($V_1/V_2$ or $V_C/V_P$) | Ratio of central compartment to periphery compartment |
+
+[^1]: To use these new parameters, you will want to set $k_{12}$ as your original flux rate and $k_{21}$ as `PKPD_D1_flux_across_capillaries * central_to_periphery_volume_ratio`.
 
 You can also set the following parameters in `microenvironment_setup` for each drug:
 | Parameter | Description |
@@ -92,7 +94,9 @@ In the table below, `X` can stand for any one of `prolif`, `apop`, `necrosis`, o
 | `PKPD_D1_X_EC50` | Damage from drug 1 at which the rate of `X` is halfway between the base and saturation rates (in damage) |
 | `PKPD_D1_X_hill_power` | Hill coefficient for calculating the effect of drug 1 on the rate of `X` |
 | `PKPD_D1_damage` | Not a parameter; data that tracks the current damage to the cell |
-| `PKPD_D1_repair_rate` | Zero-order elimination rate of damage from drug 1 (in damage per minute) |
+| `PKPD_D1_repair_rate` | **While this is still allowed, consider using the following two parameters to quantify repair rates instead.** Zero-order elimination rate of damage from drug 1 (in damage per minute) |
+| `PKPD_D1_repair_rate_constant` | Zero-order elimination rate of damage from drug 1 (in damage per minute) |
+| `PKPD_D1_repair_rate_linear` | First-order elimination rate of damage from drug 1 (in minutes<sup>-1</sup>) |
 | `PKPD_D1_metabolism_rate` | Rate of elimination of drug 1 from inside a cell (in minutes<sup>-1</sup>) |
 
 
