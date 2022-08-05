@@ -54,12 +54,14 @@ PK dynamics must be set for each drug and PD dynamics determined for each cell t
 
 ### PK parameters <a name="pk_pars"></a>
 PK dynamics in PhysiPKPD currently follow a simplified 2-compartment model[^quasi-ss_assumption]:
+
 $$
-\begin{split}
+\begin{aligned}
 C' & = k(P-C) - \lambda C \\
 P' & = kR(C-P)
-\end{split}
+\end{aligned}
 $$
+
 Soon, we will use separate intercompartmental clearance rates, i.e., $k_{12}$ and $k_{21}$.
 We are also working on including a way for users to implement even more complex PK dynamics.
 
