@@ -99,6 +99,17 @@ In the table below, `X` can stand for any one of `prolif`, `apop`, `necrosis`, o
 | `PKPD_D1_repair_rate_linear` | First-order elimination rate of damage from drug 1 (in minutes<sup>-1</sup>) |
 | `PKPD_D1_metabolism_rate` | Rate of elimination of drug 1 from inside a cell (in minutes<sup>-1</sup>) |
 
+### Miscellaneous parameters
+The following are user parameters that provide some control over how the dynamics are solved.
+Currently, the only PK and PD models implemented in PhysiPKPD are readily solved using analytic techniques.
+By informal observation, the analytic solutions are not slower than the numerical solutions.
+If anything the analtyic solutions are faster.
+But you do you!
+|Parameter|Description|
+|---|---|
+| `PKPD_use_analytic_pk_solutions` | Boolean to determine whether to use analytic (matrix exponential) or numerical (explicit Euler) to solve PK dynamics; defaults to `True` |
+| `PKPD_use_analytic_pd_solutions` | Boolean to determine whether to use analytic (matrix exponential) or numerical (explicit Euler) to solve PD dynamics; defaults to `False` |
+| `PKPD_precompute_pd_quantities` | Boolean to determine whether to pre-compute values used to analytically solve PD dynamics; **turn this off if PD parameters can vary within a cell type OR if your `mechanics_dt` is not a multiple of your `diffusion_dt`; defaults to `False` |
 
 ## Making your own project using PhysiPKPD
 If you wish to make your own project that uses PhysiPKPD (and not just one of the pre-built sample projects), this is how you can proceed.
