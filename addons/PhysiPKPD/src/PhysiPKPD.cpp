@@ -16,14 +16,14 @@ void PK_model( double current_time )
 
     if (need_to_setup)
     {
-        update_function = &pk_model_original;
+        update_function = &pk_model_two_compartment;
         need_to_setup = false;
     }
 
     update_function(current_time);
 }
 
-void setup_pk_original_model(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
+void setup_pk_dosing_schedule(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
 {
     nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
     nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
@@ -76,7 +76,80 @@ void setup_pk_original_model(std::vector<bool> &setup_done, double current_time,
     }
 }
 
-void pk_model_original(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
+void pk_model_one_compartment(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
+{
+    // Set up drug 1
+    static int PKPD_D1_dose_count = 0;
+    static std::vector<double> PKPD_D1_dose_times;
+    static std::vector<double> PKPD_D1_dose_values;
+
+    static double PKPD_D1_central_concentration = 0.0;
+
+    static double PKPD_D1_confluence_check_time = 0.0; // next time to check for confluence
+
+    // Set up drug 2
+    static int PKPD_D2_dose_count = 0;
+    static std::vector<double> PKPD_D2_dose_times;
+    static std::vector<double> PKPD_D2_dose_values;
+
+    static double PKPD_D2_central_concentration = 0.0;
+
+    static double PKPD_D2_confluence_check_time = 0.0; // next time to check for confluence
+
+    static std::vector<bool> setup_done = {false,false};
+    if( !setup_done[0] || !setup_done[1] )
+    {
+        // consider the pk setup if there are no doses
+        setup_done[0] = parameters.ints("PKPD_D1_max_number_doses")==0; 
+        setup_done[1] = parameters.ints("PKPD_D2_max_number_doses")==0;
+
+        setup_pk_dosing_schedule(setup_done, current_time, PKPD_D1_dose_times, PKPD_D1_dose_values, PKPD_D1_confluence_check_time, PKPD_D2_dose_times, PKPD_D2_dose_values, PKPD_D2_confluence_check_time);
+    }
+
+    // add doses if time for that
+    // it should be possible to report that the dosing is all done by setting these update functions to null; something like pk_dose_fn = pk_dose; if( dose_count>max_number_doses ) {pk_dose_fn = null;}
+    if (PKPD_D1_dose_count < parameters.ints("PKPD_D1_max_number_doses") && current_time > PKPD_D1_dose_times[PKPD_D1_dose_count] - tolerance )
+    {
+        pk_dose(PKPD_D1_dose_values[PKPD_D1_dose_count],PKPD_D1_central_concentration);
+        PKPD_D1_dose_count++;
+    }
+    
+    if (PKPD_D2_dose_count < parameters.ints("PKPD_D2_max_number_doses") && current_time > PKPD_D2_dose_times[PKPD_D2_dose_count] - tolerance )
+    {
+        pk_dose(PKPD_D2_dose_values[PKPD_D2_dose_count],PKPD_D2_central_concentration);
+        PKPD_D2_dose_count++;
+    }
+
+    static bool use_analytic_pk_solutions = true; // set this to true by default
+
+    if (use_analytic_pk_solutions)
+    {
+        // pre-computed quantities to express solution to matrix exponential
+        static double concentration_loss_1 = exp(parameters.doubles("PKPD_D1_central_elimination_rate") * diffusion_dt);
+        static double concentration_loss_2 = exp(parameters.doubles("PKPD_D2_central_elimination_rate") * diffusion_dt);
+
+        PKPD_D1_central_concentration *= concentration_loss_1;
+        PKPD_D2_central_concentration *= concentration_loss_2;
+    }
+    else // use direct euler
+    {
+        // update PK model for drug 1
+        pk_explicit_euler_one_compartment(diffusion_dt, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"));
+        // update PK model for drug 2
+        pk_explicit_euler_one_compartment(diffusion_dt, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"));
+    }
+
+    // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
+    std::vector<double> new_dirichlet_values(2, 0);
+    new_dirichlet_values[0] = PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number");
+    new_dirichlet_values[1] = PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number");
+
+    pk_update_dirichlet(new_dirichlet_values);
+
+    return;
+}
+
+void pk_model_two_compartment(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
 {
     // Set up drug 1
     static int PKPD_D1_dose_count = 0;
@@ -107,7 +180,7 @@ void pk_model_original(double current_time) // update the Dirichlet boundary con
         setup_done[0] = parameters.ints("PKPD_D1_max_number_doses")==0; 
         setup_done[1] = parameters.ints("PKPD_D2_max_number_doses")==0;
 
-        setup_pk_original_model(setup_done, current_time, PKPD_D1_dose_times, PKPD_D1_dose_values, PKPD_D1_confluence_check_time, PKPD_D2_dose_times, PKPD_D2_dose_values, PKPD_D2_confluence_check_time);
+        setup_pk_dosing_schedule(setup_done, current_time, PKPD_D1_dose_times, PKPD_D1_dose_values, PKPD_D1_confluence_check_time, PKPD_D2_dose_times, PKPD_D2_dose_values, PKPD_D2_confluence_check_time);
     }
 
     // add doses if time for that
@@ -228,17 +301,24 @@ void pk_model_original(double current_time) // update the Dirichlet boundary con
     else // use direct euler
     {
         // update PK model for drug 1
-        pk_explicit_euler(diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), k12_1, k21_1);
+        pk_explicit_euler_two_compartment(diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), k12_1, k21_1);
         // update PK model for drug 2
-        pk_explicit_euler(diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), k12_2, k21_2);
+        pk_explicit_euler_two_compartment(diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), k12_2, k21_2);
     }
 
     // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
-    static std::vector<int> nPKPD_drugs{nPKPD_D1, nPKPD_D2};
     std::vector<double> new_dirichlet_values(2, 0);
     new_dirichlet_values[0] = PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number");
     new_dirichlet_values[1] = PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number");
 
+    pk_update_dirichlet(new_dirichlet_values);
+
+    return;
+}
+
+void pk_update_dirichlet(std::vector<double> new_dirichlet_values)
+{
+    static std::vector<int> nPKPD_drugs{nPKPD_D1, nPKPD_D2};
     #pragma omp parallel for 
 	for( unsigned int i=0 ; i < microenvironment.mesh.voxels.size() ;i++ )
 	{
@@ -254,14 +334,18 @@ void pk_model_original(double current_time) // update the Dirichlet boundary con
 	
 		}
 	}
-
-    return;
 }
 
-void pk_explicit_euler( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double k12, double k21 )
+void pk_explicit_euler_one_compartment( double dt, double &central_concentration, double elimination_rate )
+{
+    central_concentration -= dt * elimination_rate * central_concentration;
+    if (central_concentration < 0) {central_concentration = 0;}
+}
+
+void pk_explicit_euler_two_compartment( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double k12, double k21 )
 {
     static double central_to_periphery_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
-    // update PK model for drug 1
+
     double central_change_rate = -1 * elimination_rate * central_concentration;
     central_change_rate -= k12 * central_concentration;
     central_change_rate += k21 * periphery_concentration / central_to_periphery_volume_ratio;
