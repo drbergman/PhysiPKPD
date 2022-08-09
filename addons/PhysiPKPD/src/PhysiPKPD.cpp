@@ -171,8 +171,6 @@ void pk_model_two_compartment(double current_time) // update the Dirichlet bound
 
     static double PKPD_D2_confluence_check_time = 0.0; // next time to check for confluence
 
-    static double PKPD_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
-
     static std::vector<bool> setup_done = {false,false};
     if( !setup_done[0] || !setup_done[1] )
     {
@@ -200,6 +198,9 @@ void pk_model_two_compartment(double current_time) // update the Dirichlet bound
     static bool need_to_check_backwards_compatibility = true; // for the pk solver
     static bool use_analytic_pk_solutions = true; // set this to true by default
 
+    static double R_1;
+    static double R_2;
+
     static double k12_1;
     static double k21_1;
 
@@ -225,13 +226,43 @@ void pk_model_two_compartment(double current_time) // update the Dirichlet bound
         {
             std::cout << "You seem to be using the simplified PK dynamics with 2 compartments" << std::endl;
             std::cout << "  You can achieve the same thing using PKPD_D1_central_to_periphery_clearance_rate = PKPD_D1_flux_across_capillaries" << std::endl;
-            std::cout << "  and PKPD_D1_periphery_to_central_clearance_rate = PKPD_D1_flux_across_capillaries * central_to_periphery_volume_ratio" << std::endl << std::endl;
+            std::cout << "  and PKPD_D1_periphery_to_central_clearance_rate = PKPD_D1_flux_across_capillaries * PKPD_D1_central_to_periphery_volume_ratio" << std::endl << std::endl;
 
             k12_1 = parameters.doubles("PKPD_D1_flux_across_capillaries");
-            k21_1 = parameters.doubles("PKPD_D1_flux_across_capillaries") * parameters.doubles("central_to_periphery_volume_ratio");
+            k21_1 = parameters.doubles("PKPD_D1_flux_across_capillaries") * parameters.doubles("PKPD_D1_central_to_periphery_volume_ratio");
 
             k12_2 = parameters.doubles("PKPD_D2_flux_across_capillaries");
-            k21_2 = parameters.doubles("PKPD_D2_flux_across_capillaries") * parameters.doubles("central_to_periphery_volume_ratio");
+            k21_2 = parameters.doubles("PKPD_D2_flux_across_capillaries") * parameters.doubles("PKPD_D2_central_to_periphery_volume_ratio");
+        }
+
+        if (parameters.doubles("PKPD_D1_central_to_periphery_volume_ratio") > 0)
+        {
+            R_1 = parameters.doubles("PKPD_D1_central_to_periphery_volume_ratio");
+        }
+        else if (parameters.doubles("central_to_periphery_volume_ratio") > 0)
+        {
+            R_1 = parameters.doubles("central_to_periphery_volume_ratio");
+        }
+        else
+        {
+            R_1 = 1.0;
+            std::cout << "You did not supply a volume ratio for your 2-compartment model." << std::endl
+                      << "  Assuming a ratio of R_1 = " << 1.0 << std::endl;
+        }
+
+        if (parameters.doubles("PKPD_D2_central_to_periphery_volume_ratio") > 0)
+        {
+            R_2 = parameters.doubles("PKPD_D2_central_to_periphery_volume_ratio");
+        }
+        else if (parameters.doubles("central_to_periphery_volume_ratio") > 0)
+        {
+            R_2 = parameters.doubles("central_to_periphery_volume_ratio");
+        }
+        else
+        {
+            R_2 = 1.0;
+            std::cout << "You did not supply a volume ratio for your 2-compartment model." << std::endl
+                      << "  Assuming a ratio of R_2 = " << 1.0 << std::endl;
         }
         need_to_check_backwards_compatibility = false;
     }
@@ -239,7 +270,6 @@ void pk_model_two_compartment(double current_time) // update the Dirichlet bound
     if (use_analytic_pk_solutions)
     {
         // pk parameters
-        static double R = parameters.doubles("central_to_periphery_volume_ratio");
         static double l_1 = parameters.doubles("PKPD_D1_central_elimination_rate");
         static double l_2 = parameters.doubles("PKPD_D2_central_elimination_rate");
 
@@ -276,15 +306,15 @@ void pk_model_two_compartment(double current_time) // update the Dirichlet bound
         if (!analytic_pk_solution_setup_done)
         {
             M_1[0][0] = -0.5 * (alpha_1 * gamma_1 * (decay_1[1] - decay_1[0]) - beta_1 * gamma_1 * (decay_1[0] + decay_1[1])) / (beta_1 * gamma_1);
-            M_1[0][1] = -0.5 * f_1 * (alpha_1*alpha_1 - beta_1*beta_1) * (decay_1[1] - decay_1[0]) / (beta_1 * gamma_1 * R);
-            M_1[1][0] = -0.5 * R * gamma_1*gamma_1 * (decay_1[0] - decay_1[1]) / (beta_1 * gamma_1 * f_1);
+            M_1[0][1] = -0.5 * f_1 * (alpha_1*alpha_1 - beta_1*beta_1) * (decay_1[1] - decay_1[0]) / (beta_1 * gamma_1 * R_1);
+            M_1[1][0] = -0.5 * R_1 * gamma_1*gamma_1 * (decay_1[0] - decay_1[1]) / (beta_1 * gamma_1 * f_1);
             M_1[1][1] = -0.5 * gamma_1 * (alpha_1 * (decay_1[0] - decay_1[1]) - beta_1 * (decay_1[0] + decay_1[1])) / (beta_1 * gamma_1);
 
             // std::cout << "M_1 = [" << M_1[0][0] << "," << M_1[0][1] << ";" << M_1[1][0] << "," << M_1[1][1] << "]" << std::endl;
 
             M_2[0][0] = -0.5 * (alpha_2 * gamma_2 * (decay2[1] - decay2[0]) - beta_2 * gamma_2 * (decay2[0] + decay2[1])) / (beta_2 * gamma_2);
-            M_2[0][1] = -0.5 * f_2 * (alpha_2*alpha_2 - beta_2*beta_2) * (decay2[1] - decay2[0]) / (beta_2 * gamma_2 * R);
-            M_2[1][0] = -0.5 * R * gamma_2*gamma_2 * (decay2[0] - decay2[1]) / (beta_2 * gamma_2 * f_2);
+            M_2[0][1] = -0.5 * f_2 * (alpha_2*alpha_2 - beta_2*beta_2) * (decay2[1] - decay2[0]) / (beta_2 * gamma_2 * R_2);
+            M_2[1][0] = -0.5 * R_2 * gamma_2*gamma_2 * (decay2[0] - decay2[1]) / (beta_2 * gamma_2 * f_2);
             M_2[1][1] = -0.5 * gamma_2 * (alpha_2 * (decay2[0] - decay2[1]) - beta_2 * (decay2[0] + decay2[1])) / (beta_2 * gamma_2);
 
             // std::cout << "M_2 = [" << M_2[0][0] << "," << M_2[0][1] << ";" << M_2[1][0] << "," << M_2[1][1] << "]" << std::endl;
@@ -301,9 +331,9 @@ void pk_model_two_compartment(double current_time) // update the Dirichlet bound
     else // use direct euler
     {
         // update PK model for drug 1
-        pk_explicit_euler_two_compartment(diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), k12_1, k21_1);
+        pk_explicit_euler_two_compartment(diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), k12_1, k21_1, R_1);
         // update PK model for drug 2
-        pk_explicit_euler_two_compartment(diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), k12_2, k21_2);
+        pk_explicit_euler_two_compartment(diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), k12_2, k21_2, R_2);
     }
 
     // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
@@ -342,10 +372,8 @@ void pk_explicit_euler_one_compartment( double dt, double &central_concentration
     if (central_concentration < 0) {central_concentration = 0;}
 }
 
-void pk_explicit_euler_two_compartment( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double k12, double k21 )
+void pk_explicit_euler_two_compartment( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double k12, double k21, double central_to_periphery_volume_ratio )
 {
-    static double central_to_periphery_volume_ratio = parameters.doubles("central_to_periphery_volume_ratio");
-
     double central_change_rate = -1 * elimination_rate * central_concentration;
     central_change_rate -= k12 * central_concentration;
     central_change_rate += k21 * periphery_concentration / central_to_periphery_volume_ratio;

@@ -21,7 +21,7 @@ double confluence_computation( void );
 void pd_function( Cell* pC, Phenotype& p, double dt );
 void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2);
 void pk_explicit_euler_one_compartment( double dt, double &central_concentration, double elimination_rate );
-void pk_explicit_euler_two_compartment( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double k12, double k21 );
+void pk_explicit_euler_two_compartment( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double k12, double k21, double central_to_periphery_volume_ratio );
 void pk_dose(double next_dose, double &central_concentration);
 void pk_update_dirichlet(std::vector<double> new_dirichlet_values);
 #endif
