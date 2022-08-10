@@ -50,7 +50,7 @@
     </options>
 
     <microenvironment_setup>
-        <variable name="PKPD_drug_number_1" units="dimensionless" ID="0">
+        <variable name="PKPD_D1" units="dimensionless" ID="0">
             <physical_parameter_set>
                 <diffusion_coefficient units="micron^2/min">100000.0</diffusion_coefficient>
                 <decay_rate units="1/min">1</decay_rate>
@@ -67,7 +67,7 @@
             </Dirichlet_options>
         </variable>
 
-        <variable name="PKPD_drug_number_2" units="dimensionless" ID="1">
+        <variable name="PKPD_D2" units="dimensionless" ID="1">
             <physical_parameter_set>
                 <diffusion_coefficient units="micron^2/min">100000.0</diffusion_coefficient>
                 <decay_rate units="1/min">1</decay_rate>
@@ -198,14 +198,14 @@
 				</motility>
 
                 <secretion>
-                    <substrate name="PKPD_drug_number_1">
+                    <substrate name="PKPD_D1">
                         <secretion_rate units="1/min">0</secretion_rate>
                         <secretion_target units="substrate density">1</secretion_target>
                         <uptake_rate units="1/min">20</uptake_rate>
                         <net_export_rate units="total substrate/min">0</net_export_rate>
                     </substrate>
 
-                    <substrate name="PKPD_drug_number_2">
+                    <substrate name="PKPD_D2">
                         <secretion_rate units="1/min">0</secretion_rate>
                         <secretion_target units="substrate density">1</secretion_target>
                         <uptake_rate units="1/min">20</uptake_rate>

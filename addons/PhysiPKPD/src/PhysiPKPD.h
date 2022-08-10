@@ -15,6 +15,7 @@ class Pharmacokinetics_Model;
 class Pharmacokinetics_Model
 {
  public:
+    std::string substrate_name;
 	int substrate_index; // index of the substrate following pk dynamics
     std::vector<double> dose_times;
     std::vector<double> dose_amounts;
@@ -37,6 +38,7 @@ class Pharmacokinetics_Model
 
 Pharmacokinetics_Model *create_pk_model(void);
 Pharmacokinetics_Model *create_pk_model(int substrate_index);
+Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substrate_name);
 
 void PK_model( double current_time );
 void setup_pk_dosing_schedule(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time);

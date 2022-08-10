@@ -257,9 +257,9 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
     Cell_Definition *pCD = find_cell_definition(pC->type);
 
     // find index of drug 1 in the microenvironment
-    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
+    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
     // find index of drug 2 in the microenvironment
-    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
+    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_D2");
 
     // find index of damage variable for drug 1
     int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
