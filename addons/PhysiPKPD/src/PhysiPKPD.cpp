@@ -9,7 +9,7 @@ static int nPKPD_D2;
 
 static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots for determining when to do these
 
-pk_instance::pk_instance()
+Pharmacokinetics_Model::Pharmacokinetics_Model()
 {
 	substrate_index = 0;
     dose_times = {};
@@ -18,7 +18,7 @@ pk_instance::pk_instance()
     dose_count = 0;
     max_doses = 0;
 
-    reflection_coefficient = 1.0;
+    biot_number = 0.0;
 
     setup_done = false;
 
@@ -28,18 +28,18 @@ pk_instance::pk_instance()
 	return; 
 }
 
-pk_instance* create_pk_instance( int substrate_index )
+Pharmacokinetics_Model* create_pk_model( int substrate_index )
 {
-    pk_instance* pNew;
-    pNew = new pk_instance;
+    Pharmacokinetics_Model* pNew;
+    pNew = new Pharmacokinetics_Model;
     pNew->substrate_index = substrate_index;
     return pNew;
 }
 
-pk_instance* create_pk_instance( void )
+Pharmacokinetics_Model* create_pk_model( void )
 {
-    pk_instance* pNew;
-    pNew = new pk_instance;
+    Pharmacokinetics_Model* pNew;
+    pNew = new Pharmacokinetics_Model;
     return pNew;
 }
 
@@ -48,13 +48,13 @@ void PK_model( double current_time )
     // static void (*update_function)(double);
     static bool need_to_setup = true;
 
-    static std::vector<pk_instance*> all_pk;
+    static std::vector<Pharmacokinetics_Model*> all_pk;
 
     if (need_to_setup)
     {
         for (int n = 0; n < microenvironment.number_of_densities(); n++)
         {
-            all_pk.push_back(create_pk_instance(n));
+            all_pk.push_back(create_pk_model(n));
             setup_pk_advancer(all_pk[n]);
             all_pk[n]->compartment_concentrations = {0,0};
             all_pk[n]->advance = &single_pk_model_two_compartment;
@@ -75,7 +75,7 @@ void PK_model( double current_time )
     // update_function(current_time);
 }
 
-void setup_pk_advancer(pk_instance* pPK)
+void setup_pk_advancer(Pharmacokinetics_Model* pPK)
 {
     // pk parameters
     double k12;
@@ -86,7 +86,7 @@ void setup_pk_advancer(pk_instance* pPK)
     // assume for now that we are using a 2-compartment model and will be solving it analytically
     if (pPK->substrate_index==0)
     {
-        pPK->reflection_coefficient = parameters.doubles("PKPD_D1_biot_number");
+        pPK->biot_number = parameters.doubles("PKPD_D1_biot_number");
         pPK->max_doses = parameters.ints("PKPD_D1_max_number_doses");
         if (parameters.doubles("PKPD_D1_central_to_periphery_clearance_rate") != 0 || parameters.doubles("PKPD_D1_periphery_to_central_clearance_rate") != 0 ||
             parameters.doubles("PKPD_D1_flux_across_capillaries") == 0 )
@@ -122,7 +122,7 @@ void setup_pk_advancer(pk_instance* pPK)
         l = parameters.doubles("PKPD_D1_central_elimination_rate");
     } else if (pPK->substrate_index==1)
     {
-        pPK->reflection_coefficient = parameters.doubles("PKPD_D2_biot_number");
+        pPK->biot_number = parameters.doubles("PKPD_D2_biot_number");
         pPK->max_doses = parameters.ints("PKPD_D2_max_number_doses");
         if (parameters.doubles("PKPD_D2_central_to_periphery_clearance_rate") != 0 || parameters.doubles("PKPD_D2_periphery_to_central_clearance_rate") != 0 ||
             parameters.doubles("PKPD_D2_flux_across_capillaries") == 0 )
@@ -176,7 +176,7 @@ void setup_pk_advancer(pk_instance* pPK)
     // std::cout << "M = [" << pPK->M[0][0] << "," << pPK->M[0][1] << ";" << pPK->M[1][0] << "," << pPK->M[1][1] << "]" << std::endl;
 }
 
-void setup_pk_single_dosing_schedule(pk_instance *pPK, double current_time)
+void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time)
 {
     if (!pPK->setup_done)
     {
@@ -547,7 +547,7 @@ void pk_model_two_compartment(double current_time) // update the Dirichlet bound
     return;
 }
 
-void single_pk_model_two_compartment(pk_instance* pPK, double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
+void single_pk_model_two_compartment(Pharmacokinetics_Model* pPK, double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
 {
     // add doses if time for that
     // it should be possible to report that the dosing is all done by setting these update functions to null; something like pk_dose_fn = pk_dose; if( dose_count>max_number_doses ) {pk_dose_fn = null;}
@@ -571,7 +571,7 @@ void single_pk_model_two_compartment(pk_instance* pPK, double current_time) // u
         {
             if (microenvironment.get_substrate_dirichlet_activation(pPK->substrate_index, i))
             {
-                microenvironment.update_dirichlet_node(i, pPK->substrate_index, pPK->compartment_concentrations[0] * pPK->reflection_coefficient);
+                microenvironment.update_dirichlet_node(i, pPK->substrate_index, pPK->compartment_concentrations[0] * pPK->biot_number);
             }
         }
     }

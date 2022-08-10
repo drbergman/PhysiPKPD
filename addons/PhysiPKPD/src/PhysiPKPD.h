@@ -1,5 +1,5 @@
-#ifndef _PhysiPKPD_h_
-#define _PhysiPKPD_h_
+#ifndef __PhysiPKPD_h__
+#define __PhysiPKPD_h__
 
 #include "../../../core/PhysiCell.h"
 #include "../../../core/PhysiCell_phenotype.h"
@@ -10,35 +10,33 @@
 using namespace BioFVM;
 using namespace PhysiCell;
 
-class pk_instance;
+class Pharmacokinetics_Model;
 
-class pk_instance
+class Pharmacokinetics_Model
 {
  public:
 	int substrate_index; // index of the substrate following pk dynamics
     std::vector<double> dose_times;
     std::vector<double> dose_amounts;
+    double confluence_check_time;
+
+    bool setup_done;
 
     int dose_count;
     int max_doses;
 
     std::vector<std::vector<double>> M;
-
     std::vector<double> compartment_concentrations;
 
-    double reflection_coefficient;
+    double biot_number;
 
-    void (*advance)( pk_instance* pPK, double current_time );
-
-    bool setup_done;
-
-    double confluence_check_time;
+    void (*advance)( Pharmacokinetics_Model* pPK, double current_time );
 		
-	pk_instance(); // done
+	Pharmacokinetics_Model(); // done
 };
 
-pk_instance* create_pk_instance( void );
-pk_instance *create_pk_instance(int substrate_index);
+Pharmacokinetics_Model *create_pk_model(void);
+Pharmacokinetics_Model *create_pk_model(int substrate_index);
 
 void PK_model( double current_time );
 void setup_pk_dosing_schedule(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time);
@@ -55,8 +53,8 @@ void pk_explicit_euler_two_compartment( double dt, double &periphery_concentrati
 void pk_dose(double next_dose, double &central_concentration);
 void pk_update_dirichlet(std::vector<double> new_dirichlet_values);
 
-void setup_pk_advancer(pk_instance* pPK);
-void single_pk_model_two_compartment(pk_instance* pPK, double current_time); // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
-void setup_pk_single_dosing_schedule(pk_instance *pPK, double current_time);
+void setup_pk_advancer(Pharmacokinetics_Model* pPK);
+void single_pk_model_two_compartment(Pharmacokinetics_Model* pPK, double current_time); // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
+void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time);
 
 #endif
