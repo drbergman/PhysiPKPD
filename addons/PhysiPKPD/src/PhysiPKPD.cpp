@@ -34,11 +34,10 @@ Pharmacokinetics_Model* create_pk_model( int substrate_index, std::string substr
     pNew->substrate_name = substrate_name;
     return pNew;
 }
-
+//
 Pharmacokinetics_Model* create_pk_model( int substrate_index )
 {
-    Pharmacokinetics_Model* pNew;
-    pNew = new Pharmacokinetics_Model;
+    Pharmacokinetics_Model* pNew = create_pk_model();
     pNew->substrate_index = substrate_index;
     return pNew;
 }
@@ -52,9 +51,40 @@ Pharmacokinetics_Model* create_pk_model( void )
 
 void PK_model( double current_time )
 {
-    static std::vector<int> PKPD_ind = {microenvironment.find_density_index("PKPD_D1"),microenvironment.find_density_index("PKPD_D2")};
-    static std::vector<std::string> PKPD_names = {"PKPD_D1","PKPD_D2"};
-    // static void (*update_function)(double);
+    static std::vector<std::string> PKPD_names;
+    static std::vector<int> PKPD_ind;
+    static bool need_to_parse_pk_names = true;
+    if (need_to_parse_pk_names)
+    {
+        static std::string s = parameters.strings("PKPD_pk_substrate_names");
+        static std::string delimiter = ",";
+        static size_t pos = 0;
+        static std::string token;
+        while ((pos = s.find(delimiter)) != std::string::npos)
+        {
+            token = s.substr(0, pos);
+            if (microenvironment.find_density_index(token) != -1)
+            {
+                PKPD_names.push_back(token);
+                PKPD_ind.push_back(microenvironment.find_density_index(token));
+            }
+            else
+            {
+                std::cout << "WARNING: " << token << " is not a substrate in the microenvironment." << std::endl;
+            }
+            s.erase(0, pos + 1);
+        }
+        if (microenvironment.find_density_index(s) != -1)
+        {
+            PKPD_names.push_back(s);
+            PKPD_ind.push_back(microenvironment.find_density_index(s));
+        }
+        else
+        {
+            std::cout << "WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
+        }
+        need_to_parse_pk_names = false;
+    }
     static bool need_to_setup = true;
 
     static std::vector<Pharmacokinetics_Model*> all_pk;
@@ -79,6 +109,21 @@ void PK_model( double current_time )
         }
         all_pk[n]->advance(all_pk[n], current_time);
     }
+
+#pragma omp parallel for
+    for (unsigned int i = 0; i < microenvironment.mesh.voxels.size(); i++)
+    {
+        if (microenvironment.mesh.voxels[i].is_Dirichlet == true)
+        {
+            for (unsigned int j = 0; j < all_pk.size(); j++)
+            {
+                if (microenvironment.get_substrate_dirichlet_activation(all_pk[j]->substrate_index, i)) // no guarantee that the ordering in the user parameters matches the indexing order
+                {
+                    microenvironment.update_dirichlet_node(i, all_pk[j]->substrate_index, all_pk[j]->compartment_concentrations[0] * all_pk[j]->biot_number);
+                }
+            }
+        }
+    }
 }
 
 void setup_pk_advancer(Pharmacokinetics_Model* pPK)
@@ -90,6 +135,43 @@ void setup_pk_advancer(Pharmacokinetics_Model* pPK)
     double l;
 
     // assume for now that we are using a 2-compartment model and will be solving it analytically
+
+    pPK->biot_number = parameters.doubles(pPK->substrate_name + "_biot_number");
+    pPK->max_doses = parameters.ints(pPK->substrate_name + "_max_number_doses");
+    if (parameters.doubles(pPK->substrate_name + "_central_to_periphery_clearance_rate") != 0 || parameters.doubles(pPK->substrate_name + "_periphery_to_central_clearance_rate") != 0 ||
+        parameters.doubles(pPK->substrate_name + "_flux_across_capillaries") == 0)
+    {
+        // then do not need to worry about backwards compatibility
+        k12 = parameters.doubles(pPK->substrate_name + "_central_to_periphery_clearance_rate");
+        k21 = parameters.doubles(pPK->substrate_name + "_periphery_to_central_clearance_rate");
+    }
+    else // the new clearance rates are all 0 and one of the old flux rates is nonzero, so it seems like they are using the old pk model syntax
+    {
+        std::cout << "You seem to be using the simplified PK dynamics with 2 compartments" << std::endl;
+        std::cout << "  You can achieve the same thing using PKPD_D1_central_to_periphery_clearance_rate = PKPD_D1_flux_across_capillaries" << std::endl;
+        std::cout << "  and PKPD_D1_periphery_to_central_clearance_rate = PKPD_D1_flux_across_capillaries * PKPD_D1_central_to_periphery_volume_ratio" << std::endl
+                  << std::endl;
+
+        k12 = parameters.doubles(pPK->substrate_name + "_flux_across_capillaries");
+        k21 = parameters.doubles(pPK->substrate_name + "_flux_across_capillaries") * parameters.doubles(pPK->substrate_name + "_central_to_periphery_volume_ratio");
+    }
+    if (parameters.doubles(pPK->substrate_name + "_central_to_periphery_volume_ratio") > 0)
+    {
+        R = parameters.doubles(pPK->substrate_name + "_central_to_periphery_volume_ratio");
+    }
+    else if (parameters.doubles("central_to_periphery_volume_ratio") > 0)
+    {
+        R = parameters.doubles("central_to_periphery_volume_ratio");
+    }
+    else
+    {
+        R = 1.0;
+        std::cout << "You did not supply a volume ratio for your 2-compartment model." << std::endl
+                  << "  Assuming a ratio of R = " << 1.0 << std::endl;
+    }
+    l = parameters.doubles(pPK->substrate_name + "_central_elimination_rate");
+
+    /*
     if (pPK->substrate_name=="PKPD_D1")
     {
         pPK->biot_number = parameters.doubles("PKPD_D1_biot_number");
@@ -163,6 +245,7 @@ void setup_pk_advancer(Pharmacokinetics_Model* pPK)
         }
         l = parameters.doubles("PKPD_D2_central_elimination_rate");
     }
+    */
 
     // pre-computed quantities to express solution to matrix exponential
     double f = k21 / k12;
@@ -206,48 +289,49 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
         {
             pPK->confluence_check_time += phenotype_dt;
         }
-        
-        // if (pPK->substrate_name=="PKPD_D1" && (parameters.bools("PKPD_D1_set_first_dose_time") || (current_time > pPK->confluence_check_time - tolerance && confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition"))))
-        // {
-        //     if (parameters.ints("PKPD_D1_max_number_doses")==0) {pPK->setup_done = true; return;}
-        //     pPK->dose_times.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
-        //     pPK->dose_amounts.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
-        //     pPK->dose_times[0] = parameters.bools("PKPD_D1_set_first_dose_time") ? parameters.doubles("PKPD_D1_first_dose_time") : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now
-        //     for (unsigned int i = 1; i < parameters.ints("PKPD_D1_max_number_doses"); i++)
-        //     {
-        //         pPK->dose_times[i] = pPK->dose_times[i - 1] + parameters.doubles("PKPD_D1_dose_interval");
-        //     }
-        //     for (unsigned int i = 0; i < parameters.ints("PKPD_D1_max_number_doses"); i++)
-        //     {
-        //         pPK->dose_amounts[i] = i < parameters.ints("PKPD_D1_number_loading_doses") ? parameters.doubles("PKPD_D1_central_increase_on_loading_dose") : parameters.doubles("PKPD_D1_central_increase_on_dose");
-        //     }
-        //     pPK->setup_done = true;
-        // }
-        // else
-        // {
-        //     pPK->confluence_check_time += phenotype_dt;
-        // }
+        /*
+        if (pPK->substrate_name=="PKPD_D1" && (parameters.bools("PKPD_D1_set_first_dose_time") || (current_time > pPK->confluence_check_time - tolerance && confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition"))))
+        {
+            if (parameters.ints("PKPD_D1_max_number_doses")==0) {pPK->setup_done = true; return;}
+            pPK->dose_times.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
+            pPK->dose_amounts.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
+            pPK->dose_times[0] = parameters.bools("PKPD_D1_set_first_dose_time") ? parameters.doubles("PKPD_D1_first_dose_time") : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now
+            for (unsigned int i = 1; i < parameters.ints("PKPD_D1_max_number_doses"); i++)
+            {
+                pPK->dose_times[i] = pPK->dose_times[i - 1] + parameters.doubles("PKPD_D1_dose_interval");
+            }
+            for (unsigned int i = 0; i < parameters.ints("PKPD_D1_max_number_doses"); i++)
+            {
+                pPK->dose_amounts[i] = i < parameters.ints("PKPD_D1_number_loading_doses") ? parameters.doubles("PKPD_D1_central_increase_on_loading_dose") : parameters.doubles("PKPD_D1_central_increase_on_dose");
+            }
+            pPK->setup_done = true;
+        }
+        else
+        {
+            pPK->confluence_check_time += phenotype_dt;
+        }
 
-        // if (pPK->substrate_name=="PKPD_D2" && (parameters.bools("PKPD_D2_set_first_dose_time") || (current_time > pPK->confluence_check_time - tolerance && confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition"))))
-        // {
-        //     if (parameters.ints("PKPD_D2_max_number_doses")==0) {pPK->setup_done = true; return;}
-        //     pPK->dose_times.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
-        //     pPK->dose_amounts.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
-        //     pPK->dose_times[0] = parameters.bools("PKPD_D2_set_first_dose_time") ? parameters.doubles("PKPD_D2_first_dose_time") : current_time;
-        //     for (unsigned int i = 1; i < parameters.ints("PKPD_D2_max_number_doses"); i++)
-        //     {
-        //         pPK->dose_times[i] = pPK->dose_times[i - 1] + parameters.doubles("PKPD_D2_dose_interval");
-        //     }
-        //     for (unsigned int i = 0; i < parameters.ints("PKPD_D2_max_number_doses"); i++)
-        //     {
-        //         pPK->dose_amounts[i] = i < parameters.ints("PKPD_D2_number_loading_doses") ? parameters.doubles("PKPD_D2_central_increase_on_loading_dose") : parameters.doubles("PKPD_D2_central_increase_on_dose");
-        //     }
-        //     pPK->setup_done = true;
-        // }
-        // else
-        // {
-        //     pPK->confluence_check_time += phenotype_dt;
-        // }
+        if (pPK->substrate_name=="PKPD_D2" && (parameters.bools("PKPD_D2_set_first_dose_time") || (current_time > pPK->confluence_check_time - tolerance && confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition"))))
+        {
+            if (parameters.ints("PKPD_D2_max_number_doses")==0) {pPK->setup_done = true; return;}
+            pPK->dose_times.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
+            pPK->dose_amounts.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
+            pPK->dose_times[0] = parameters.bools("PKPD_D2_set_first_dose_time") ? parameters.doubles("PKPD_D2_first_dose_time") : current_time;
+            for (unsigned int i = 1; i < parameters.ints("PKPD_D2_max_number_doses"); i++)
+            {
+                pPK->dose_times[i] = pPK->dose_times[i - 1] + parameters.doubles("PKPD_D2_dose_interval");
+            }
+            for (unsigned int i = 0; i < parameters.ints("PKPD_D2_max_number_doses"); i++)
+            {
+                pPK->dose_amounts[i] = i < parameters.ints("PKPD_D2_number_loading_doses") ? parameters.doubles("PKPD_D2_central_increase_on_loading_dose") : parameters.doubles("PKPD_D2_central_increase_on_dose");
+            }
+            pPK->setup_done = true;
+        }
+        else
+        {
+            pPK->confluence_check_time += phenotype_dt;
+        }
+        */
     }
     return;
 }
@@ -592,17 +676,17 @@ void single_pk_model_two_compartment(Pharmacokinetics_Model* pPK, double current
     pPK->compartment_concentrations[1] = pPK->M[1][0] * previous_compartment_concentrations[0] + pPK->M[1][1] * previous_compartment_concentrations[1];
 
     // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
-    #pragma omp parallel for 
-	for( unsigned int i=0 ; i < microenvironment.mesh.voxels.size() ;i++ )
-	{
-		if( microenvironment.mesh.voxels[i].is_Dirichlet == true )
-        {
-            if (microenvironment.get_substrate_dirichlet_activation(pPK->substrate_index, i))
-            {
-                microenvironment.update_dirichlet_node(i, pPK->substrate_index, pPK->compartment_concentrations[0] * pPK->biot_number);
-            }
-        }
-    }
+    // #pragma omp parallel for 
+	// for( unsigned int i=0 ; i < microenvironment.mesh.voxels.size() ;i++ )
+	// {
+	// 	if( microenvironment.mesh.voxels[i].is_Dirichlet == true )
+    //     {
+    //         if (microenvironment.get_substrate_dirichlet_activation(pPK->substrate_index, i))
+    //         {
+    //             microenvironment.update_dirichlet_node(i, pPK->substrate_index, pPK->compartment_concentrations[0] * pPK->biot_number);
+    //         }
+    //     }
+    // }
    return;
 }
 
