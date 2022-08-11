@@ -135,7 +135,6 @@ void setup_pk_advancer(Pharmacokinetics_Model* pPK)
     double l;
 
     // assume for now that we are using a 2-compartment model and will be solving it analytically
-
     pPK->biot_number = parameters.doubles(pPK->substrate_name + "_biot_number");
     pPK->max_doses = parameters.ints(pPK->substrate_name + "_max_number_doses");
     if (parameters.doubles(pPK->substrate_name + "_central_to_periphery_clearance_rate") != 0 || parameters.doubles(pPK->substrate_name + "_periphery_to_central_clearance_rate") != 0 ||
@@ -148,8 +147,8 @@ void setup_pk_advancer(Pharmacokinetics_Model* pPK)
     else // the new clearance rates are all 0 and one of the old flux rates is nonzero, so it seems like they are using the old pk model syntax
     {
         std::cout << "You seem to be using the simplified PK dynamics with 2 compartments" << std::endl;
-        std::cout << "  You can achieve the same thing using PKPD_D1_central_to_periphery_clearance_rate = PKPD_D1_flux_across_capillaries" << std::endl;
-        std::cout << "  and PKPD_D1_periphery_to_central_clearance_rate = PKPD_D1_flux_across_capillaries * PKPD_D1_central_to_periphery_volume_ratio" << std::endl
+        std::cout << "  You can achieve the same thing using [drug_name]_central_to_periphery_clearance_rate = [drug_name]_flux_across_capillaries" << std::endl;
+        std::cout << "  and [drug_name]_periphery_to_central_clearance_rate = [drug_name]_flux_across_capillaries * [drug_name]_central_to_periphery_volume_ratio" << std::endl
                   << std::endl;
 
         k12 = parameters.doubles(pPK->substrate_name + "_flux_across_capillaries");
@@ -166,102 +165,34 @@ void setup_pk_advancer(Pharmacokinetics_Model* pPK)
     else
     {
         R = 1.0;
-        std::cout << "You did not supply a volume ratio for your 2-compartment model." << std::endl
+        std::cout << "You did not supply a volume ratio for the 2-compartment model for " << pPK->substrate_name << "." << std::endl
                   << "  Assuming a ratio of R = " << 1.0 << std::endl;
     }
     l = parameters.doubles(pPK->substrate_name + "_central_elimination_rate");
 
-    /*
-    if (pPK->substrate_name=="PKPD_D1")
-    {
-        pPK->biot_number = parameters.doubles("PKPD_D1_biot_number");
-        pPK->max_doses = parameters.ints("PKPD_D1_max_number_doses");
-        if (parameters.doubles("PKPD_D1_central_to_periphery_clearance_rate") != 0 || parameters.doubles("PKPD_D1_periphery_to_central_clearance_rate") != 0 ||
-            parameters.doubles("PKPD_D1_flux_across_capillaries") == 0 )
-        {
-            // then do not need to worry about backwards compatibility
-            k12 = parameters.doubles("PKPD_D1_central_to_periphery_clearance_rate");
-            k21 = parameters.doubles("PKPD_D1_periphery_to_central_clearance_rate");
-        }
-        else // the new clearance rates are all 0 and one of the old flux rates is nonzero, so it seems like they are using the old pk model syntax
-        {
-            std::cout << "You seem to be using the simplified PK dynamics with 2 compartments" << std::endl;
-            std::cout << "  You can achieve the same thing using PKPD_D1_central_to_periphery_clearance_rate = PKPD_D1_flux_across_capillaries" << std::endl;
-            std::cout << "  and PKPD_D1_periphery_to_central_clearance_rate = PKPD_D1_flux_across_capillaries * PKPD_D1_central_to_periphery_volume_ratio" << std::endl
-                      << std::endl;
-
-            k12 = parameters.doubles("PKPD_D1_flux_across_capillaries");
-            k21 = parameters.doubles("PKPD_D1_flux_across_capillaries") * parameters.doubles("PKPD_D1_central_to_periphery_volume_ratio");
-        }
-        if (parameters.doubles("PKPD_D1_central_to_periphery_volume_ratio") > 0)
-        {
-            R = parameters.doubles("PKPD_D1_central_to_periphery_volume_ratio");
-        }
-        else if (parameters.doubles("central_to_periphery_volume_ratio") > 0)
-        {
-            R = parameters.doubles("central_to_periphery_volume_ratio");
-        }
-        else
-        {
-            R = 1.0;
-            std::cout << "You did not supply a volume ratio for your 2-compartment model." << std::endl
-                      << "  Assuming a ratio of R = " << 1.0 << std::endl;
-        }
-        l = parameters.doubles("PKPD_D1_central_elimination_rate");
-    } else if (pPK->substrate_name=="PKPD_D2")
-    {
-        pPK->biot_number = parameters.doubles("PKPD_D2_biot_number");
-        pPK->max_doses = parameters.ints("PKPD_D2_max_number_doses");
-        if (parameters.doubles("PKPD_D2_central_to_periphery_clearance_rate") != 0 || parameters.doubles("PKPD_D2_periphery_to_central_clearance_rate") != 0 ||
-            parameters.doubles("PKPD_D2_flux_across_capillaries") == 0 )
-        {
-            // then do not need to worry about backwards compatibility
-            k12 = parameters.doubles("PKPD_D2_central_to_periphery_clearance_rate");
-            k21 = parameters.doubles("PKPD_D2_periphery_to_central_clearance_rate");
-        }
-        else // the new clearance rates are all 0 and one of the old flux rates is nonzero, so it seems like they are using the old pk model syntax
-        {
-            std::cout << "You seem to be using the simplified PK dynamics with 2 compartments" << std::endl;
-            std::cout << "  You can achieve the same thing using PKPD_D2_central_to_periphery_clearance_rate = PKPD_D2_flux_across_capillaries" << std::endl;
-            std::cout << "  and PKPD_D2_periphery_to_central_clearance_rate = PKPD_D2_flux_across_capillaries * PKPD_D2_central_to_periphery_volume_ratio" << std::endl
-                      << std::endl;
-
-            k12 = parameters.doubles("PKPD_D2_flux_across_capillaries");
-            k21 = parameters.doubles("PKPD_D2_flux_across_capillaries") * parameters.doubles("PKPD_D2_central_to_periphery_volume_ratio");
-        }
-        if (parameters.doubles("PKPD_D2_central_to_periphery_volume_ratio") > 0)
-        {
-            R = parameters.doubles("PKPD_D2_central_to_periphery_volume_ratio");
-        }
-        else if (parameters.doubles("central_to_periphery_volume_ratio") > 0)
-        {
-            R = parameters.doubles("central_to_periphery_volume_ratio");
-        }
-        else
-        {
-            R = 1.0;
-            std::cout << "You did not supply a volume ratio for your 2-compartment model." << std::endl
-                      << "  Assuming a ratio of R = " << 1.0 << std::endl;
-        }
-        l = parameters.doubles("PKPD_D2_central_elimination_rate");
-    }
-    */
-
     // pre-computed quantities to express solution to matrix exponential
-    double f = k21 / k12;
-    double alpha = k12 + l - f * k12;
-    double beta = sqrt(k12 * k12 * (f + 1) * (f + 1) - 2 * k12 * l * f + 2 * k12 * l + l * l);
-    double a = -0.5 * (k12 * (f + 1) + l);
+    double beta = sqrt((k12 + k21) * (k12 + k21) + 2 * l * (k12 - k21) + l * l);
+    if (beta==0)
+    {
+        std::cout << "WARNING: " << pPK->substrate_name << " has PK parameters that cannot used by this framework." << std::endl;
+        std::cout << "  This is because k12=0 and k21=elimination rate." << std::endl;
+        std::cout << "  Since k12=0 means the periphery never fills up, k21 is meaningless." << std::endl;
+        std::cout << "  Will change k21 to make this work." << std::endl;
+        std::cout << "  This is a simple solution for now. Eventually, this may trigger a switch to a 1-compartment model." << std::endl;
+        k21 += 1.0;
+        beta = sqrt((k12 + k21) * (k12 + k21) + 2 * l * (k12 - k21) + l * l);
+    }
+    double alpha = k12 - k21 + l;
+    double a = -0.5 * (k12 + k21 + l);
     double b = 0.5 * beta;
-    double gamma = 2 * f * k12;
     std::vector<double> ev = {a - b, a + b}; // eigenvalues
     std::vector<double> decay = {exp(ev[0] * diffusion_dt), exp(ev[1] * diffusion_dt)};
 
     pPK->M = {{0,0},{0,0}};
-    pPK->M[0][0] = -0.5 * (alpha * gamma * (decay[1] - decay[0]) - beta * gamma * (decay[0] + decay[1])) / (beta * gamma);
-    pPK->M[0][1] = -0.5 * f * (alpha * alpha - beta * beta) * (decay[1] - decay[0]) / (beta * gamma * R);
-    pPK->M[1][0] = -0.5 * R * gamma * gamma * (decay[0] - decay[1]) / (beta * gamma * f);
-    pPK->M[1][1] = -0.5 * gamma * (alpha * (decay[0] - decay[1]) - beta * (decay[0] + decay[1])) / (beta * gamma);
+    pPK->M[0][0] = -0.5 * (alpha * (decay[1] - decay[0]) - beta * (decay[0] + decay[1])) / beta;
+    pPK->M[0][1] = k21 * (decay[1] - decay[0]) / (beta * R);
+    pPK->M[1][0] = R * k12 * (decay[1] - decay[0]) / beta;
+    pPK->M[1][1] = -0.5 * (alpha * (decay[0] - decay[1]) - beta * (decay[0] + decay[1])) / beta;
     // std::cout << "M = [" << pPK->M[0][0] << "," << pPK->M[0][1] << ";" << pPK->M[1][0] << "," << pPK->M[1][1] << "]" << std::endl;
 }
 
@@ -336,6 +267,24 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
     return;
 }
 
+void single_pk_model_two_compartment(Pharmacokinetics_Model* pPK, double current_time)
+{
+    // add dose if time for that
+    if (pPK->dose_count < pPK->max_doses && current_time > pPK->dose_times[pPK->dose_count] - tolerance )
+    {
+        pPK->compartment_concentrations[0] += pPK->dose_amounts[pPK->dose_count];
+        pPK->dose_count++;
+    }
+
+    // store previous quantities for computation
+    std::vector<double> previous_compartment_concentrations = pPK->compartment_concentrations;
+
+    pPK->compartment_concentrations[0] = pPK->M[0][0] * previous_compartment_concentrations[0] + pPK->M[0][1] * previous_compartment_concentrations[1];
+    pPK->compartment_concentrations[1] = pPK->M[1][0] * previous_compartment_concentrations[0] + pPK->M[1][1] * previous_compartment_concentrations[1];
+
+   return;
+}
+
 void setup_pk_dosing_schedule(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
 {
     nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
@@ -389,6 +338,7 @@ void setup_pk_dosing_schedule(std::vector<bool> &setup_done, double current_time
     }
 }
 
+/* these functions were used when hard-coding PKPD_drug_number_1 and PKPD_drug_number_2
 void pk_model_one_compartment(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
 {
     // Set up drug 1
@@ -462,7 +412,7 @@ void pk_model_one_compartment(double current_time) // update the Dirichlet bound
     return;
 }
 
-void pk_model_two_compartment(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
+void pk_model_two_compartment(double current_time)
 {
     // Set up drug 1
     static int PKPD_D1_dose_count = 0;
@@ -659,37 +609,6 @@ void pk_model_two_compartment(double current_time) // update the Dirichlet bound
     return;
 }
 
-void single_pk_model_two_compartment(Pharmacokinetics_Model* pPK, double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
-{
-    // add doses if time for that
-    // it should be possible to report that the dosing is all done by setting these update functions to null; something like pk_dose_fn = pk_dose; if( dose_count>max_number_doses ) {pk_dose_fn = null;}
-    if (pPK->dose_count < pPK->max_doses && current_time > pPK->dose_times[pPK->dose_count] - tolerance )
-    {
-        pPK->compartment_concentrations[0] += pPK->dose_amounts[pPK->dose_count];
-        pPK->dose_count++;
-    }
-
-    // store previous quantities for computation
-    std::vector<double> previous_compartment_concentrations = pPK->compartment_concentrations;
-
-    pPK->compartment_concentrations[0] = pPK->M[0][0] * previous_compartment_concentrations[0] + pPK->M[0][1] * previous_compartment_concentrations[1];
-    pPK->compartment_concentrations[1] = pPK->M[1][0] * previous_compartment_concentrations[0] + pPK->M[1][1] * previous_compartment_concentrations[1];
-
-    // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
-    // #pragma omp parallel for 
-	// for( unsigned int i=0 ; i < microenvironment.mesh.voxels.size() ;i++ )
-	// {
-	// 	if( microenvironment.mesh.voxels[i].is_Dirichlet == true )
-    //     {
-    //         if (microenvironment.get_substrate_dirichlet_activation(pPK->substrate_index, i))
-    //         {
-    //             microenvironment.update_dirichlet_node(i, pPK->substrate_index, pPK->compartment_concentrations[0] * pPK->biot_number);
-    //         }
-    //     }
-    // }
-   return;
-}
-
 void pk_update_dirichlet(std::vector<double> new_dirichlet_values)
 {
     static std::vector<int> nPKPD_drugs{nPKPD_D1, nPKPD_D2};
@@ -736,6 +655,7 @@ void pk_dose(double next_dose, double &central_concentration)
 {
     central_concentration += next_dose;
 }
+*/
 
 void pd_function(Cell *pC, Phenotype &p, double dt)
 {
