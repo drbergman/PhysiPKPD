@@ -101,8 +101,12 @@ Since the periphery is effectively excluded in this case, the value of $k_{21}$ 
 
 We are also working on including a way for users to implement even more complex PK dynamics.
 
-For each drug, you can set the following parameters in `user_parameters`.
-For example, a substrate called `myDrug` with 10 doses administered would have `myDrug_max_number_doses` set to `10`.
+For each substrate, you can set the following parameters in `user_parameters`.
+For example, a substrate called `myDrug` with 10 doses administered would have the following in `user_parameters`: 
+
+```
+<myDrug_max_number_doses type="int">10</myDrug_max_number_doses>
+```
 
 | Parameter | Type | Description | If Missing |
 | :-- | --- | :-: | --- |
@@ -115,19 +119,19 @@ For example, a substrate called `myDrug` with 10 doses administered would have `
 | `S_central_increase_on_loading_dose` | `double` | Increase in concentration in central compartment after a loading dose | If `S_number_loading_doses`>0, throws an error |
 | `S_central_increase_on_dose` | `double` | Increase in concentration in central compartment after a regular dose | If `S_max_number_doses`>`S_number_loading_doses`, throws an error |
 | `S_central_elimination_rate` $(\lambda)$ | `double` | Linear elimination rate in central compartment (in mintues<sup>-1</sup>) | Set to `0` |
-| `S_flux_across_capillaries`<a name="old_flux_par"></a> | `double` | **While this is still allowed, consider using the following two parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) | See below |
 | `S_central_to_periphery_volume_ratio` $(R = V_1/V_2 = V_C/V_P)$ | `double` | Ratio of central compartment to periphery compartment | Set to `central_to_periphery_volume_ratio` |
 | `central_to_periphery_volume_ratio` $(R = V_1/V_2 = V_C/V_P)$ | `double` | Ratio of central compartment to periphery compartment *for any substrates without a specific volume ratio as above* | Set to `1` |
 | `S_central_to_periphery_clearance_rate` $(k_{12})$ | `double` | Rate of change in concentration in central compartment due to distribution (in minutes<sup>-1</sup>) | Set to `S_flux_across_capillaries`, if present. Otherwise, set to `0` |
 | `S_periphery_to_central_clearance_rate` $(k_{21})$ | `double` | Rate of change in concentration in periphery compartment due to redistribution (in minutes<sup>-1</sup>) | Set to `S_flux_across_capillaries` $\times$ `S_central_to_periphery_volume_ratio`, if present. Otherwise, set to `0` |
-| `S_biot_number` | `double` | Ratio of drug concentration on boundary of microenvironment (Dirichlet condition) and concentration in systemic circulation | Set to `1` |
+| `S_flux_across_capillaries`<a name="old_flux_par"></a> | `double` | **While this is still allowed, consider using the above two parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) | See above |
+| `S_biot_number` | `double` | Ratio of substrate concentration on boundary of microenvironment (Dirichlet condition) and concentration in systemic circulation | Set to `1` |
 <p align="center">
     <b>Table:</b> PK Parameters
 </p>
 
 [^1]: To use these new parameters, you will want to set $k_{12}$ as your original flux rate and $k_{21}$ as `S_flux_across_capillaries * S_central_to_periphery_volume_ratio`.
 
-You can also set the following parameters in `microenvironment_setup` for each drug:
+You can also set the following parameters in `microenvironment_setup` for each substrate:
 | Parameter | Description |
 | :--| --- |
 | `diffusion_coefficient` | Diffusion rate in the microenvironment |
@@ -138,6 +142,7 @@ You can also set the following parameters in `microenvironment_setup` for each d
 
 ### PD parameters <a name="pd_pars"></a>
 For each cell type, all of the PD parameters are in `custom_data`.
+
 
 #### Damage Accumulation Parameters <a name="dam_pars"></a>
 Each cell affected by a substrate `S` accumulates damage, $D$, based on the *amount*, $A$ of the substrate internalized.
@@ -153,16 +158,23 @@ $$
 Note that since damage is an abstract quantity, we do not include a rate parameter as a coefficient for $A$ in the equation for $D'$.
 Each of these parameters **must** be set[^old_repair].
 If they are not set, PhysiPKPD will throw an error.
+By default, PhysiPKPD uses the `mechanics_dt` set in the configuration file.
+You can change this by adding a user parameter of the format `S_dt_C`.
+For example, if you wish to use a timestep of `0.01` for updating the damage of `myDrug` on `tumor`, then add the following to `user_parameters`:
+
+```
+<myDrug_dt_tumor type="double">0.01</myDrug_dt_tumor>
+```
 
 [^old_repair]: Old versions of PhysiPKPD only had a constant repair rate. For backwards compatibility, `S_repair_rate` can be set instead.
-So long as the repair rates in the [table](#dam_pars_table) are not set, then PhysiPKPD will use this value to set a constant repair rate.
+If the repair rates in the [table](#dam_pars_table) are not set, then PhysiPKPD will use this value to set a constant repair rate.
 
 |Parameter|Description|
 |:--|---|
 | `S_damage` $(D)$ | Not a parameter; data that tracks the current damage to the cell |
-| `S_repair_rate_constant` $(r_0)$ | Zero-order elimination rate of damage from drug 1 (in damage per minute) |
-| `S_repair_rate_linear` $(r_1)$ | First-order elimination rate of damage from drug 1 (in minutes<sup>-1</sup>) |
-| `S_metabolism_rate` $(m)$ | Rate of elimination of drug 1 from inside a cell (in minutes<sup>-1</sup>) |
+| `S_repair_rate_constant` $(r_0)$ | Zero-order elimination rate of damage from `S` (in damage per minute) |
+| `S_repair_rate_linear` $(r_1)$ | First-order elimination rate of damage from `S` (in minutes<sup>-1</sup>) |
+| `S_metabolism_rate` $(m)$ | Rate of elimination of `S` from inside a cell (in minutes<sup>-1</sup>) |
 
 <p align="center">
     <b>Table:</b> Damage Accumulation Parameters <a name="dam_pars_table"></a>
@@ -170,22 +182,32 @@ So long as the repair rates in the [table](#dam_pars_table) are not set, then Ph
 
 #### Cell Effect Parameters
 The accumulated damage then affects the cell through one or more mechanisms of action (MOA).
-These MOAs are specified by setting `S_moa_is_X` to 1.0 in `custom_data`.
+These MOAs are specified by setting `S_moa_is_X` to `1.0` in `custom_data`.
 Currently, PhysiPKPD supports the following MOAs: `prolif`, `apop`, `necrosis`, or `motility`.
 Replace `X` with the corresponding one of these you wish for your MOA.
-For example, a substrate called `myDrug` causing a proliferation effect would have `myDrug_moa_is_prolif` set to `1.0`.
+For example, a substrate called `myDrug` causing a proliferation effect would have the following in `custom_data` for the affected cell:
+
+```
+<myDrug_moa_is_prolif>1.0</myDrug_moa_is_prolif>
+```
+
 MOAs that are not present in `custom_data` are assumed off.
 *Beware of typos!*
 
 For each MOA, the damage is input into a Hill-type function so that the effect eventually saturates.
 These parameters also go in `custom_data`, but if any are omitted for an active MOA, PhysiCell will relentlessly spam the standard output.
+The effect is applied to whatever the *current* relevant rate for the cell is.
+This way, you can easily add these PD effects on top of other effects already present in your model.
+Just take care that before calling `pd_function` within `update_phenotype` that the affected rate is reset to the base value lest PhysiPKPD compound these effects each time.
+See the sample projects targeting `proliferation`, `apop`, and `necrosis`.
+If you target `motility`, do the same but within `update_migration_bias`.
 
 |Parameter|Description|
 |:--|:--|
-| `S_moa_is_X` | Used as boolean to determine which effects to apply to this cell type based on the damage from drug 1; values > 0.5 will apply the effect |
-| `S_X_saturation_rate` | Rate of `X` as damage from drug 1 approaches infinity |
-| `S_X_EC50` | Damage from drug 1 at which the rate of `X` is halfway between the base and saturation rates (in damage) |
-| `S_X_hill_power` | Hill coefficient for calculating the effect of drug 1 on the rate of `X` |
+| `S_moa_is_X` | Used as boolean to determine which effects to apply to this cell type based on the damage from `S`; values > 0.5 will apply the effect |
+| `S_X_saturation_rate` | Rate of `X` as damage from `S` approaches infinity |
+| `S_X_EC50` | Damage from `S` at which the rate of `X` is halfway between the base and saturation rates (in damage) |
+| `S_X_hill_power` | Hill coefficient for calculating the effect of `S` on the rate of `X` |
 <p align="center">
     <b>Table:</b> Cell Effect Parameters
 </p>
@@ -200,14 +222,14 @@ This can be illustrated with an example:
 
 ##### Example: MOA targeted by multiple substrates
 Cell `C` of type `CD` is targeted by `S1` and `S2`, both with an `apop` MOA on `CD`.
-Currently, `C` has damages `d1` and `d2` from `S1` and `S2`, respectively.
+Currently, `C` has damages `S1_damage` and `S2_damage` from `S1` and `S2`, respectively.
 Using the distinct EC50s and Hill powers for `S1` and `S2` on `C`, these Hill-type functions output $h_1 = 0.25$ and $h_2=0.5$ for `S1` and `S2`, respectively.
 These values can be interpreted as `S1` causing a quarter of its maximal effect on `C` and `S2` causing half its maximal effect on `C`.
 
 Now, suppose that the saturation effects on `C` are `1E-3` $\text{min}^{-1}$ and `1E-2` $\text{min}^{-1}$ for `S1` and `S2`, respectively.
 The base apoptosis rate for `CD` is `1E-5` $\text{min}^{-1}$.
 Then, `S1` and `S2` have saturation factors of $f_{\text{sat},1} = 10^{-3} / 10^{-5} = 100$ and $f_{\text{sat},2} = 10^{-2} / 10^{-5} = 1000$, respectively.
-These can be interpreted as the substrates effecting up to a 100-fold and 1000-fold, respectively, increase in the apoptosis rate of `C`.
+These can be interpreted as the substrates causing up to a 100-fold and 1000-fold, respectively, increase in the apoptosis rate of `C`.
 
 Thus, the factor change from `S1` is $f_{\text{sat},1} \cdot h_1 = 25$; from `S2` it is $f_{\text{sat},2} \cdot h_2 = 500$.
 The total factor change applied to the apoptosis rate for `C` is then $25\cdot 500 = 12,500$.
@@ -228,7 +250,11 @@ These pre-computations are an all-or-nothing for every (substrate, cell type) pa
 In other words, you cannot specify that some of the pre-computations can be done but not others.
 You can include the following as Booleans in `user_parameters` to control this.
 In the following table, `C` stands for a cell type name.
-For example, if a substrate `myDrug` affects cell type `tumor` and you want to pre-compute the PD quantities, set `myDrug_precompute_pd_for_tumor` to `True`.
+For example, if a substrate `myDrug` affects cell type `tumor` and you want to pre-compute the PD quantities, include the following in `user_parameters`:
+
+```
+<myDrug_precompute_pd_for_tumor type="bool">True</myDrug_precompute_pd_for_tumor>
+```
 
 |Parameter|Type|Description| If Missing |
 |---|---|---|:--|
@@ -241,7 +267,7 @@ For example, if a substrate `myDrug` affects cell type `tumor` and you want to p
 ## Making your own project using PhysiPKPD
 If you wish to make your own project that uses PhysiPKPD (and not just one of the pre-built sample projects), this is how you can proceed.
 1. Make the PKPD template project: `make template_pkpd`
-2. Edit the configuration file to set the Dirichlet conditions, [PK Parameters](#pk_pars), and [PD Parameters](#pd_pars) for the two PKPD drugs and the default cell type `cell`.
+2. Edit the configuration file to set the Dirichlet conditions, [PK Parameters](#pk_pars), and [PD Parameters](#pd_pars) for the two PKPD substrates and the default cell type `cell`.
 3. Add additional substrates as normal (using the Model Builder for this is untested)
 4. Add additional cell types as normal (using the Model Builder for this is untested).
 5. By default, each cell type is assigned the same `update_phenotype` function, which is `cell_phenotype` found in the `custom.cpp` file.
