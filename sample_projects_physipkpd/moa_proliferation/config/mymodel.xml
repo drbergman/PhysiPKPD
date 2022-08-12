@@ -182,21 +182,6 @@
                 <PKPD_D1_prolif_EC50 units="damage">1e8</PKPD_D1_prolif_EC50>
                 <PKPD_D1_prolif_hill_power units="dimensionless">2</PKPD_D1_prolif_hill_power>
 
-                <PKPD_D1_moa_is_apop units="bool">0.0</PKPD_D1_moa_is_apop>
-                <PKPD_D1_apop_saturation_rate units="1/min">1e-2</PKPD_D1_apop_saturation_rate>
-                <PKPD_D1_apop_EC50 units="damage">1e7</PKPD_D1_apop_EC50>
-                <PKPD_D1_apop_hill_power units="dimensionless">2</PKPD_D1_apop_hill_power>
-
-                <PKPD_D1_moa_is_necrosis units="bool">0.0</PKPD_D1_moa_is_necrosis>
-                <PKPD_D1_necrosis_saturation_rate units="1/min">1E-4</PKPD_D1_necrosis_saturation_rate>
-                <PKPD_D1_necrosis_EC50 units="damage">1e7</PKPD_D1_necrosis_EC50>
-                <PKPD_D1_necrosis_hill_power units="dimensionless">2</PKPD_D1_necrosis_hill_power>
-
-                <PKPD_D1_moa_is_motility units="bool">0.0</PKPD_D1_moa_is_motility>
-                <PKPD_D1_motility_saturation_rate units="1/min">0.0</PKPD_D1_motility_saturation_rate>
-                <PKPD_D1_motility_EC50 units="damage">1e8</PKPD_D1_motility_EC50>
-                <PKPD_D1_motility_hill_power units="dimensionless">2</PKPD_D1_motility_hill_power>
-
                 <PKPD_D1_damage units="damage">0</PKPD_D1_damage>
                 <PKPD_D1_repair_rate_constant units="damage/min">5e6</PKPD_D1_repair_rate_constant>
                 <PKPD_D1_repair_rate_linear units="damage/min">1e-2</PKPD_D1_repair_rate_linear>

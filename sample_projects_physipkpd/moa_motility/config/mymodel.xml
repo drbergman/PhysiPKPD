@@ -200,21 +200,6 @@
 
                 <!-- <div_drugs type="divider" description="-Starting Drug 1 PD parameters-"/> -->
 
-                <PKPD_D1_moa_is_prolif>0.0</PKPD_D1_moa_is_prolif>
-                <PKPD_D1_prolif_saturation_rate>1e-6</PKPD_D1_prolif_saturation_rate>
-                <PKPD_D1_prolif_EC50>1e8</PKPD_D1_prolif_EC50>
-                <PKPD_D1_prolif_hill_power>2</PKPD_D1_prolif_hill_power>
-
-                <PKPD_D1_moa_is_apop>0.0</PKPD_D1_moa_is_apop>
-                <PKPD_D1_apop_saturation_rate>1e-2</PKPD_D1_apop_saturation_rate>
-                <PKPD_D1_apop_EC50>1e7</PKPD_D1_apop_EC50>
-                <PKPD_D1_apop_hill_power>2</PKPD_D1_apop_hill_power>
-
-                <PKPD_D1_moa_is_necrosis>0.0</PKPD_D1_moa_is_necrosis>
-                <PKPD_D1_necrosis_saturation_rate>1E-4</PKPD_D1_necrosis_saturation_rate>
-                <PKPD_D1_necrosis_EC50>1e7</PKPD_D1_necrosis_EC50>
-                <PKPD_D1_necrosis_hill_power>2</PKPD_D1_necrosis_hill_power>
-
                 <PKPD_D1_moa_is_motility>1.0</PKPD_D1_moa_is_motility>
                 <PKPD_D1_motility_saturation_rate>0.0</PKPD_D1_motility_saturation_rate>
                 <PKPD_D1_motility_EC50>1e8</PKPD_D1_motility_EC50>

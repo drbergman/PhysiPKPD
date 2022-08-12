@@ -697,7 +697,7 @@ Pharmacodynamics_Model* create_pd_model( void )
 static std::vector<std::string> PD_names;
 static std::vector<Pharmacodynamics_Model *> all_pd;
 
-void PD_model( double current_time )
+void PD_model(double current_time)
 {
     static std::vector<int> PD_ind;
     static bool need_to_parse_pd_names = true;
@@ -734,20 +734,35 @@ void PD_model( double current_time )
         }
         need_to_parse_pd_names = false;
     }
-
     if (need_to_setup)
     {
-        for (int n = 0; n < PD_ind.size(); n++)
+        for (int n = 0; n < PD_ind.size(); n++) // loop over all identified PD substrates
         {
-            for (int k = 0; k < cell_definitions_by_index.size(); k++)
+            std::vector<std::string> moa_strings; // name the moas in custom_data I need to see in each cell type
+            moa_strings.push_back(PD_names[n] + "_moa_is_prolif");
+            moa_strings.push_back(PD_names[n] + "_moa_is_apop");
+            moa_strings.push_back(PD_names[n] + "_moa_is_necrosis");
+            moa_strings.push_back(PD_names[n] + "_moa_is_motility");
+
+            std::vector<bool> set_moas_for_cell_type; // after checking all these moas, some may have been set here (so the user does not need a massive list in their xml); will then need to update these moas for each cell of that type
+            set_moas_for_cell_type.resize(cell_definitions_by_index.size(), false);
+            bool set_these_moas_for_cell_type[cell_definitions_by_index.size()][moa_strings.size()];
+
+            for (int k = 0; k < cell_definitions_by_index.size(); k++) // loop over all cell defs to see if they have these moas and if they are affected by the drug
             {
-                Cell_Definition* pCD = cell_definitions_by_index[k];
+                Cell_Definition *pCD = cell_definitions_by_index[k];
                 bool is_type_affected_by_drug = false;
-                is_type_affected_by_drug |= pCD->custom_data[PD_names[n] + "_moa_is_prolif"] > 0.5;
-                is_type_affected_by_drug |= pCD->custom_data[PD_names[n] + "_moa_is_apop"] > 0.5;
-                is_type_affected_by_drug |= pCD->custom_data[PD_names[n] + "_moa_is_necrosis"] > 0.5;
-                is_type_affected_by_drug |= pCD->custom_data[PD_names[n] + "_moa_is_motility"] > 0.5;
-                if (is_type_affected_by_drug)
+                for (int moa_counter=0; moa_counter < moa_strings.size(); moa_counter++) // loop over the moas
+                {
+                    if (pCD->custom_data.find_variable_index(moa_strings[moa_counter]) == -1) // then this moa was not specified by the user; assume it is not an moa
+                    {
+                        pCD->custom_data.add_variable(moa_strings[moa_counter], 0.0);
+                        set_these_moas_for_cell_type[k][moa_counter] = true;
+                        set_moas_for_cell_type[k] = true; // flag this cell type for updating all its moas
+                    } else {set_these_moas_for_cell_type[k][moa_counter] = false;}
+                    is_type_affected_by_drug |= pCD->custom_data[moa_strings[moa_counter]] > 0.5;
+                }                             // finished looping over moas for this (substrate,cell type) pair
+                if (is_type_affected_by_drug) // then set up PD model for this (substrate, cell type) pairing
                 {
                     all_pd.push_back(create_pd_model(PD_ind[n], PD_names[n], k, pCD->name));
                     setup_pd_advancer(all_pd[n]);
@@ -756,10 +771,27 @@ void PD_model( double current_time )
                     all_pd[n]->damage_index = pCD->custom_data.find_variable_index(PD_names[n] + "_damage");
                     all_pd[n]->advance = &single_pd_model;
                 }
-            }
-        }
+            } // finished looping over all cell types for this substrate
+
+#pragma omp parallel for
+            for (int i = 0; i < (*all_cells).size(); i++) // loop over all cells to see if they have a type that got moas added to their custom_data
+            {
+                if (set_moas_for_cell_type[(*all_cells)[i]->type]) // check if this cell type is one that needs to be updated
+                {
+                    Cell_Definition *pCD = cell_definitions_by_index[(*all_cells)[i]->type];
+                    for (int moa_counter = 0; moa_counter < moa_strings.size(); moa_counter++) // loop over each moa
+                    {
+                        if (set_these_moas_for_cell_type[(*all_cells)[i]->type][moa_counter])
+                        {
+                            (*all_cells)[i]->custom_data.add_variable(moa_strings[moa_counter], pCD->custom_data[moa_strings[moa_counter]]);
+                        }
+                    }
+                }
+            } // finish looping over each cell
+
+        } // finish looping over all identified PD substrates
         need_to_setup = false;
-    }
+    } // finished setup
 
     for (int n = 0; n < all_pd.size(); n++)
     {
