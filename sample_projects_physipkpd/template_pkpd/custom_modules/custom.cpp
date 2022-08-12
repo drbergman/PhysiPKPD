@@ -230,14 +230,16 @@ void cell_phenotype(Cell *pC, Phenotype &p, double dt)
     static int nNec = p.death.find_death_model_index( "Necrosis" );
     
     // first reset the rate of the affected process to its base values. Otherwise drug effects will stack, which is (probably) not what you want.
-    // if( pC->custom_data["PKPD_D1_moa_is_prolif"] > 0.5 || pC->custom_data["PKPD_D2_moa_is_prolif"] > 0.5 )
-    // { p.cycle.data.transition_rate(0,0) = pCD->phenotype.cycle.data.transition_rate(0,0); }
-    // if( pC->custom_data["PKPD_D1_moa_is_apop"] > 0.5 || pC->custom_data["PKPD_D2_moa_is_apop"] > 0.5 )
-    // { p.death.rates[nApop] = pCD->phenotype.death.rates[nApop]; }
-    // if( pC->custom_data["PKPD_D1_moa_is_necrosis"] > 0.5 || pC->custom_data["PKPD_D2_moa_is_necrosis"] > 0.5 )
-    // { p.death.rates[nNec] = pCD->phenotype.death.rates[nNec]; }
     
+    // if this phenotype has a prolif moa
+    // set_single_behavior( pC, "cycle entry", get_single_base_behavior( pC, "cycle entry") );
     
+    // if this phenotype has a apop moa
+    // set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
+    
+    // if this phenotype has a necrosis moa
+    // set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
+        
 
     // update phenotype based on PD dynamics
     pd_function(pC, p, dt);

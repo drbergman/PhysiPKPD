@@ -80,7 +80,7 @@ void write_cell_data_for_plots( double current_time, char delim);
 std::vector<std::string> damage_coloring( Cell* pCell );
 double confluence_computation( void );
 void pd_function( Cell* pC, Phenotype& p, double dt );
-void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2);
+void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2, std::vector<std::vector<int>> &damage_inds, std::vector<std::vector<int>> &ec50_inds, std::vector<std::vector<int>> &hp_inds);
 void pk_explicit_euler_one_compartment( double dt, double &central_concentration, double elimination_rate );
 void pk_explicit_euler_two_compartment( double dt, double &periphery_concentration, double &central_concentration, double elimination_rate, double k12, double k21, double central_to_periphery_volume_ratio );
 void pk_dose(double next_dose, double &central_concentration);

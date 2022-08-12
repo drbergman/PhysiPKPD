@@ -222,18 +222,9 @@ void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
 {
     Cell_Definition* pCD = find_cell_definition( pC->type );
 
-    // find index of apoptosis death model
-    static int nApop = p.death.find_death_model_index( "apoptosis" );
-    // find index of necrosis death model
-    static int nNec = p.death.find_death_model_index( "Necrosis" );
-    
+
     // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
-    if( pC->custom_data["PKPD_D1_moa_is_prolif"] > 0.5 || pC->custom_data["PKPD_D2_moa_is_prolif"] > 0.5 )
-    { p.cycle.data.transition_rate(0,0) = pCD->phenotype.cycle.data.transition_rate(0,0); }
-    if( pC->custom_data["PKPD_D1_moa_is_apop"] > 0.5 || pC->custom_data["PKPD_D2_moa_is_apop"] > 0.5 )
-    { p.death.rates[nApop] = pCD->phenotype.death.rates[nApop]; }
-    if( pC->custom_data["PKPD_D1_moa_is_necrosis"] > 0.5 || pC->custom_data["PKPD_D2_moa_is_necrosis"] > 0.5 )
-    { p.death.rates[nNec] = pCD->phenotype.death.rates[nNec]; }
+    set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
     
     
 

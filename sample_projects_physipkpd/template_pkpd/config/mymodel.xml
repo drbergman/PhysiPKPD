@@ -284,8 +284,6 @@
         <PKPD_D1_set_first_dose_time type="bool" units="none" description="user sets first dose time to start therapy for drug 1; false=user gives confluence condition">True</PKPD_D1_set_first_dose_time>
         <PKPD_D1_first_dose_time type="double" units="min" description="time of first dose for drug 1">0.0</PKPD_D1_first_dose_time>
         <PKPD_D1_confluence_condition type="double" units="none" description="confluence as proportion at which to start therapy for drug 1">0.6</PKPD_D1_confluence_condition>
-        <d1_color_ec50 type="double" units="none" description="ec50 used for coloring">1e8</d1_color_ec50>
-        <d1_color_hp type="double" units="none" description="hill power used for coloring">2.0</d1_color_hp>
 
 
 
@@ -308,8 +306,6 @@
         <PKPD_D2_set_first_dose_time type="bool" units="none" description="user sets first dose time to start therapy for drug 2; false=user gives confluence condition">True</PKPD_D2_set_first_dose_time>
         <PKPD_D2_first_dose_time type="double" units="min" description="time of first dose for drug 2">180.0</PKPD_D2_first_dose_time>
         <PKPD_D2_confluence_condition type="double" units="none" description="confluence as proportion at which to start therapy for drug 2">0.6</PKPD_D2_confluence_condition>
-        <d2_color_ec50 type="double" units="none" description="ec50 used for coloring">1e8</d2_color_ec50>
-        <d2_color_hp type="double" units="none" description="hill power used for coloring">2.0</d2_color_hp>
 
 
 
@@ -326,12 +322,11 @@
 
         <div_generalPK type="divider" description="---PK---"/>
 
-        <central_to_periphery_volume_ratio type="double" units="dimensionless" description="ratio of volume in systemic circulation to the volume of the periphery">1.0</central_to_periphery_volume_ratio>
-        <PKPD_use_analytic_pk_solutions type="bool" units="dimensionless" description="whether to use analytic solution to the pk model">True</PKPD_use_analytic_pk_solutions>
-        <PKPD_use_analytic_pd_solutions type="bool" units="dimensionless" description="whether to use analytic solutions for PD dynamics (true) or approximate using numerical methods (false)">True></PKPD_use_analytic_pd_solutions>
+        <PKPD_D1_central_to_periphery_volume_ratio type="double" units="dimensionless" description="ratio of volume in systemic circulation to the volume of the periphery">1.0</PKPD_D1_central_to_periphery_volume_ratio>
+        <PKPD_D2_central_to_periphery_volume_ratio type="double" units="dimensionless" description="ratio of volume in systemic circulation to the volume of the periphery">1.0</PKPD_D2_central_to_periphery_volume_ratio>
         <PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True></PKPD_precompute_all_pd_quantities>
-        <PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1,PDPD_D2</PKPD_pk_substrate_names>
-        <PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1,PDPD_D2</PKPD_pd_substrate_names>
+        <PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1,PKPD_D2</PKPD_pk_substrate_names>
+        <PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1,PKPD_D2</PKPD_pd_substrate_names>
 
     </user_parameters>
 

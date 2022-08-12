@@ -695,6 +695,7 @@ Pharmacodynamics_Model* create_pd_model( void )
 }
 
 static std::vector<std::string> PD_names;
+static std::vector<Pharmacodynamics_Model *> all_pd;
 
 void PD_model( double current_time )
 {
@@ -733,8 +734,6 @@ void PD_model( double current_time )
         }
         need_to_parse_pd_names = false;
     }
-
-    static std::vector<Pharmacodynamics_Model *> all_pd;
 
     if (need_to_setup)
     {
@@ -1248,15 +1247,37 @@ void PD_model_hardcoded(double current_time)
 }
 */
 
-void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2)
+void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2, std::vector<std::vector<int>> &damage_inds, std::vector<std::vector<int>> &ec50_inds, std::vector<std::vector<int>> &hp_inds)
 {
+    damage_inds.resize(nCD,{});
+    ec50_inds.resize(nCD,{});
+    hp_inds.resize(nCD,{});
     for (int i = 0; i < nCD; i++)
     {
         int grey = (int)round(255 * (i + 1) / (nCD + 1)); // all cell types get their own shade of grey when undamaged
         default_colors.push_back({grey, grey, grey});
         default_colors[i].resize(3, grey);
 
-        if (cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_prolif"] || cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_apop"] || cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_necrosis"] || cell_definitions_by_index[i]->custom_data["PKPD_D1_moa_is_motility"])
+        int k = 0; // number of substrates found that target this cell type
+        for (int n = 0; n < all_pd.size(); n++)
+        {
+            if (all_pd[n]->cell_index==i)
+            {
+                damage_inds[i].push_back(find_cell_definition(i)->custom_data.find_variable_index(all_pd[n]->substrate_name + "_damage"));
+                std::string moa;
+                if (find_cell_definition(i)->custom_data[all_pd[n]->substrate_name + "_moa_is_prolif"] > 0.5) {moa = "prolif";}
+                else if (find_cell_definition(i)->custom_data[all_pd[n]->substrate_name + "_moa_is_apop"] > 0.5) {moa = "apop";}
+                else if (find_cell_definition(i)->custom_data[all_pd[n]->substrate_name + "_moa_is_necrosis"] > 0.5) {moa = "necrosis";}
+                else if (find_cell_definition(i)->custom_data[all_pd[n]->substrate_name + "_moa_is_motility"] > 0.5) {moa = "motility";}
+                else {std::cout << "No moa found somehow for " << all_pd[n]->substrate_name << " acting on " << find_cell_definition(i)->name << std::endl; }
+                ec50_inds[i].push_back(find_cell_definition(i)->custom_data.find_variable_index(all_pd[n]->substrate_name + "_" + moa + "_EC50"));
+                hp_inds[i].push_back(find_cell_definition(i)->custom_data.find_variable_index(all_pd[n]->substrate_name + "_" + moa + "_hill_power"));
+                k++;
+                if (k==2) { break; }
+            }
+        }
+
+        if (damage_inds[i].size()>0)
         {
             color_diffs_D1.push_back({(int)round((255 - grey) / 2), (int)round(-grey / 2), (int)round(-grey / 2)}); // if drug 1 affects cell type i, then set a red shift in the cytoplasm color
         }
@@ -1265,7 +1286,7 @@ void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_c
             color_diffs_D1.push_back({0, 0, 0}); // if drug 1 does NOT affect cell type i, do not change the cytoplasm color
         }
 
-        if (cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_prolif"] || cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_apop"] || cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_necrosis"] || cell_definitions_by_index[i]->custom_data["PKPD_D2_moa_is_motility"])
+        if (damage_inds[i].size()>1)
         {
             color_diffs_D2.push_back({(int)round(-grey / 2), (int)round(-grey / 2), (int)round((255 - grey) / 2)}); // if drug 2 affects cell type i, then set a blue shift in the nucleus color
         }
@@ -1278,6 +1299,8 @@ void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_c
 
 std::vector<std::string> damage_coloring(Cell *pC)
 {
+    if (all_pd.size()==0) // then either at initialization or there are actually no PD effects here
+    { return paint_by_number_cell_coloring(pC);}
     std::vector<std::string> output(4, "black");
 
     if (pC->phenotype.cycle.current_phase().code == PhysiCell_constants::apoptotic)
@@ -1296,40 +1319,38 @@ std::vector<std::string> damage_coloring(Cell *pC)
     static std::vector<std::vector<int>> default_colors;
     static std::vector<std::vector<int>> color_diffs_D1; // red shift
     static std::vector<std::vector<int>> color_diffs_D2; // blue shift
+    static std::vector<std::vector<int>> damage_inds;
+    static std::vector<std::vector<int>> ec50_inds;
+    static std::vector<std::vector<int>> hp_inds;
     static bool colors_initialized = false;
 
     if( !colors_initialized )
     { 
-        intialize_damage_coloring(nCD, default_colors, color_diffs_D1, color_diffs_D2); 
+        intialize_damage_coloring(nCD, default_colors, color_diffs_D1, color_diffs_D2,damage_inds,ec50_inds,hp_inds); 
         colors_initialized = true;
     }
 
     std::vector<int> default_color = default_colors[pC->type];
     std::vector<double> color_diffs;
     char colorTempString[128];
-    double d1_val;
-    double d1_norm_val;
-    double d2_val;
-    double d2_norm_val;
 
-    // d1_val = pC->custom_data[nPKPD_D1_damage];
-    d1_val = get_single_behavior(pC, "custom:PKPD_D1_damage");
-    d1_norm_val = Hill_response_function(d1_val, parameters.doubles("d1_color_ec50"), parameters.doubles("d1_color_hp"));
+    std::vector<double> d_val = {0,0};
+    for (int i = 0; i < damage_inds[pC->type].size(); i++)
+    {
+        d_val[i] = pC->custom_data[damage_inds[pC->type][i]];
+        d_val[i] = Hill_response_function(d_val[i], pC->custom_data[ec50_inds[pC->type][i]], pC->custom_data[hp_inds[pC->type][i]]);
+    }
 
-    int rd = (int)round(d1_norm_val * color_diffs_D1[pC->type][0]); // red differential
-    int gd = (int)round(d1_norm_val * color_diffs_D1[pC->type][1]); // green differential
-    int bd = (int)round(d1_norm_val * color_diffs_D1[pC->type][2]); // blue differential
+    int rd = (int)round(d_val[0] * color_diffs_D1[pC->type][0]); // red differential
+    int gd = (int)round(d_val[0] * color_diffs_D1[pC->type][1]); // green differential
+    int bd = (int)round(d_val[0] * color_diffs_D1[pC->type][2]); // blue differential
 
     sprintf(colorTempString, "rgb(%u, %u, %u)", default_color[0] + rd, default_color[1] + gd, default_color[2] + bd);
     output[0].assign(colorTempString); //cytoplasm
 
-    // d2_val = pC->custom_data[nPKPD_D2_damage];
-    d2_val = get_single_behavior(pC, "custom:PKPD_D2_damage");
-    d2_norm_val = Hill_response_function(d2_val, parameters.doubles("d2_color_ec50"), parameters.doubles("d2_color_hp"));
-
-    rd = (int)round(d2_norm_val * color_diffs_D2[pC->type][0]); // red differential
-    gd = (int)round(d2_norm_val * color_diffs_D2[pC->type][1]); // green differential
-    bd = (int)round(d2_norm_val * color_diffs_D2[pC->type][2]); // blue differential
+    rd = (int)round(d_val[1] * color_diffs_D2[pC->type][0]); // red differential
+    gd = (int)round(d_val[1] * color_diffs_D2[pC->type][1]); // green differential
+    bd = (int)round(d_val[1] * color_diffs_D2[pC->type][2]); // blue differential
 
     sprintf(colorTempString, "rgb(%u, %u, %u)", default_color[0] + rd, default_color[1] + gd, default_color[2] + bd);
     output[2].assign(colorTempString); //nucleus
