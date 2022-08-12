@@ -643,17 +643,26 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
 
                 if (!pPD->use_precomputed_quantities)
                 {
-                    pPD->metabolism_reduction_factor = exp(-pC->custom_data[pPD->substrate_name + "_metabolism_rate"] * dt);
-                    pPD->damage_initial_damage_term = exp(-pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * dt);
-                    pPD->damage_constant = pC->custom_data[pPD->substrate_name + "_repair_rate_constant"] / pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * (pPD->damage_initial_damage_term - 1); // +d_00...
+                    double metabolism_reduction_factor = exp(-pC->custom_data[pPD->substrate_name + "_metabolism_rate"] * dt);
+                    double damage_initial_damage_term = exp(-pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * dt);
+                    double damage_constant = pC->custom_data[pPD->substrate_name + "_repair_rate_constant"] / pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * (damage_initial_damage_term - 1); // +d_00...
+                    double damage_initial_drug_term;
                     if (pC->custom_data[pPD->substrate_name + "_metabolism_rate"] != pC->custom_data[pPD->substrate_name + "_repair_rate_linear"])                                                                // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
                     {
-                        pPD->damage_initial_drug_term = (pPD->metabolism_reduction_factor - pPD->damage_initial_damage_term) / (pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] - pC->custom_data[pPD->substrate_name + "_metabolism_rate"]);
+                        damage_initial_drug_term = (metabolism_reduction_factor - damage_initial_damage_term) / (pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] - pC->custom_data[pPD->substrate_name + "_metabolism_rate"]);
                     }
                     else
                     {
-                        pPD->damage_initial_drug_term = dt * pPD->metabolism_reduction_factor; // in this case, metabolism_decay = pPD->damage_initial_damage_term
+                        damage_initial_drug_term = dt * metabolism_reduction_factor; 
                     }
+                    pC->custom_data[pPD->damage_index] *= damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
+                    pC->custom_data[pPD->damage_index] += damage_constant;                                                                            // + d_00 ...
+                    pC->custom_data[pPD->damage_index] += damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0)
+                    if (pC->custom_data[pPD->damage_index] <= 0)
+                    {
+                        pC->custom_data[pPD->damage_index] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
+                    }
+                    p.molecular.internalized_total_substrates[pPD->substrate_index] *= metabolism_reduction_factor;
                 }
 
                 pC->custom_data[pPD->damage_index] *= pPD->damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
