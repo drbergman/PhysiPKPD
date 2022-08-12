@@ -156,12 +156,14 @@ If they are not set, PhysiPKPD will throw an error.
 
 [^old_repair]: Old versions of PhysiPKPD only had a constant repair rate. For backwards compatibility, `S_repair_rate` can be set instead.
 So long as the repair rates in the [table](#dam_pars_table) are not set, then PhysiPKPD will use this value to set a constant repair rate.
+
 |Parameter|Description|
 |:--|---|
 | `S_damage` $(D)$ | Not a parameter; data that tracks the current damage to the cell |
 | `S_repair_rate_constant` $(r_0)$ | Zero-order elimination rate of damage from drug 1 (in damage per minute) |
 | `S_repair_rate_linear` $(r_1)$ | First-order elimination rate of damage from drug 1 (in minutes<sup>-1</sup>) |
 | `S_metabolism_rate` $(m)$ | Rate of elimination of drug 1 from inside a cell (in minutes<sup>-1</sup>) |
+
 <p align="center">
     <b>Table:</b> Damage Accumulation Parameters <a name="dam_pars_table"></a>
 </p>
