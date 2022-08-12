@@ -574,6 +574,21 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
         pCD->custom_data.add_variable(pPD->substrate_name + "_repair_rate_linear", "1/min", 0.0);
     }
 
+    // make sure that all the necessary intracellular dynamics are present
+    std::vector<std::string> necessary_custom_fields;
+    necessary_custom_fields.push_back(pPD->substrate_name + "_metabolism_rate");
+    necessary_custom_fields.push_back(pPD->substrate_name + "_repair_rate_constant");
+    necessary_custom_fields.push_back(pPD->substrate_name + "_repair_rate_linear");
+    necessary_custom_fields.push_back(pPD->substrate_name + "_damage");
+    for (int i = 0; i < necessary_custom_fields.size(); i++)
+    {
+        if(pCD->custom_data.find_variable_index(necessary_custom_fields[i])==-1)
+        {
+            std::cout << pCD->name << " does not have " << necessary_custom_fields[i] << "." << std::endl;
+            exit(-1);
+        }
+    }
+
     if (pPD->use_precomputed_quantities) // setup precomputed quanities (if not using precomputed quantities, there is currently nothing to set up)
     {
         if (fabs(round(pPD->dt / diffusion_dt) - pPD->dt / diffusion_dt) > 0.0001)
@@ -677,10 +692,10 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
         {
             if (pC->custom_data[PD_names[n] + "_moa_is_prolif"] > 0.5)
             {
-                double saturation_factor = pC->custom_data[PD_names[n] + "_prolif_saturation_rate"] / get_single_base_behavior(pC, "cycle entry"); // saturation factor of proliferation for drug 1
+                double saturation_factor = get_single_behavior(pC, "custom:" + PD_names[n] + "_prolif_saturation_rate") / get_single_base_behavior(pC, "cycle entry"); // saturation factor of proliferation for drug 1
                 if (pC->custom_data[PD_names[n] + "_damage"] > 0)
                 {
-                    temp = Hill_response_function(pC->custom_data[PD_names[n] + "_damage"], pC->custom_data[PD_names[n] + "_prolif_EC50"], pC->custom_data[PD_names[n] + "_prolif_hill_power"]);
+                    temp = Hill_response_function(pC->custom_data[PD_names[n] + "_damage"], get_single_behavior(pC,"custom:" + PD_names[n] + "_prolif_EC50"), get_single_behavior(pC,"custom:" + PD_names[n] + "_prolif_hill_power"));
                     factor_change *= 1 + (saturation_factor - 1) * temp;
                 }
             }
@@ -694,10 +709,10 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
     {
         if (pC->custom_data[PD_names[n] + "_moa_is_apop"] > 0.5)
         {
-            double saturation_factor = pC->custom_data[PD_names[n] + "_apop_saturation_rate"] / get_single_base_behavior(pC, "apoptosis"); // saturation factor of proliferation for drug 1
+            double saturation_factor = get_single_behavior(pC, "custom:" + PD_names[n] + "_apop_saturation_rate") / get_single_base_behavior(pC, "apoptosis"); // saturation factor of proliferation for drug 1
             if (pC->custom_data[PD_names[n] + "_damage"] > 0)
             {
-                temp = Hill_response_function(pC->custom_data[PD_names[n] + "_damage"], pC->custom_data[PD_names[n] + "_apop_EC50"], pC->custom_data[PD_names[n] + "_apop_hill_power"]);
+                temp = Hill_response_function(pC->custom_data[PD_names[n] + "_damage"], get_single_behavior(pC,"custom:" + PD_names[n] + "_apop_EC50"), get_single_behavior(pC,"custom:" + PD_names[n] + "_apop_hill_power"));
                 factor_change *= 1 + (saturation_factor - 1) * temp;
             }
         }
@@ -712,7 +727,7 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
         {
             if (pC->custom_data[PD_names[n] + "_damage"] > 0)
             {
-                factor_change += pC->custom_data[PD_names[n] + "_necrosis_saturation_rate"] * Hill_response_function(pC->custom_data[PD_names[n] + "_damage"], pC->custom_data[PD_names[n] + "_necrosis_EC50"], pC->custom_data[PD_names[n] + "_necrosis_hill_power"]);
+                factor_change += get_single_behavior(pC, "custom:" + PD_names[n] + "_necrosis_saturation_rate") * Hill_response_function(pC->custom_data[PD_names[n] + "_damage"], get_single_behavior(pC,"custom:" + PD_names[n] + "_necrosis_EC50"), get_single_behavior(pC,"custom:" + PD_names[n] + "_necrosis_hill_power"));
             }
         }
     }
