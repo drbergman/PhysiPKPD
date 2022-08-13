@@ -1,23 +1,29 @@
 # PhysiPKPD
 ## Getting Started...
-### ...by downloading PhysiPKPD add adding to a working PhysiCell directory
+### ...by downloading PhysiPKPD add adding to a working PhysiCell directory <a name="DL"></a>
 1. Download the repository and unzip the file.
 2. Move the folder `PhysiPKPD/addons/PhysiPKPD` into `PhysiCell/addons/`
 3. Move the folder `PhysiPKPD/sample_projects_phsyipkpd` into `PhysiCell`
 4. Open `PhysiCell/sample_projects/Makefile-default` (the one that `make reset` will will put in the main PhysiCell directory)
 5. Add the text from `Makefile-PhysiPKPD_Addendum` to `PhysiCell/sample_projects/Makefile-default` (anywhere should work, perhaps best around line 195 at the end of the other sample projects)
-6. Replace `PhysiCell/BioFVM/BioFVM_microenvironment.cpp` with `PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp` (and similarly with the `.h` file). Make sure the new files are both named `BioFVM_microenvironment` with the proper extension.
+6. Replace `PhysiCell/BioFVM/BioFVM_microenvironment.cpp` with `PhysiCell/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp`[^BFVMcpp] (and similarly with the `.h`[^BFVMh] file). Make sure the new files are both named `BioFVM_microenvironment` with the proper extension.
 7. Delete `PhysiCell/BioFVM_microenvironment.o` so the next `make` call will compile the new `BioFVM_microenvironment` code.
+8. Perform the same for `PhysiCell/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.cpp`[^PScpp] replacing `PhysiCell/modules/PhysiCell_settings.cpp`[^PScpp] (and similarly with the `.h` file).
+Rename. Check the extension. Delete `PhysiCell/PhysiCell_settings.o`.
 
 ### ...by cloning the repository
 1. Fork this repository to your own GitHub account.
 2. Clone the resulting forked repository onto your machine.
 3. Copy all the PhysiCell files in your PhysiCell directory **except addons**
 4. Copy the subfolders in `PhysiCell/addons` into your cloned directory's `addons` folder
-5. Open `PhysiCell/sample_projects/Makefile-default` (the one that `make reset` will will put in the main PhysiCell directory)
-6. Add the text from `Makefile-PhysiPKPD_Addendum` to `PhysiCell/sample_projects/Makefile-default` (anywhere should work, perhaps best around line 195 at the end of the other sample projects)
-7. Replace `PhysiCell/BioFVM/BioFVM_microenvironment.cpp` with `PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp` (and similarly with the `.h` file). Make sure the new files are both named `BioFVM_microenvironment` with the proper extension.
-8. Delete `PhysiCell/BioFVM_microenvironment.o` so the next `make` call will compile the new `BioFVM_microenvironment` code.
+5. Continue from #4 [above](#DL).
+
+[^BFVMcpp]: The only changes from PhysiCell v1.10.4 are at [Lines 241-246](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp#L241-L246) and [Line 1536](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp#L1536).
+
+[^BFVMh]: The only changes from PhysiCell v1.10.4 are at [Line 255](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.h#L255).
+
+[^PScpp]: Adding a template member function to `Parameters` that allows for a search for a non-existent `user_parameter` to return `-1`.
+See [Lines ]
 
 Congratulations! You're ready to try out PhysiPKPD!
 

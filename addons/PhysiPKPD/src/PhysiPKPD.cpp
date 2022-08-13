@@ -55,7 +55,7 @@ void PK_model(double current_time)
         std::string delimiter = ",";
         size_t pos = 0;
         std::string token;
-
+        
         if (parameters.strings.find_variable_index("PKPD_pk_substrate_names") == -1)
         {
             std::cout << "WARNING: PKPD_pk_substrate_names was not found in User Parameters." << std::endl
@@ -487,8 +487,7 @@ void PD_model(double current_time)
                 if (is_type_affected_by_drug) // then set up PD model for this (substrate, cell type) pairing
                 {
                     all_pd.push_back(create_pd_model(PD_ind[n], PD_names[n], k, pCD->name));
-                    all_pd[n]->dt = parameters.doubles.find_variable_index(PD_names[n] + "_dt_" + pCD->name)==-1 ? mechanics_dt : parameters.doubles(PD_names[n] + "_dt_" + pCD->name);
-std::cout << " dt = " << all_pd[n]->dt << std::endl;
+                    all_pd[n]->dt = parameters.doubles.find_variable_index(PD_names[n] + "_dt_" + pCD->name)==-1 ? mechanics_dt : parameters.doubles(PD_names[n] + "_dt_" + pCD->name); // default to mechanics_dt
                     setup_pd_advancer(all_pd[n]);
                     all_pd[n]->previous_pd_time = current_time;
                     all_pd[n]->next_pd_time = current_time;
