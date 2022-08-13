@@ -6,10 +6,19 @@
 3. Move the folder `PhysiPKPD/sample_projects_phsyipkpd` into `PhysiCell`
 4. Open `PhysiCell/sample_projects/Makefile-default` (the one that `make reset` will will put in the main PhysiCell directory)
 5. Add the text from `Makefile-PhysiPKPD_Addendum` to `PhysiCell/sample_projects/Makefile-default` (anywhere should work, perhaps best around line 195 at the end of the other sample projects)
-6. Replace `PhysiCell/BioFVM/BioFVM_microenvironment.cpp` with `PhysiCell/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp`[^BFVMcpp] (and similarly with the `.h`[^BFVMh] file). Make sure the new files are both named `BioFVM_microenvironment` with the proper extension.
+6. Replace `PhysiCell/BioFVM/BioFVM_microenvironment.cpp` with `PhysiCell/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp`[^bfvmcpp] (and similarly with the `.h`[^bfvmh] file). Make sure the new files are both named `BioFVM_microenvironment` with the proper extension.
 7. Delete `PhysiCell/BioFVM_microenvironment.o` so the next `make` call will compile the new `BioFVM_microenvironment` code.
-8. Perform the same for `PhysiCell/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.cpp`[^PScpp] replacing `PhysiCell/modules/PhysiCell_settings.cpp` (and similarly with the `.h`[^PSh] file).
+8. Perform the same for `PhysiCell/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.cpp`[^pscpp] replacing `PhysiCell/modules/PhysiCell_settings.cpp` (and similarly with the `.h`[^psh] file).
 Rename. Check the extension. Delete `PhysiCell/PhysiCell_settings.o`.
+
+[^bfvmcpp]: Allows for looping over all voxels to accurately identify which substrates have a Dirichlet condition there. The only changes from PhysiCell v1.10.4 are at [Lines 241-246](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp#L241-L246) and [Line 1536](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp#L1536).
+
+[^bfvmh]: The only changes from PhysiCell v1.10.4 are at [Line 255](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.h#L255).
+
+[^pscpp]: Adding a template member function to `Parameters` that allows for a search for a non-existent `user_parameter` to return `-1`.
+The only changes from PhysiCell v1.10.4 are at [Lines 379-387](https://github.com/drbergman/PhysiPKPD/blob/8a4267a0a2f6a9847e882af282d20b2cd72e121f/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.cpp#L379-L387).
+
+[^psh]: The only changes from PhysiCell v1.10.4 are at [Lines 182](https://github.com/drbergman/PhysiPKPD/blob/8a4267a0a2f6a9847e882af282d20b2cd72e121f/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.h#L182).
 
 ### ...by cloning the repository
 1. Fork this repository to your own GitHub account.
@@ -17,16 +26,6 @@ Rename. Check the extension. Delete `PhysiCell/PhysiCell_settings.o`.
 3. Copy all the PhysiCell files in your PhysiCell directory **except addons**
 4. Copy the subfolders in `PhysiCell/addons` into your cloned directory's `addons` folder
 5. Continue from #4 [above](#DL).
-
-[^BFVMcpp]: Allows for looping over all voxels to accurately identify which substrates have a Dirichlet condition there.
-The only changes from PhysiCell v1.10.4 are at [Lines 241-246](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp#L241-L246) and [Line 1536](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp#L1536).
-
-[^BFVMh]: The only changes from PhysiCell v1.10.4 are at [Line 255](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.h#L255).
-
-[^PScpp]: Adding a template member function to `Parameters` that allows for a search for a non-existent `user_parameter` to return `-1`.
-The only changes from PhysiCell v1.10.4 are at [Lines 379-387](https://github.com/drbergman/PhysiPKPD/blob/8a4267a0a2f6a9847e882af282d20b2cd72e121f/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.cpp#L379-L387).
-
-[^PSh]: The only changes from PhysiCell v1.10.4 are at [Lines 182](https://github.com/drbergman/PhysiPKPD/blob/8a4267a0a2f6a9847e882af282d20b2cd72e121f/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.h#L182).
 
 Congratulations! You're ready to try out PhysiPKPD!
 
