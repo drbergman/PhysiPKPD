@@ -253,6 +253,7 @@
 
         <div_drug1_PK type="divider" description="---Drug 1 PK---"/>
 
+        <PKPD_D1_pk_model type="string" description="What PK model to use. Some options: 2C">1C</PKPD_D1_pk_model>
         <PKPD_D1_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">400.0</PKPD_D1_central_increase_on_loading_dose>
         <PKPD_D1_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">5e2</PKPD_D1_central_increase_on_dose>
         <PKPD_D1_central_elimination_rate type="double" units="1/min" description="decay rate of drug 1 in systemic circulation">0.0027</PKPD_D1_central_elimination_rate>
@@ -271,6 +272,7 @@
 
         <div_drug2_PK type="divider" description="---Drug 2 PK---"/>
 
+        <PKPD_D2_pk_model type="string" description="What PK model to use. Some options: 2C">2C</PKPD_D2_pk_model>
         <PKPD_D2_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 2">0</PKPD_D2_central_increase_on_loading_dose>
         <PKPD_D2_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 2">5e2</PKPD_D2_central_increase_on_dose>
         <PKPD_D2_central_elimination_rate type="double" units="1/min" description="decay rate of drug 2 in systemic circulation">0.0027</PKPD_D2_central_elimination_rate>

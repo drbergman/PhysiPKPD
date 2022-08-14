@@ -102,8 +102,6 @@ void PK_model(double current_time)
         {
             all_pk.push_back(create_pk_model(PK_ind[n], PK_names[n]));
             setup_pk_advancer(all_pk[n]);
-            all_pk[n]->compartment_concentrations = {0, 0};
-            all_pk[n]->advance = &single_pk_model_two_compartment;
         }
         need_to_setup = false;
     }
@@ -135,15 +133,54 @@ void PK_model(double current_time)
 
 void setup_pk_advancer(Pharmacokinetics_Model *pPK)
 {
+    void(*setup_function)(Pharmacokinetics_Model *pPK);
+    if (parameters.strings.find_variable_index(pPK->substrate_name + "_pk_model")==-1)
+    {
+        std::cout << "WARNING: No PK model specified for " << pPK->substrate_name << "." << std::endl
+                  << "  Will attempt to set up a 2-compartment model." << std::endl
+                  << std::endl;
+        setup_function = &setup_pk_model_two_compartment;
+    }
+    else 
+    {
+        std::vector<std::string> current_options = {"2C","1C"};
+        std::vector<void (*)(Pharmacokinetics_Model*)> fns;
+        fns.push_back(&setup_pk_model_two_compartment);
+        fns.push_back(&setup_pk_model_one_compartment);
+
+        std::string model = parameters.strings(pPK->substrate_name + "_pk_model");
+        bool model_found = false;
+        for ( int i=0; i<current_options.size(); i++)
+        {
+            if (model==current_options[i])
+            {
+                setup_function = fns[i];
+                model_found = true;
+                break;
+            }
+        }
+        if (!model_found)
+        {
+            std::cout << "ERROR: " << pPK->substrate_name + " is set to follow " + parameters.strings(pPK->substrate_name + "_pk_model") + " but this is not an allowable option." << std::endl
+                      << "  Current options include: " << current_options << std::endl;
+            exit(-1);
+        }
+    }
+    setup_function(pPK);
+    return;
+}
+
+void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
+{
+
     // pk parameters
     double k12;
     double k21;
     double R;
     double l;
 
-    /*
-    %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%%
-    */
+    /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
+
     // assume for now that we are using a 2-compartment model and will be solving it analytically
     if (parameters.doubles.find_variable_index(pPK->substrate_name + "_biot_number") == -1)
     {
@@ -243,10 +280,25 @@ void setup_pk_advancer(Pharmacokinetics_Model *pPK)
         l = parameters.doubles(pPK->substrate_name + "_central_elimination_rate");
     }
 
+    /*    %%%%%%%%%%%% Made sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
+
+    if (k12==0 || k21==0 || R==0)
+    {
+        std::cout << "WARNING: Because at least one of the following PK parameters for " << pPK->substrate_name << " is 0: k12=" << k12 << ", k21=" << k21 << ", R=" << R << std::endl
+                  << "  This model will be treated as a 1-compartment model by updating the current central elimination rate to lambda = lambda + k12." << std::endl;
+
+        pPK->M = {{exp(-(l+k12) * diffusion_dt)}}; // M is defined as a vector of vectors, hence this expression
+        // std::cout << "M = " << pPK->M[0][0] << std::endl;
+
+        pPK->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
+        pPK->advance = &single_pk_model_one_compartment;
+        return;
+    }
+
     // pre-computed quantities to express solution to matrix exponential
     double beta = sqrt((k12 + k21) * (k12 + k21) + 2 * l * (k12 - k21) + l * l);
-    if (beta == 0)
-    {
+    if (beta == 0) // with the above if statement, this block should never trigger
+    { 
         std::cout << "WARNING: " << pPK->substrate_name << " has PK parameters that cannot used by this framework." << std::endl;
         std::cout << "  This is because k12=0 and k21=elimination rate." << std::endl;
         std::cout << "  Since k12=0 means the periphery never fills up, k21 is meaningless." << std::endl;
@@ -267,6 +319,63 @@ void setup_pk_advancer(Pharmacokinetics_Model *pPK)
     pPK->M[1][0] = R * k12 * (decay[1] - decay[0]) / beta;
     pPK->M[1][1] = -0.5 * (alpha * (decay[0] - decay[1]) - beta * (decay[0] + decay[1])) / beta;
     // std::cout << "M = [" << pPK->M[0][0] << "," << pPK->M[0][1] << ";" << pPK->M[1][0] << "," << pPK->M[1][1] << "]" << std::endl;
+
+    pPK->compartment_concentrations = {0, 0};
+    pPK->advance = &single_pk_model_two_compartment;
+    return;
+}
+
+void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
+{
+
+    // pk parameters
+    double l;
+
+    /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
+
+    // assume for now that we are using a 2-compartment model and will be solving it analytically
+    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_biot_number") == -1)
+    {
+        std::cout << pPK->substrate_name << "_biot_number not set." << std::endl
+                  << "  Using a default value of 1.0." << std::endl;
+        pPK->biot_number = 1.0;
+    } // assume a default value of 1
+    else
+    {
+        pPK->biot_number = parameters.doubles(pPK->substrate_name + "_biot_number");
+    }
+
+    if (parameters.ints.find_variable_index(pPK->substrate_name + "_max_number_doses") == -1)
+    {
+        std::cout << pPK->substrate_name << "_max_number_doses not set." << std::endl
+                  << "  Using a default value of 0." << std::endl;
+        pPK->max_doses = 0;
+    } // assume a default value of 0
+    else
+    {
+        pPK->max_doses = parameters.ints(pPK->substrate_name + "_max_number_doses");
+    }
+
+    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_elimination_rate") == -1)
+    {
+        std::cout << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
+                  << "  Using a default value of 0.0." << std::endl;
+        l = 0.0;
+    } // assume a default value of 0
+    else
+    {
+        l = parameters.doubles(pPK->substrate_name + "_central_elimination_rate");
+    }
+
+    /*    %%%%%%%%%%%% Made sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
+
+    // pre-computed quantities to express solution to matrix exponential
+    pPK->M = {{exp(-l * diffusion_dt)}}; // M is defined as a vector of vectors, hence this expression
+    // std::cout << "M = " << pPK->M[0][0] << std::endl;
+
+    pPK->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
+    pPK->advance = &single_pk_model_one_compartment;
+    return;
 }
 
 void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time)
@@ -356,6 +465,19 @@ void single_pk_model_two_compartment(Pharmacokinetics_Model *pPK, double current
     pPK->compartment_concentrations[0] = pPK->M[0][0] * previous_compartment_concentrations[0] + pPK->M[0][1] * previous_compartment_concentrations[1];
     pPK->compartment_concentrations[1] = pPK->M[1][0] * previous_compartment_concentrations[0] + pPK->M[1][1] * previous_compartment_concentrations[1];
 
+    return;
+}
+
+void single_pk_model_one_compartment(Pharmacokinetics_Model *pPK, double current_time)
+{
+    // add dose if time for that
+    if (pPK->dose_count < pPK->max_doses && current_time > pPK->dose_times[pPK->dose_count] - tolerance)
+    {
+        pPK->compartment_concentrations[0] += pPK->dose_amounts[pPK->dose_count];
+        pPK->dose_count++;
+    }
+
+    pPK->compartment_concentrations[0] = pPK->M[0][0] * pPK->compartment_concentrations[0];
     return;
 }
 

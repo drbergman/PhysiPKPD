@@ -89,7 +89,10 @@ void pk_update_dirichlet(std::vector<double> new_dirichlet_values);
 // void PD_model_hardcoded(double current_time);
 
 void setup_pk_advancer(Pharmacokinetics_Model* pPK);
-void single_pk_model_two_compartment(Pharmacokinetics_Model* pPK, double current_time); // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
+void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK);
+void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK);
+void single_pk_model_two_compartment(Pharmacokinetics_Model* pPK, double current_time);
+void single_pk_model_one_compartment(Pharmacokinetics_Model *pPK, double current_time);
 void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time);
 
 void setup_pd_advancer(Pharmacodynamics_Model *pPD);
