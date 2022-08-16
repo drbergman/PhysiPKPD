@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created by COPASI version 4.36 (Build 260) on 2022-07-29 21:51 with libSBML version 5.19.4. -->
+<sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4">
+  <model metaid="COPASI0" id="PDynamics" name="PDynamics">
+    <annotation>
+      <COPASI xmlns="http://www.copasi.org/static/sbml">
+        <rdf:RDF xmlns:dcterms="http://purl.org/dc/terms/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+          <rdf:Description rdf:about="#COPASI0">
+            <dcterms:created>
+              <rdf:Description>
+                <dcterms:W3CDTF>2022-07-28T15:07:25Z</dcterms:W3CDTF>
+              </rdf:Description>
+            </dcterms:created>
+          </rdf:Description>
+        </rdf:RDF>
+      </COPASI>
+    </annotation>
+    <listOfFunctionDefinitions>
+      <functionDefinition metaid="COPASI11" id="Rate_Law_for_R_damage" name="Rate Law for R_damage">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <lambda>
+            <bvar>
+              <ci> PKPD_D1 </ci>
+            </bvar>
+            <bvar>
+              <ci> repair_rate </ci>
+            </bvar>
+            <bvar>
+              <ci> damage </ci>
+            </bvar>
+            <bvar>
+              <ci> k </ci>
+            </bvar>
+            <apply>
+              <minus/>
+              <apply>
+                <times/>
+                <ci> k </ci>
+                <ci> PKPD_D1 </ci>
+              </apply>
+              <apply>
+                <times/>
+                <ci> repair_rate </ci>
+                <ci> damage </ci>
+              </apply>
+            </apply>
+          </lambda>
+        </math>
+      </functionDefinition>
+    </listOfFunctionDefinitions>
+    <listOfUnitDefinitions>
+      <unitDefinition id="length" name="length">
+        <listOfUnits>
+          <unit kind="metre" exponent="1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="area" name="area">
+        <listOfUnits>
+          <unit kind="metre" exponent="2" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="volume" name="volume">
+        <listOfUnits>
+          <unit kind="litre" exponent="1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="time" name="time">
+        <listOfUnits>
+          <unit kind="second" exponent="1" scale="-3" multiplier="60"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="substance" name="substance">
+        <listOfUnits>
+          <unit kind="mole" exponent="1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="unit_0" name="1/min">
+        <listOfUnits>
+          <unit kind="second" exponent="-1" scale="-3" multiplier="60"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="unit_1" name="l">
+        <listOfUnits>
+          <unit kind="litre" exponent="1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+    </listOfUnitDefinitions>
+    <listOfCompartments>
+      <compartment metaid="COPASI1" id="volume" name="compartment_intracellular" spatialDimensions="3" size="1" constant="false">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+      </compartment>
+    </listOfCompartments>
+    <listOfSpecies>
+      <species metaid="COPASI2" id="PKPD_D1" name="PKPD_D1" compartment="volume" initialAmount="0.999999999999999" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+      </species>
+      <species metaid="COPASI3" id="damage" name="damage" compartment="volume" initialAmount="0" hasOnlySubstanceUnits="true" boundaryCondition="false" constant="false">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+      </species>
+      <species metaid="COPASI4" id="volume_1" name="volume" compartment="volume" initialAmount="1" hasOnlySubstanceUnits="true" boundaryCondition="true" constant="true">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+      </species>
+    </listOfSpecies>
+    <listOfParameters>
+      <parameter metaid="COPASI5" id="linear_metabolism_rate" name="linear_metabolism_rate" value="0.05" units="unit_0" constant="true">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+      </parameter>
+      <parameter metaid="COPASI6" id="repair_rate" name="repair_rate" value="0.01" units="unit_0" constant="true">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+      </parameter>
+      <parameter metaid="COPASI7" id="volume_0" name="volume" value="1" units="unit_1" constant="true">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+      </parameter>
+      <parameter metaid="COPASI8" id="k" name="k" value="0.01" units="unit_0" constant="true">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+      </parameter>
+      <parameter id="Metabolite_0" name="Initial for volume" value="1">
+        <annotation>
+          <initialValue xmlns="http://copasi.org/initialValue" parent="volume_1"/>
+        </annotation>
+      </parameter>
+    </listOfParameters>
+    <listOfInitialAssignments>
+      <initialAssignment symbol="Metabolite_0">
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <ci> volume_1 </ci>
+        </math>
+      </initialAssignment>
+    </listOfInitialAssignments>
+    <listOfRules>
+      <assignmentRule variable="volume">
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <ci> Metabolite_0 </ci>
+        </math>
+      </assignmentRule>
+    </listOfRules>
+    <listOfReactions>
+      <reaction metaid="COPASI9" id="R_PKPD_D1" name="R_PKPD_D1" reversible="false">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+        <listOfReactants>
+          <speciesReference species="PKPD_D1" stoichiometry="1"/>
+        </listOfReactants>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> linear_metabolism_rate </ci>
+              <ci> PKPD_D1 </ci>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction metaid="COPASI10" id="R_damage" name="R_damage" reversible="false">
+        <annotation>
+          <COPASI xmlns="http://www.copasi.org/static/sbml">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+          </COPASI>
+        </annotation>
+        <listOfProducts>
+          <speciesReference species="damage" stoichiometry="1"/>
+        </listOfProducts>
+        <listOfModifiers>
+          <modifierSpeciesReference species="PKPD_D1"/>
+        </listOfModifiers>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> volume </ci>
+              <apply>
+                <ci> Rate_Law_for_R_damage </ci>
+                <apply>
+                  <divide/>
+                  <ci> PKPD_D1 </ci>
+                  <ci> volume </ci>
+                </apply>
+                <ci> repair_rate </ci>
+                <apply>
+                  <divide/>
+                  <ci> damage </ci>
+                  <ci> volume </ci>
+                </apply>
+                <ci> k </ci>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+    </listOfReactions>
+  </model>
+</sbml>
