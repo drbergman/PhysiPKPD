@@ -150,6 +150,37 @@ void setup_tissue( void )
 	
 	// create cells 
     
+	Cell *pC;
+
+    // place cells
+    double max_distance = parameters.doubles("max_initial_distance");
+    Cell_Definition *pCD = find_cell_definition("cancer_cell");
+
+    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
+    for (int n = 0; n < parameters.ints("number_of_cells"); n++)
+    {
+        std::vector<double> position = {0, 0, 0};
+        double r = sqrt(UniformRandom()) * max_distance;
+        double theta = UniformRandom() * 6.2831853;
+        position[0] = r * cos(theta);
+        position[1] = r * sin(theta);
+        pC = create_cell(*pCD);
+        pC->assign_position(position);
+        int nPKPD_D1_int = pC->custom_data.find_variable_index( "PKPD_D1_int_conc" );
+		int i_damage_i = pC->custom_data.find_variable_index("damage");
+        pC->custom_data[nPKPD_D1_int] = parameters.doubles("PKPD_D1_initial_internal_concentration");
+		pC->custom_data[i_damage_i] = parameters.doubles("damage");
+
+        
+        double cell_volume = pC->phenotype.volume.total;
+        pC->phenotype.molecular.internalized_total_substrates[nPKPD_D1]= pC->custom_data[nPKPD_D1_int] * cell_volume;		
+
+        //pC->phenotype.molecular.internalized_total_substrates[drug2_index]= pC->custom_data[i_drug2_i] * cell_volume;
+        pC->phenotype.intracellular->start();
+		pC->phenotype.intracellular->set_parameter_value("volume", cell_volume);
+    }
+
+	/*
 	Cell* pCell;
 	
 	double cell_radius = cell_defaults.phenotype.geometry.radius; 
@@ -157,28 +188,17 @@ void setup_tissue( void )
 	double initial_tumor_radius = 100;
     double retval;
 
-	std::vector<std::vector<double>> positions = create_cell_circle_positions(cell_radius,initial_tumor_radius);
+	// std::vector<std::vector<double>> positions = create_cell_circle_positions(cell_radius,initial_tumor_radius);
     
-    std::cout << "NUMBER OF CELLS : " << positions.size() << " __________" << std::endl;
+    // std::cout << "NUMBER OF CELLS : " << positions.size() << " __________" << std::endl;
     for( int i=0; i < positions.size(); i++ )
     {
         pCell = create_cell(get_cell_definition("cancer_cell")); 
-        int nPKPD_D1_int = pCell->custom_data.find_variable_index( "PKPD_D1_int_conc" );
-		int i_damage_i = pCell->custom_data.find_variable_index("damage");
         pCell->assign_position( positions[i] );
 
-        pCell->custom_data[nPKPD_D1_int] = parameters.doubles("PKPD_D1_initial_internal_concentration");
-		pCell->custom_data[i_damage_i] = parameters.doubles("damage");
-
-        
-        double cell_volume = pCell->phenotype.volume.total;
-        pCell->phenotype.molecular.internalized_total_substrates[nPKPD_D1]= pCell->custom_data[nPKPD_D1_int] * cell_volume;		
-
-        //pCell->phenotype.molecular.internalized_total_substrates[drug2_index]= pCell->custom_data[i_drug2_i] * cell_volume;
-        pCell->phenotype.intracellular->start();
-		pCell->phenotype.intracellular->set_parameter_value("volume", cell_volume);
        
     }
+	*/
 
 	return; 
 }
@@ -248,16 +268,13 @@ void update_intracellular()
 
 	}
 }
-    
-                
-
 
 std::vector<std::string> my_coloring_function( Cell* pCell )
 {
 	return paint_by_number_cell_coloring(pCell);
 }
 
-
+/*
 std::vector<std::vector<double>> create_cell_circle_positions(double cell_radius, double sphere_radius)
 {
 	std::vector<std::vector<double>> cells;
@@ -330,7 +347,6 @@ double SimulatePKModel(rrc::RRHandle rrHandle)
 	return res;
 }
 
-
 void EditMicroenvironment(double dose)
 {
 	// This function is created for editing Microenvironment according to SBML results
@@ -338,3 +354,4 @@ void EditMicroenvironment(double dose)
 
 
 }
+*/

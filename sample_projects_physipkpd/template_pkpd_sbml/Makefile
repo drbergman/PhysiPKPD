@@ -274,13 +274,13 @@ checkpoint:
 	zip -r $$(date +%b_%d_%Y_%H%M).zip Makefile *.cpp *.h config/*.xml custom_modules/*
 
 zip:
-	zip -r latest.zip Makefile* *.cpp *.h BioFVM/* config/* core/* custom_modules/* matlab/* modules/* sample_projects_physipkpd/template_pkpd_librr/*
+	zip -r latest.zip Makefile* *.cpp *.h BioFVM/* config/* core/* custom_modules/* matlab/* modules/* sample_projects_physipkpd/template_pkpd_sbml/*
 	cp latest.zip $$(date +%b_%d_%Y_%H%M).zip
 	cp latest.zip VERSION_$(VERSION).zip
 	mv *.zip archives/
 
 tar:
-	tar --ignore-failed-read -czf latest.tar Makefile* *.cpp *.h BioFVM/* config/* core/* custom_modules/* matlab/* modules/* sample_projects_physipkpd/template_pkpd_librr/*
+	tar --ignore-failed-read -czf latest.tar Makefile* *.cpp *.h BioFVM/* config/* core/* custom_modules/* matlab/* modules/* sample_projects_physipkpd/template_pkpd_sbml/*
 	cp latest.tar $$(date +%b_%d_%Y_%H%M).tar
 	cp latest.tar VERSION_$(VERSION).tar
 	mv *.tar archives/
@@ -320,10 +320,10 @@ data-plots:
 
 redo:
 	make reset
-	make template_pkpd_librr
+	make template_pkpd_sbml
 	make
 
 rc: # reconfig
-	cp ./sample_projects_physipkpd/template_pkpd_librr/config/mymodel.xml ./config/
-	cp ./sample_projects_physipkpd/template_pkpd_librr/config/PD_v0.xml ./config/
-	cp ./sample_projects_physipkpd/template_pkpd_librr/config/PK_dosing.xml ./config/
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/mymodel.xml ./config/
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/PD_v0.xml ./config/
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/PK_base.xml ./config/

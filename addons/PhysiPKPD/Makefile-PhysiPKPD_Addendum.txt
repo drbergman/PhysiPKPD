@@ -53,11 +53,11 @@ template_pkpd:
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_physipkpd/template_pkpd/config/* ./config/
 	
-template_pkpd_librr:
-	cp ./sample_projects_physipkpd/template_pkpd_librr/custom_modules/* ./custom_modules/
+template_pkpd_sbml:
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/custom_modules/* ./custom_modules/
 	touch main.cpp && cp main.cpp main-backup.cpp
-	cp ./sample_projects_physipkpd/template_pkpd_librr/main.cpp ./main.cpp
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/main.cpp ./main.cpp
 	cp Makefile Makefile-backup
-	cp ./sample_projects_physipkpd/template_pkpd_librr/Makefile .
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/Makefile .
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
-	cp ./sample_projects_physipkpd/template_pkpd_librr/config/* ./config/
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/* ./config/

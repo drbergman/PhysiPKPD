@@ -80,11 +80,9 @@
 
 #include "./custom_modules/custom.h" 
 
-
-#include "rrc_api.h"
-#include "rrc_types.h"
-// #include "rrc_utilities.h"
-extern "C" rrc::RRHandle createRRInstance();
+// #ifdef ADDON_ROADRUNNER
+// #include "./addons/libRoadrunner/src/librr_intracellular.h"
+// #endif
 	
 using namespace BioFVM;
 using namespace PhysiCell;
@@ -93,20 +91,30 @@ using namespace PhysiCell;
 int main( int argc, char* argv[] )
 {
 	// load and parse settings file(s)
-	
-	bool XML_status = false; 
+
+	bool XML_status = false;
+	char copy_command [1024];
 	if( argc > 1 )
-	{ XML_status = load_PhysiCell_config_file( argv[1] ); }
+	{
+		XML_status = load_PhysiCell_config_file( argv[1] );
+		sprintf( copy_command , "cp %s %s" , argv[1] , PhysiCell_settings.folder.c_str() );
+	}
 	else
-	{ XML_status = load_PhysiCell_config_file( "./config/PhysiCell_settings.xml" ); }
+	{
+		XML_status = load_PhysiCell_config_file( "./config/PhysiCell_settings.xml" );
+		sprintf( copy_command , "cp ./config/PhysiCell_settings.xml %s" , PhysiCell_settings.folder.c_str() );
+	}
 	if( !XML_status )
 	{ exit(-1); }
-	
-	//Read SBML for PK model
-	rrc::RRHandle rrHandle;
-	rrc::RRCDataPtr result;
 
-	rrHandle = ReadSBML();
+	// copy config file to output directry
+	system( copy_command );
+	
+	// //Read SBML for PK model
+	// rrc::RRHandle rrHandle;
+	// rrc::RRCDataPtr result;
+
+	// rrHandle = ReadSBML();
 
 	// OpenMP setup
 	omp_set_num_threads(PhysiCell_settings.omp_num_threads);
@@ -115,9 +123,7 @@ int main( int argc, char* argv[] )
 	std::string time_units = "min"; 
 
 	/* Microenvironment setup */ 
-	
 	setup_microenvironment(); // modify this in the custom code 
-	std::cout << "Microenvironment setup is done" << std::endl;
 
 	/* PhysiCell setup */ 
  	
@@ -128,9 +134,9 @@ int main( int argc, char* argv[] )
 	/* Users typically start modifying here. START USERMODS */ 
 	
 	create_cell_types();
-	std::cout << "Cell type creation is done" << std::endl;
+
 	setup_tissue();
-	std::cout << "Tissue setup is done" << std::endl;
+
 	/* Users typically stop modifying here. END USERMODS */ 
 	
 	// set MultiCellDS save options 
@@ -154,7 +160,8 @@ int main( int argc, char* argv[] )
 	// for simplicity, set a pathology coloring function 
 	
 	std::vector<std::string> (*cell_coloring_function)(Cell*) = my_coloring_function; 
-	
+	// std::vector<std::string> (*cell_coloring_function)(Cell*) = damage_coloring;
+
 	sprintf( filename , "%s/initial.svg" , PhysiCell_settings.folder.c_str() ); 
 	SVG_plot( filename , microenvironment, 0.0 , PhysiCell_globals.current_time, cell_coloring_function );
 	
@@ -221,14 +228,17 @@ int main( int argc, char* argv[] )
 				}
 			}
 
+            // update Dirichlet conditions
+            PK_model( PhysiCell_globals.current_time );
+
 			// update the microenvironment
 			microenvironment.simulate_diffusion_decay( diffusion_dt );
 
 
-			double dose;
-			dose = SimulatePKModel(rrHandle);
+			// double dose;
+			// dose = SimulatePKModel(rrHandle);
 
-			EditMicroenvironment(dose);
+			// EditMicroenvironment(dose);
             
             
 /*             double dt_intracellular = 1.0;

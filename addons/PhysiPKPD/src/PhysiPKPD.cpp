@@ -2,6 +2,10 @@
 #include <fstream>
 #include "./PhysiPKPD.h"
 
+#ifdef ADDON_ROADRUNNER // librr_intracellular.h will protect against redefining this
+#include "../../libRoadrunner/src/librr_intracellular.h"
+#endif
+
 static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots for determining when to do these
 
 Pharmacokinetics_Model::Pharmacokinetics_Model()
@@ -81,12 +85,12 @@ void PK_model(double current_time)
             }
             s.erase(0, pos + 1);
         }
-        if (microenvironment.find_density_index(s) != -1)
+        if (s.size()>0 && microenvironment.find_density_index(s) != -1)
         {
             PK_names.push_back(s);
             PK_ind.push_back(microenvironment.find_density_index(s));
         }
-        else
+        else if (s.size() > 0)
         {
             std::cout << "WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
         }
@@ -143,10 +147,11 @@ void setup_pk_advancer(Pharmacokinetics_Model *pPK)
     }
     else 
     {
-        std::vector<std::string> current_options = {"2C","1C"};
+        std::vector<std::string> current_options = {"2C","1C","SBML"};
         std::vector<void (*)(Pharmacokinetics_Model*)> fns;
         fns.push_back(&setup_pk_model_two_compartment);
         fns.push_back(&setup_pk_model_one_compartment);
+        fns.push_back(&setup_pk_model_sbml);
 
         std::string model = parameters.strings(pPK->substrate_name + "_pk_model");
         bool model_found = false;
@@ -378,6 +383,43 @@ void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
     return;
 }
 
+rrc::RRHandle rrHandle; // this should cause an issue if not using the template_pkpd_sbml project with the -D ADDON_ROADRUNNER flag
+
+void setup_pk_model_sbml(Pharmacokinetics_Model *pPK)
+{
+
+    /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
+
+    // assume for now that we are using a 2-compartment model and will be solving it analytically
+    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_biot_number") == -1)
+    {
+        std::cout << pPK->substrate_name << "_biot_number not set." << std::endl
+                  << "  Using a default value of 1.0." << std::endl;
+        pPK->biot_number = 1.0;
+    } // assume a default value of 1
+    else
+    {
+        pPK->biot_number = parameters.doubles(pPK->substrate_name + "_biot_number");
+    }
+    /*    %%%%%%%%%%%% Made sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
+
+    // Read SBML for PK model
+    rrHandle = createRRInstance(); // creating rrHandle to save SBML in it
+    rrc::RRCDataPtr result;
+
+
+	//reading given SBML
+	if (!rrc::loadSBML(rrHandle, "./config/PK_base.xml"))    //------------- To PhysiPKPD Team : please provide PK model in here -------------
+	{
+		std::cerr << "------------->>>>>  Error while loading SBML file  <-------------\n\n";
+		exit(0);
+	}
+
+    pPK->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
+    pPK->advance = &single_pk_model_sbml;
+    return;
+}
+
 void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time)
 {
     if (!pPK->setup_done)
@@ -467,6 +509,98 @@ void single_pk_model_two_compartment(Pharmacokinetics_Model *pPK, double current
 
     return;
 }
+
+void single_pk_model_sbml(Pharmacokinetics_Model *pPK, double current_time)
+{
+    double dose;
+
+    //------------- To PhysiPKPD Team : please provide proper start/end time -------------
+	static double start_time = 0.0;
+	static double end_time = diffusion_dt;
+
+	//create Data Pointer
+	rrc::RRCDataPtr result;
+	//freeing memory
+	rrc::freeRRCData(result);
+
+	// simulate SBML
+	result = rrc::simulateEx(rrHandle, start_time, end_time, 2);
+
+	// parsing results
+	rrc::RRVectorPtr vptr;
+	vptr = rrc::getFloatingSpeciesConcentrations(rrHandle);
+
+	// Getting "Concentrations"
+	std::string species_names_str = stringArrayToString(rrc::getFloatingSpeciesIds(rrHandle));
+	// std::cerr << "PK SBML species names: " << species_names_str << "\n" << std::endl; //------------- To PhysiPKPD Team : please learn the index of Drug index here and comment this line -------------
+	// std::cout << "    Data = " << vptr->Data[0] << " " << vptr->Data[1] << std::endl;  //------------- To PhysiPKPD Team : uncomment here if you want to visualize the numbers -------------
+
+	pPK->compartment_concentrations[0] = vptr->Data[0]; // @Supriya: Please confirm that vptr->Data[0] will always be the value of the first Species at end_time
+
+	rrc::freeVector(vptr);
+    // EditMicroenvironment(dose);
+    return;
+}
+
+/*
+double SimulatePKModel(rrc::RRHandle rrHandle)
+{
+
+	//------------- To PhysiPKPD Team : please provide proper start/end time -------------
+	static double start_time = 0.0;
+	static double end_time = 0.01;
+
+	//create Data Pointer
+	rrc::RRCDataPtr result;
+	//freeing memory
+	rrc::freeRRCData(result);
+
+	// simulate SBML
+	result = rrc::simulateEx(rrHandle, start_time, end_time, 2);
+
+	// parsing results
+	rrc::RRVectorPtr vptr;
+	vptr = rrc::getFloatingSpeciesConcentrations(rrHandle);
+
+	// Getting "Concentrations"
+	std::string species_names_str = stringArrayToString(rrc::getFloatingSpeciesIds(rrHandle));
+	std::cerr << species_names_str << "\n" << std::endl; //------------- To PhysiPKPD Team : please learn the index of Drug index here and comment this line -------------
+
+	int dose_index = 2;                    //------------- To PhysiPKPD Team : And provide index over here -------------
+	double res = vptr->Data[dose_index];
+	//std::cout << "    res = " << res << std::endl;  //------------- To PhysiPKPD Team : uncomment here if you want to visualize the numbers -------------
+	rrc::freeVector(vptr);
+
+	return res;
+}
+
+
+rrc::RRHandle ReadSBML()
+{
+	// creating rrHandle to save SBML in it
+	rrc::RRHandle rrHandle;
+	rrHandle = createRRInstance();
+
+	//reading given SBML
+	if (!rrc::loadSBML(rrHandle, "./config/PK_dosing.xml"))    //------------- To PhysiPKPD Team : please provide PK model in here -------------
+	{
+		std::cerr << "------------->>>>>  Error while loading SBML file  <-------------\n\n";
+		exit(0);
+	}
+
+	return rrHandle;
+}
+*/
+
+/*
+void EditMicroenvironment(double dose)
+{
+	// This function is created for editing Microenvironment according to SBML results
+	//------------- To PhysiPKPD Team : PLease fill this function to change your Boundaries at the Microenvironment
+
+
+}
+*/
 
 void single_pk_model_one_compartment(Pharmacokinetics_Model *pPK, double current_time)
 {
