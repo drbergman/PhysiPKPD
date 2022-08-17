@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- generated with COPASI 4.36 (Build 260) (http://www.copasi.org) at 2022-08-16T03:05:32Z -->
+<!-- generated with COPASI 4.36 (Build 260) (http://www.copasi.org) at 2022-08-16T22:22:46Z -->
 <?oxygen RNGSchema="http://www.copasi.org/static/schema/CopasiML.rng" type="xml"?>
 <COPASI xmlns="http://www.copasi.org/static/schema" versionMajor="4" versionMinor="36" versionDevel="260" copasiSourcesModified="0">
   <ListOfFunctions>
@@ -88,9 +88,7 @@ Reaction scheme where the products are created from the reactants and the change
     <ListOfCompartments>
       <Compartment key="Compartment_0" name="Patient" simulationType="fixed" dimensionality="3" addNoise="false">
         <MiriamAnnotation>
-<rdf:RDF
-xmlns:dcterms="http://purl.org/dc/terms/"
-xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:RDF xmlns:dcterms="http://purl.org/dc/terms/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 <rdf:Description rdf:about="#Compartment_0">
 </rdf:Description>
 </rdf:RDF>
@@ -106,42 +104,37 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
       </Metabolite>
       <Metabolite key="Metabolite_1" name="periphery_concentration" simulationType="reactions" compartment="Compartment_0" addNoise="false">
         <MiriamAnnotation>
-<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
-
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" />
         </MiriamAnnotation>
       </Metabolite>
     </ListOfMetabolites>
     <ListOfModelValues>
       <ModelValue key="ModelValue_0" name="lambda" simulationType="fixed" addNoise="false">
         <MiriamAnnotation>
-<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
-
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" />
         </MiriamAnnotation>
       </ModelValue>
       <ModelValue key="ModelValue_1" name="k12" simulationType="fixed" addNoise="false">
         <MiriamAnnotation>
-<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
-
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" />
         </MiriamAnnotation>
       </ModelValue>
       <ModelValue key="ModelValue_2" name="k21" simulationType="fixed" addNoise="false">
         <MiriamAnnotation>
-<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
-
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" />
         </MiriamAnnotation>
       </ModelValue>
     </ListOfModelValues>
     <ListOfReactions>
       <Reaction key="Reaction_0" name="elimination" reversible="false" fast="false" addNoise="false">
         <MiriamAnnotation>
-<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
-
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" />
         </MiriamAnnotation>
         <ListOfSubstrates>
           <Substrate metabolite="Metabolite_0" stoichiometry="1"/>
         </ListOfSubstrates>
         <ListOfConstants>
-          <Constant key="Parameter_204" name="k1" value="0"/>
+          <Constant key="Parameter_249" name="k1" value="0.0027"/>
         </ListOfConstants>
         <KineticLaw function="Function_13" unitType="Default" scalingCompartment="CN=Root,Model=PK_base,Vector=Compartments[Patient]">
           <ListOfCallParameters>
@@ -156,8 +149,7 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
       </Reaction>
       <Reaction key="Reaction_1" name="Q12" reversible="true" fast="false" addNoise="false">
         <MiriamAnnotation>
-<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
-
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" />
         </MiriamAnnotation>
         <ListOfSubstrates>
           <Substrate metabolite="Metabolite_0" stoichiometry="1"/>
@@ -166,8 +158,8 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
           <Product metabolite="Metabolite_1" stoichiometry="1"/>
         </ListOfProducts>
         <ListOfConstants>
-          <Constant key="Parameter_201" name="k2" value="0.1"/>
-          <Constant key="Parameter_205" name="k1" value="1"/>
+          <Constant key="Parameter_250" name="k2" value="0.0048"/>
+          <Constant key="Parameter_251" name="k1" value="0.0048"/>
         </ListOfConstants>
         <KineticLaw function="Function_14" unitType="Default" scalingCompartment="CN=Root,Model=PK_base,Vector=Compartments[Patient]">
           <ListOfCallParameters>
@@ -204,7 +196,7 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
           <ModelParameter cn="CN=Root,Model=PK_base,Vector=Compartments[Patient]" value="1" type="Compartment" simulationType="fixed"/>
         </ModelParameterGroup>
         <ModelParameterGroup cn="String=Initial Species Values" type="Group">
-          <ModelParameter cn="CN=Root,Model=PK_base,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" value="9.5029381192799998e+26" type="Species" simulationType="reactions"/>
+          <ModelParameter cn="CN=Root,Model=PK_base,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" value="3.0110703799999998e+26" type="Species" simulationType="reactions"/>
           <ModelParameter cn="CN=Root,Model=PK_base,Vector=Compartments[Patient],Vector=Metabolites[periphery_concentration]" value="0" type="Species" simulationType="reactions"/>
         </ModelParameterGroup>
         <ModelParameterGroup cn="String=Initial Global Quantities" type="Group">
@@ -245,7 +237,7 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
       <StateTemplateVariable objectReference="ModelValue_2"/>
     </StateTemplate>
     <InitialState type="initialState">
-      0 9.5029381192799998e+26 0 1 0.0027000000000000001 0.0047999999999999996 0.0047999999999999996 
+      0 3.0110703799999998e+26 0 1 0.0027000000000000001 0.0047999999999999996 0.0047999999999999996 
     </InitialState>
   </Model>
   <ListOfTasks>

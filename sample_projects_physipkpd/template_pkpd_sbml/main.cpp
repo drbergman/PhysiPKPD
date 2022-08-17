@@ -79,10 +79,6 @@
 // put custom code modules here! 
 
 #include "./custom_modules/custom.h" 
-
-// #ifdef ADDON_ROADRUNNER
-// #include "./addons/libRoadrunner/src/librr_intracellular.h"
-// #endif
 	
 using namespace BioFVM;
 using namespace PhysiCell;
@@ -109,12 +105,6 @@ int main( int argc, char* argv[] )
 
 	// copy config file to output directry
 	system( copy_command );
-	
-	// //Read SBML for PK model
-	// rrc::RRHandle rrHandle;
-	// rrc::RRCDataPtr result;
-
-	// rrHandle = ReadSBML();
 
 	// OpenMP setup
 	omp_set_num_threads(PhysiCell_settings.omp_num_threads);
@@ -187,8 +177,6 @@ int main( int argc, char* argv[] )
     double intracellular_dt_tolerance = 0.001 * intracellular_dt; 
     double next_intracellular_update = intracellular_dt; 
 
-    
-    
 	// main loop 
 	
 	try 
@@ -234,37 +222,14 @@ int main( int argc, char* argv[] )
 			// update the microenvironment
 			microenvironment.simulate_diffusion_decay( diffusion_dt );
 
+            PD_model( PhysiCell_globals.current_time );
 
-			// double dose;
-			// dose = SimulatePKModel(rrHandle);
-
-			// EditMicroenvironment(dose);
-            
-            
-/*             double dt_intracellular = 1.0;
-            //std::cout << "Current_Time : " << PhysiCell_globals.current_time << " -   FMOD : " << fmod(PhysiCell_globals.current_time,1.0) << std::endl;
-            if ( fabs((fmod (PhysiCell_globals.current_time, dt_intracellular) - 1 )) < 0.001 || (fmod (PhysiCell_globals.current_time, dt_intracellular) < 0.00001) ) 
-            {
-                std::cout << "DIVIDED" <<std::endl;
-            } */
-			
 			// run PhysiCell 
 			((Cell_Container *)microenvironment.agent_container)->update_all_cells( PhysiCell_globals.current_time );
 			
 			/*
 			  Custom add-ons could potentially go here. 
 			*/
-            
-            double time_since_last_intracellular = PhysiCell_globals.current_time - last_intracellular_time;
-            
-            //update_intracellular();
-            
-            if( PhysiCell_globals.current_time >= next_intracellular_update )
-            {
-			    update_intracellular();
-
-                next_intracellular_update += intracellular_dt; 
-            }
 
 			PhysiCell_globals.current_time += diffusion_dt;
 		}

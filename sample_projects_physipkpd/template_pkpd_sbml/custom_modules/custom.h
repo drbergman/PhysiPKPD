@@ -79,6 +79,7 @@ using namespace PhysiCell;
 
 void create_cell_types( void );
 void setup_tissue( void ); 
+void create_output_csv_files( void );
 
 // set up the BioFVM microenvironment 
 void setup_microenvironment( void ); 
@@ -86,16 +87,11 @@ void setup_microenvironment( void );
 // custom pathology coloring function 
 
 std::vector<std::string> my_coloring_function( Cell* );
-void update_intracellular();
 
 // custom functions can go here 
 
-void predator_hunting_function( Cell* pCell, Phenotype& phenotype, double dt ); 
-void predator_cycling_function( Cell* pCell, Phenotype& phenotype, double dt ); 
-
-void prey_cycling_function( Cell* pCell , Phenotype& phenotype, double dt ); 
-std::vector<std::vector<double>> create_cell_circle_positions(double cell_radius, double sphere_radius);
-
-// rrc::RRHandle ReadSBML();
-// double SimulatePKModel(rrc::RRHandle rrHandle);
-// void EditMicroenvironment(double dose);
+void phenotype_function( Cell* pCell, Phenotype& phenotype, double dt );
+void custom_function( Cell* pCell, Phenotype& phenotype , double dt );
+void contact_function( Cell* pMe, Phenotype& phenoMe , Cell* pOther, Phenotype& phenoOther , double dt );
+void cell_phenotype( Cell* pC, Phenotype& p, double dt );
+void motility_rule( Cell* pC, Phenotype& p, double dt );

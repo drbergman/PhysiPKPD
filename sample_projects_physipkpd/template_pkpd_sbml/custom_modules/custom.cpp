@@ -75,86 +75,119 @@ using namespace BioFVM;
 // #include "rrc_utilities.h"
 extern "C" rrc::RRHandle createRRInstance();
 
-void create_cell_types( void )
+void create_cell_types(void)
 {
-	// set the random seed 
-	SeedRandom( parameters.ints("random_seed") );  
-	
-	/* 
-	   Put any modifications to default cell definition here if you 
-	   want to have "inherited" by other cell types. 
-	   
-	   This is a good place to set default functions. 
-	*/ 
-	
-	cell_defaults.functions.volume_update_function = standard_volume_update_function;
-	cell_defaults.functions.update_velocity = standard_update_cell_velocity;
+    // set the random seed
+    SeedRandom(parameters.ints("random_seed"));
 
-	cell_defaults.functions.update_migration_bias = NULL; 
-	cell_defaults.functions.update_phenotype = NULL; // update_cell_and_death_parameters_O2_based; 
-	cell_defaults.functions.custom_cell_rule = NULL; 
-	
-	cell_defaults.functions.add_cell_basement_membrane_interactions = NULL; 
-	cell_defaults.functions.calculate_distance_to_membrane = NULL; 
-	
+    /*
+       Put any modifications to default cell definition here if you
+       want to have "inherited" by other cell types.
+
+       This is a good place to set default functions.
+    */
+
+    initialize_default_cell_definition();
+    cell_defaults.phenotype.secretion.sync_to_microenvironment(&microenvironment);
+
+    cell_defaults.functions.volume_update_function = standard_volume_update_function;
+    cell_defaults.functions.update_velocity = standard_update_cell_velocity;
+
+    cell_defaults.functions.update_migration_bias = NULL;
+    cell_defaults.functions.update_phenotype = NULL; // update_cell_and_death_parameters_O2_based;
+    cell_defaults.functions.custom_cell_rule = NULL;
+    cell_defaults.functions.contact_function = NULL;
+
+    cell_defaults.functions.add_cell_basement_membrane_interactions = NULL;
+    cell_defaults.functions.calculate_distance_to_membrane = NULL;
+
+    /*
+       This parses the cell definitions in the XML config file.
+    */
+
+    initialize_cell_definitions_from_pugixml();
+
+    /*
+       Put any modifications to individual cell definitions here.
+
+       This is a good place to set custom functions.
+    */
+
+    cell_defaults.functions.update_phenotype = phenotype_function;
+    cell_defaults.functions.custom_cell_rule = custom_function;
+    cell_defaults.functions.contact_function = contact_function;
+
+    for (int k = 0; k < cell_definitions_by_index.size(); k++)
+    {
+        cell_definitions_by_index[k]->functions.update_phenotype = cell_phenotype;
+        // uncomment the following line if motility is a mechanism of action for one of your drugs. WARNING: I think this will overwrite any migration biases set by chemotaxis.
+        // cell_definitions_by_index[k]->functions.update_migration_bias = motility_rule;
+    }
+
+    /*
+       This builds the map of cell definitions and summarizes the setup.
+    */
+
+    build_cell_definitions_maps();
+
 	/*
-	   This parses the cell definitions in the XML config file. 
+	   This intializes cell signal and response dictionaries 
 	*/
-	
-	initialize_cell_definitions_from_pugixml(); 
 
-	build_cell_definitions_maps(); 
-	display_cell_definitions( std::cout ); 
-	
-	return; 
+	setup_signal_behavior_dictionaries(); 
+
+    /* 
+	   Put any modifications to individual cell definitions here. 
+	   
+	   This is a good place to set custom functions. 
+	*/ 
+
+    display_cell_definitions(std::cout);
+
+    return;
 }
 
-void setup_microenvironment( void )
+void setup_microenvironment(void)
 {
-	// set domain parameters 
-	
-	// put any custom code to set non-homogeneous initial conditions or 
-	// extra Dirichlet nodes here. 
-	
-	// initialize BioFVM 
-	
-	initialize_microenvironment(); 	
-	
-	return; 
+    // set domain parameters
+
+    // put any custom code to set non-homogeneous initial conditions or
+    // extra Dirichlet nodes here.
+
+    // initialize BioFVM
+
+    initialize_microenvironment();
+
+    return;
 }
 
-void setup_tissue( void )
+void setup_tissue(void)
 {
+    double Xmin = microenvironment.mesh.bounding_box[0];
+    double Ymin = microenvironment.mesh.bounding_box[1];
+    double Zmin = microenvironment.mesh.bounding_box[2];
 
-    static int nPKPD_D1 = microenvironment.find_density_index( "PKPD_D1" );
+    double Xmax = microenvironment.mesh.bounding_box[3];
+    double Ymax = microenvironment.mesh.bounding_box[4];
+    double Zmax = microenvironment.mesh.bounding_box[5];
 
-    
-    
-	double Xmin = microenvironment.mesh.bounding_box[0]; 
-	double Ymin = microenvironment.mesh.bounding_box[1]; 
-	double Zmin = microenvironment.mesh.bounding_box[2]; 
+    if (default_microenvironment_options.simulate_2D == true)
+    {
+        Zmin = 0.0;
+        Zmax = 0.0;
+    }
 
-	double Xmax = microenvironment.mesh.bounding_box[3]; 
-	double Ymax = microenvironment.mesh.bounding_box[4]; 
-	double Zmax = microenvironment.mesh.bounding_box[5]; 
-	
-	if( default_microenvironment_options.simulate_2D == true )
-	{
-		Zmin = 0.0; 
-		Zmax = 0.0; 
-	}
-	
-	double Xrange = Xmax - Xmin; 
-	double Yrange = Ymax - Ymin; 
-	double Zrange = Zmax - Zmin; 
-	
-	// create cells 
-    
-	Cell *pC;
+    double Xrange = Xmax - Xmin;
+    double Yrange = Ymax - Ymin;
+    double Zrange = Zmax - Zmin;
+
+    // create some of each type of cell
+
+    Cell *pC;
 
     // place cells
     double max_distance = parameters.doubles("max_initial_distance");
-    Cell_Definition *pCD = find_cell_definition("cancer_cell");
+    Cell_Definition *pCD = find_cell_definition("cell");
 
     std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
     for (int n = 0; n < parameters.ints("number_of_cells"); n++)
@@ -166,192 +199,118 @@ void setup_tissue( void )
         position[1] = r * sin(theta);
         pC = create_cell(*pCD);
         pC->assign_position(position);
-        int nPKPD_D1_int = pC->custom_data.find_variable_index( "PKPD_D1_int_conc" );
-		int i_damage_i = pC->custom_data.find_variable_index("damage");
-        pC->custom_data[nPKPD_D1_int] = parameters.doubles("PKPD_D1_initial_internal_concentration");
-		pC->custom_data[i_damage_i] = parameters.doubles("damage");
-
-        
-        double cell_volume = pC->phenotype.volume.total;
-        pC->phenotype.molecular.internalized_total_substrates[nPKPD_D1]= pC->custom_data[nPKPD_D1_int] * cell_volume;		
-
-        //pC->phenotype.molecular.internalized_total_substrates[drug2_index]= pC->custom_data[i_drug2_i] * cell_volume;
-        pC->phenotype.intracellular->start();
-		pC->phenotype.intracellular->set_parameter_value("volume", cell_volume);
     }
 
-	/*
-	Cell* pCell;
-	
-	double cell_radius = cell_defaults.phenotype.geometry.radius; 
-	double cell_spacing = 0.8 * 2.0 * cell_radius; 
-	double initial_tumor_radius = 100;
-    double retval;
+    // load cells from your CSV file (if enabled)
+    load_cells_from_pugixml();
 
-	// std::vector<std::vector<double>> positions = create_cell_circle_positions(cell_radius,initial_tumor_radius);
-    
-    // std::cout << "NUMBER OF CELLS : " << positions.size() << " __________" << std::endl;
-    for( int i=0; i < positions.size(); i++ )
+    return;
+}
+
+std::vector<std::string> my_coloring_function(Cell *pC)
+{
+    return damage_coloring(pC);
+}
+
+void phenotype_function(Cell *pC, Phenotype &phenotype, double dt)
+{
+    return;
+}
+
+void custom_function(Cell *pC, Phenotype &phenotype, double dt)
+{
+    return;
+}
+
+void contact_function(Cell *pMe, Phenotype &phenoMe, Cell *pOther, Phenotype &phenoOther, double dt)
+{
+    return;
+}
+
+void cell_phenotype(Cell *pC, Phenotype &p, double dt)
+{
+	if (p.death.dead == true)
     {
-        pCell = create_cell(get_cell_definition("cancer_cell")); 
-        pCell->assign_position( positions[i] );
-
-       
+        p.secretion.set_all_secretion_to_zero();
+        p.secretion.set_all_uptake_to_zero();
+        pC->functions.update_phenotype = NULL;
+		return;
     }
-	*/
-
-	return; 
-}
-
-void update_intracellular()
-{
-
-	// BioFVM Indices
-	static int nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
-
-
-
-#pragma omp parallel for 
-	for (int i = 0; i < (*all_cells).size(); i++)
-	{
-		// Custom Data Indices
-		static int nPKPD_D1_int = (*all_cells)[i]->custom_data.find_variable_index("PKPD_D1_int_conc");
-		static int i_damage_i = (*all_cells)[i]->custom_data.find_variable_index("damage");
-
-
-		if ((*all_cells)[i]->is_out_of_domain == false)
-		{
-			// Cell Volume
-			double cell_volume = (*all_cells)[i]->phenotype.volume.total;
-
-			// Intracellular Amount
-			double PKPD_D1_int_temp = (*all_cells)[i]->phenotype.molecular.internalized_total_substrates[nPKPD_D1] / cell_volume;
-
-
-			//std::cout << "Intracellular Oxygen : " <<(*all_cells)[i]->phenotype.molecular.internalized_total_substrates[oxygen_substrate_index]/cell_volume << "    Extracellular Oxygen : " <<  oxy_val << std::endl;
-			//std::cout << "Intracellular Glucose : " <<(*all_cells)[i]->phenotype.molecular.internalized_total_substrates[glucose_substrate_index]/cell_volume << "    Extracellular Glucose : " <<  glu_val << std::endl;
-			//std::cout << "Intracellular Lactate : " <<(*all_cells)[i]->phenotype.molecular.internalized_total_substrates[lactate_substrate_index] << std::endl;
-
-
-			//std::cout << "main.cpp:  oxy_val (from substrate)= " << oxy_val << std::endl; 
-
-			// Update SBML 
-			(*all_cells)[i]->phenotype.intracellular->set_parameter_value("PKPD_D1", PKPD_D1_int_temp);
-			(*all_cells)[i]->phenotype.intracellular->set_parameter_value("volume", cell_volume);
-
-			//std::cout << "SBML Oxygen : " <<(*all_cells)[i]->phenotype.intracellular->get_parameter_value("Oxygen") << std::endl;
-
-			// SBML Simulation
-			(*all_cells)[i]->phenotype.intracellular->update();
-			// Phenotype Simulation
-			(*all_cells)[i]->phenotype.intracellular->update_phenotype_parameters((*all_cells)[i]->phenotype);
-
-			//std::cout << "Before Intracellular Oxygen : " <<(*all_cells)[i]->phenotype.molecular.internalized_total_substrates[oxygen_substrate_index]/cell_volume << std::endl;
-
-			// Internalized Chemical Update After SBML Simulation
-			(*all_cells)[i]->phenotype.molecular.internalized_total_substrates[nPKPD_D1] = (*all_cells)[i]->phenotype.intracellular->get_parameter_value("PKPD_D1") * cell_volume;
-
-
-			//std::cout << "SBML Energy : " <<(*all_cells)[i]->phenotype.intracellular->get_parameter_value("Energy") << std::endl;
-			/* if ( (*all_cells)[i]->phenotype.intracellular->get_parameter_value("Energy") >100 )
-			{
-				std::cout << "SBML Energy : " <<(*all_cells)[i]->phenotype.intracellular->get_parameter_value("Energy") << "  - Cell position : " << (*all_cells)[i]->position << std::endl;
-			} */
-
-			//Save custom data
-			(*all_cells)[i]->custom_data[nPKPD_D1_int] = (*all_cells)[i]->phenotype.intracellular->get_parameter_value("PKPD_D1");
-			(*all_cells)[i]->custom_data[i_damage_i] = (*all_cells)[i]->phenotype.intracellular->get_parameter_value("damage");
-			//std::cout << "Damage = " << (*all_cells)[i]->phenotype.intracellular->get_parameter_value("damage") << std::endl;
-
-
-		}
-
-	}
-}
-
-std::vector<std::string> my_coloring_function( Cell* pCell )
-{
-	return paint_by_number_cell_coloring(pCell);
-}
-
-/*
-std::vector<std::vector<double>> create_cell_circle_positions(double cell_radius, double sphere_radius)
-{
-	std::vector<std::vector<double>> cells;
-	int xc=0,yc=0,zc=0;
-	double x_spacing= cell_radius*sqrt(3);
-	double y_spacing= cell_radius*sqrt(3);
-
-	std::vector<double> tempPoint(3,0.0);
 	
-	for(double x=-sphere_radius;x<sphere_radius;x+=x_spacing, xc++)
-	{
-		for(double y=-sphere_radius;y<sphere_radius;y+=y_spacing, yc++)
-		{
-			tempPoint[1]=y + (xc%2) * cell_radius;
-			tempPoint[0]=x;
-			tempPoint[2]=0;
-			if(sqrt(norm_squared(tempPoint))< sphere_radius)
-			{ cells.push_back(tempPoint); }
-		}
-	}
-	return cells;
+    Cell_Definition* pCD = find_cell_definition( pC->type );
+
+    // find index of apoptosis death model
+    static int nApop = p.death.find_death_model_index( "apoptosis" );
+    // find index of necrosis death model
+    static int nNec = p.death.find_death_model_index( "Necrosis" );
+    
+    // first reset the rate of the affected process to its base values. Otherwise drug effects will stack, which is (probably) not what you want.
+    
+    // if this phenotype has a prolif moa
+    set_single_behavior( pC, "cycle entry", get_single_base_behavior( pC, "cycle entry") );
+    
+    // if this phenotype has a apop moa
+    set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
+    
+    // if this phenotype has a necrosis moa
+    set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
+        
+
+    // update phenotype based on PD dynamics
+    pd_function(pC, p, dt);
+
+    return;
 }
 
-
-rrc::RRHandle ReadSBML()
+void motility_rule(Cell *pC, Phenotype &p, double dt)
 {
-	// creating rrHandle to save SBML in it
-	rrc::RRHandle rrHandle;
-	rrHandle = createRRInstance();
+    // find my cell definition
+    Cell_Definition *pCD = find_cell_definition(pC->type);
 
-	//reading given SBML
-	if (!rrc::loadSBML(rrHandle, "./config/PK_dosing.xml"))    //------------- To PhysiPKPD Team : please provide PK model in here -------------
-	{
-		std::cerr << "------------->>>>>  Error while loading SBML file  <-------------\n\n";
-		exit(0);
-	}
+    // find index of drug 1 in the microenvironment
+    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
+    // find index of drug 2 in the microenvironment
+    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_D2");
 
-	return rrHandle;
+    // find index of damage variable for drug 1
+    int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
+    // find index of damage variable for drug 2
+    int nPKPD_D2_damage = pC->custom_data.find_variable_index("PKPD_D2_damage");
+
+    // set the Hill multiplier
+    double temp;
+
+    // set speed to base phenotype speed
+    p.motility.migration_speed = pCD->phenotype.motility.migration_speed;
+
+    // motility effect
+    double factor_change = 1.0; // set factor
+    if (pC->custom_data["PKPD_D1_moa_is_motility"] > 0.5)
+    {
+        static double fs_motility_D1 = pC->custom_data["PKPD_D1_motility_saturation_rate"] / pCD->phenotype.motility.migration_speed; // saturation factor of motility for drug 1
+        // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate
+        if (pC->custom_data[nPKPD_D1_damage] > 0)
+        {
+            temp = Hill_response_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_motility_EC50"], pC->custom_data["PKPD_D1_motility_hill_power"]);
+            factor_change *= 1 + (fs_motility_D1 - 1) * temp;
+        }
+    }
+
+    if (pC->custom_data["PKPD_D2_moa_is_motility"] > 0.5)
+    {
+        static double fs_motility_D2 = pC->custom_data["PKPD_D2_motility_saturation_rate"] / pCD->phenotype.motility.migration_speed; // saturation factor of motility for drug 2
+        // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate (this is unecesary when D1 also affects motility, but this is necessary when only D2 affects motility)
+        if (pC->custom_data[nPKPD_D2_damage] > 0)
+        {
+            temp = Hill_response_function(pC->custom_data[nPKPD_D2_damage], pC->custom_data["PKPD_D2_motility_EC50"], pC->custom_data["PKPD_D2_motility_hill_power"]);
+            factor_change *= 1 + (fs_motility_D2 - 1) * temp;
+        }
+    }
+    p.motility.migration_speed *= factor_change;
+
+    // trick: if dead, overwrite with NULL function pointer.
+    if (p.death.dead == true)
+    {
+        pC->functions.update_migration_bias = NULL;
+    }
 }
-
-
-double SimulatePKModel(rrc::RRHandle rrHandle)
-{
-
-	//------------- To PhysiPKPD Team : please provide proper start/end time -------------
-	static double start_time = 0.0;
-	static double end_time = 0.01;
-
-	//create Data Pointer
-	rrc::RRCDataPtr result;
-	//freeing memory
-	rrc::freeRRCData(result);
-
-	// simulate SBML
-	result = rrc::simulateEx(rrHandle, start_time, end_time, 2);
-
-	// parsing results
-	rrc::RRVectorPtr vptr;
-	vptr = rrc::getFloatingSpeciesConcentrations(rrHandle);
-
-	// Getting "Concentrations"
-	std::string species_names_str = stringArrayToString(rrc::getFloatingSpeciesIds(rrHandle));
-	std::cerr << species_names_str << "\n" << std::endl; //------------- To PhysiPKPD Team : please learn the index of Drug index here and comment this line -------------
-
-	int dose_index = 2;                    //------------- To PhysiPKPD Team : And provide index over here -------------
-	double res = vptr->Data[dose_index];
-	//std::cout << "    res = " << res << std::endl;  //------------- To PhysiPKPD Team : uncomment here if you want to visualize the numbers -------------
-	rrc::freeVector(vptr);
-
-	return res;
-}
-
-void EditMicroenvironment(double dose)
-{
-	// This function is created for editing Microenvironment according to SBML results
-	//------------- To PhysiPKPD Team : PLease fill this function to change your Boundaries at the Microenvironment
-
-
-}
-*/
