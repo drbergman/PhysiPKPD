@@ -739,6 +739,7 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
                     {
                         damage_initial_drug_term = dt * metabolism_reduction_factor; 
                     }
+                    // if (pPD->use_concentration) {damage_initial_drug_term /= pC->phenotype.volume.total;}
                     pC->custom_data[pPD->damage_index] *= damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
                     pC->custom_data[pPD->damage_index] += damage_constant;                                                                            // + d_00 ...
                     pC->custom_data[pPD->damage_index] += damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0)
@@ -751,7 +752,7 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
 
                 pC->custom_data[pPD->damage_index] *= pPD->damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
                 pC->custom_data[pPD->damage_index] += pPD->damage_constant;                                                                            // + d_00 ...
-                // pC->custom_data[pPD->damage_index] += pPD->use_concentration ? pPD->damage_constant/pC->phenotype.volume.total : pPD->damage_constant;                                                                            // + d_00 ...
+                // if (pPD->use_concentration) {damage_initial_drug_term /= pC->phenotype.volume.total;}
                 pC->custom_data[pPD->damage_index] += pPD->damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0)
                 if (pC->custom_data[pPD->damage_index] <= 0)
                 {
