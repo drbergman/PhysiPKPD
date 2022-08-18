@@ -7,34 +7,87 @@
 #include "../../../modules/PhysiCell_pugixml.h"
 #include "../../../modules/PhysiCell_standard_modules.h"
 
+#ifdef ADDON_ROADRUNNER // librr_intracellular.h will protect against redefining this
+#include "../../libRoadrunner/src/librr_intracellular.h"
+#endif
+
 using namespace BioFVM;
 using namespace PhysiCell;
 
+class Pharmacokinetics_Solver;
+class Analytic2C_PK_Solver;
+class Analytic1C_PK_Solver;
+class SBML_PK_Solver;
+
 class Pharmacokinetics_Model;
 class Pharmacodynamics_Model;
+
+class Pharmacokinetics_Solver
+{
+public:
+    std::vector<double> dose_times;
+    std::vector<double> dose_amounts;
+
+    int dose_count;
+    int max_doses;
+
+    double confluence_check_time;
+    std::vector<double> compartment_concentrations;
+
+    virtual void advance(Pharmacokinetics_Model *pPK, double current_time) = 0;
+    Pharmacokinetics_Solver();
+};
+
+class Analytic2C_PK_Solver : public Pharmacokinetics_Solver // this is like RoadRunnerIntracellular
+{
+public:
+    std::vector<std::vector<double>> M;
+    void advance(Pharmacokinetics_Model *pPK, double current_time);
+
+    Analytic2C_PK_Solver();
+};
+
+class Analytic1C_PK_Solver : public Pharmacokinetics_Solver // this is like RoadRunnerIntracellular
+{
+public:
+    double M;
+    void advance(Pharmacokinetics_Model *pPK, double current_time);
+
+    Analytic1C_PK_Solver();
+};
+
+#ifdef ADDON_ROADRUNNER
+class SBML_PK_Solver : public Pharmacokinetics_Solver // this is like RoadRunnerIntracellular
+{
+public:
+    void advance(Pharmacokinetics_Model *pPK, double current_time);
+
+    rrc::RRHandle rrHandle;
+
+    SBML_PK_Solver();
+};
+#endif
 
 class Pharmacokinetics_Model
 {
  public:
     std::string substrate_name;
 	int substrate_index; // index of the substrate following pk dynamics
-    std::vector<double> dose_times;
-    std::vector<double> dose_amounts;
-    double confluence_check_time;
+    // std::vector<double> dose_times;
+    // std::vector<double> dose_amounts;
+    // double confluence_check_time;
 
-    bool setup_done;
-
-    int dose_count;
-    int max_doses;
-
-    std::vector<std::vector<double>> M;
-    std::vector<double> compartment_concentrations;
-
+    bool dosing_schedule_setup_done;
+    // We need it to be a pointer to allow polymorphism
+	// then this object could be a numerical (not implemented), analytic, or librr solver
+	Pharmacokinetics_Solver* pk_solver;
     double biot_number;
+    double get_circulation_concentration()
+    {
+        return pk_solver->compartment_concentrations[0];
+    }
 
-    void (*advance)( Pharmacokinetics_Model* pPK, double current_time );
-		
-	Pharmacokinetics_Model(); // done
+    Pharmacokinetics_Model();
 };
 
 class Pharmacodynamics_Model
@@ -72,9 +125,6 @@ Pharmacodynamics_Model* create_pd_model( int substrate_index, int cell_index );
 Pharmacodynamics_Model* create_pd_model( int substrate_index, std::string substrate_name, int cell_index, std::string cell_type );
 
 void PK_model( double current_time );
-void setup_pk_dosing_schedule(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time);
-void pk_model_one_compartment( double current_time );
-void pk_model_two_compartment( double current_time );
 void PD_model( double dt );
 void write_cell_data_for_plots( double current_time, char delim);
 std::vector<std::string> damage_coloring( Cell* pCell );
@@ -86,16 +136,17 @@ void pk_explicit_euler_two_compartment( double dt, double &periphery_concentrati
 void pk_dose(double next_dose, double &central_concentration);
 void pk_update_dirichlet(std::vector<double> new_dirichlet_values);
 
-// void PD_model_hardcoded(double current_time);
-
-void setup_pk_advancer(Pharmacokinetics_Model* pPK);
 void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK);
 void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK);
+void setup_pk_model_sbml(Pharmacokinetics_Model *pPK);
 void single_pk_model_two_compartment(Pharmacokinetics_Model* pPK, double current_time);
 void single_pk_model_one_compartment(Pharmacokinetics_Model *pPK, double current_time);
+void single_pk_model_sbml(Pharmacokinetics_Model *pPK, double current_time);
 void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time);
 
 void setup_pd_advancer(Pharmacodynamics_Model *pPD);
+void setup_pd_model_auc(Pharmacodynamics_Model *pPD);
+void setup_pd_model_sbml(Pharmacodynamics_Model *pPD);
 void single_pd_model(Pharmacodynamics_Model *pPD, double current_time);
 
 #endif

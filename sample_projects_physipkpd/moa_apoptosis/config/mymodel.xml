@@ -235,6 +235,7 @@
         <div_generalPK type="divider" description="---PK---"/>
 
         <PKPD_D1_central_to_periphery_volume_ratio type="double" units="dimensionless" description="ratio of volume in systemic circulation to the volume of the periphery">1.0</PKPD_D1_central_to_periphery_volume_ratio>
+        <PKPD_D1_on_tumor_pd_model type="string">AUC</PKPD_D1_on_tumor_pd_model>
         <PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True></PKPD_precompute_all_pd_quantities>
         <PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pk_substrate_names>
         <PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pd_substrate_names>

@@ -2,24 +2,78 @@
 #include <fstream>
 #include "./PhysiPKPD.h"
 
+#ifdef ADDON_ROADRUNNER // librr_intracellular.h will protect against redefining this
+#include "../../libRoadrunner/src/librr_intracellular.h"
+SBML_PK_Solver::SBML_PK_Solver()
+{ return; }
+
+void SBML_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
+{
+    double dose;
+
+    //------------- To PhysiPKPD Team : please provide proper start/end time -------------
+	static double start_time = 0.0;
+	static double end_time = diffusion_dt;
+
+	//create Data Pointer
+	rrc::RRCDataPtr result;
+	//freeing memory
+	rrc::freeRRCData(result);
+
+	// simulate SBML
+	result = rrc::simulateEx(rrHandle, start_time, end_time, 2);
+
+	// parsing results
+	rrc::RRVectorPtr vptr;
+	vptr = rrc::getFloatingSpeciesConcentrations(rrHandle);
+
+	// Getting "Concentrations"
+	// std::string species_names_str = stringArrayToString(rrc::getFloatingSpeciesIds(rrHandle));
+
+	compartment_concentrations[0] = vptr->Data[0]; // @Supriya: Please confirm that vptr->Data[0] will always be the value of the first Species at end_time
+
+	rrc::freeVector(vptr);
+    return;
+}
+
+#endif
+
 static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots for determining when to do these
 
-Pharmacokinetics_Model::Pharmacokinetics_Model()
+Analytic2C_PK_Solver::Analytic2C_PK_Solver()
 {
-    substrate_index = 0;
-    dose_times = {};
-    dose_amounts = {};
+    M = {{0, 0},{0,0}};
+    return;
+}
+
+Analytic1C_PK_Solver::Analytic1C_PK_Solver()
+{
+    M = 0;
+    return;
+}
+
+Pharmacokinetics_Solver::Pharmacokinetics_Solver()
+{
+    // dose_times = {};
+    // dose_amounts = {};
 
     dose_count = 0;
     max_doses = 0;
 
-    biot_number = 1.0;
-
-    setup_done = false;
+    // dosing_schedule_setup_done = false;
 
     confluence_check_time = 0.0;
 
-    advance = NULL;
+    return;
+}
+
+Pharmacokinetics_Model::Pharmacokinetics_Model()
+{
+    substrate_index = 0;
+    biot_number = 1.0;
+    dosing_schedule_setup_done = false;
+    pk_solver = NULL;
+
     return;
 }
 
@@ -27,7 +81,118 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
 {
     Pharmacokinetics_Model *pNew = create_pk_model(substrate_index);
     pNew->substrate_name = substrate_name;
-    return pNew;
+
+    if (parameters.doubles.find_variable_index(pNew->substrate_name + "_biot_number") == -1)
+    {
+        std::cout << "PhysiPKPD WARNING: " << pNew->substrate_name << "_biot_number not set." << std::endl
+                  << "  Using a default value of 1.0." << std::endl;
+        pNew->biot_number = 1.0;
+    } // assume a default value of 1
+    else
+    {
+        pNew->biot_number = parameters.doubles(pNew->substrate_name + "_biot_number");
+    }
+
+    void(*setup_function)(Pharmacokinetics_Model *pNew);
+    std::string model;
+    if (parameters.strings.find_variable_index(substrate_name + "_pk_model")==-1)
+    {
+        std::cout << "PhysiPKPD WARNING: No PK model specified for " << substrate_name << " ." << std::endl
+                  << "  Will attempt to set up a 2-compartment model." << std::endl
+                  << std::endl;
+        setup_function = &setup_pk_model_two_compartment;
+    }
+    else 
+    {
+        std::vector<std::string> current_options = {"2C","1C","SBML"};
+        std::vector<void (*)(Pharmacokinetics_Model*)> fns;
+        fns.push_back(&setup_pk_model_two_compartment);
+        fns.push_back(&setup_pk_model_one_compartment);
+        fns.push_back(NULL); // handle this case separately
+
+        model = parameters.strings(substrate_name + "_pk_model");
+        bool model_found = false;
+        for ( int i=0; i<current_options.size(); i++)
+        {
+            if (model==current_options[i])
+            {
+                setup_function = fns[i];
+                model_found = true;
+                break;
+            }
+        }
+        if (!model_found)
+        {
+            std::cout << "PhysiPKPD ERROR: " << substrate_name + " is set to follow " + parameters.strings(substrate_name + "_pk_model") + " but this is not an allowable option." << std::endl
+                      << "  Current options include: " << current_options << std::endl;
+            exit(-1);
+        }
+    }
+
+    if (setup_function)
+    {
+        setup_function(pNew);
+        return pNew;
+    }
+
+#ifdef ADDON_ROADRUNNER
+    if (model == "SBML")
+    {
+        SBML_PK_Solver *pSolver;
+        pSolver = new SBML_PK_Solver;
+
+        // Read SBML for PK model
+        pSolver->rrHandle = createRRInstance(); // creating rrHandle to save SBML in it
+        rrc::RRCDataPtr result;
+
+        // add dosing events?
+        if (parameters.bools.find_variable_index(substrate_name + "_read_dose_from_csv")!=-1 && parameters.bools(substrate_name + "_read_dose_from_csv"))
+        {
+            // read in csv into events for the xml file
+            std::cout << "PhysiPKPD WARNING: Reading in a dosing schedule from a CSV is not yet supported." << std::endl
+                      << "  Will use ./config/PK_base.xml as is for the PK dynamics of " << substrate_name << std::endl
+                      << std::endl;
+
+        }
+        pNew->dosing_schedule_setup_done = true;
+
+        // reading given SBML
+        std::string sbml_filename = "PK_base.xml";
+        if (parameters.strings.find_variable_index(substrate_name + "_sbml_filename")==-1)
+        {
+            std::cout << "PhysiPKPD WARNING: No SBML filename provided for " << substrate_name << "." << std::endl
+                      << "  You may include a filename as a string in " << substrate_name + "_sbml_filename ." << std::endl
+                      << "  For example: <" << substrate_name << "_sbml_filename type=\"string\">PK_base.xml</" << substrate_name + "_sbml_filename>" << std::endl
+                      << "  Place that file in ./config/ for PhysiPKPD to properly locate it." << std::endl
+                      << "  For now, PhysiPKPD will use ./config/PK_base.xml." << std::endl
+                      << std::endl;
+        }
+        else
+        {
+            sbml_filename = parameters.strings(substrate_name + "_sbml_filename");
+        }
+        sbml_filename = "./config/" + sbml_filename;
+        char sbml[sbml_filename.length()+1];
+        strcpy(sbml, sbml_filename.c_str());
+
+        if (!rrc::loadSBML(pSolver->rrHandle, sbml)) //------------- To PhysiPKPD Team : please provide PK model in here -------------
+        {
+            std::cout << "PhysiPKPD ERROR: Could not load SBML file for " << substrate_name << ". " << std::endl
+                      << "  Make sure that " + sbml_filename << " is the correct filename for your SBML model." << std::endl
+                      << std::endl;
+
+            exit(-1);
+        }
+
+        pSolver->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
+        pNew->pk_solver = pSolver;
+        return pNew;
+    }
+#endif
+
+    std::cout << "PhysiPKPD ERROR: No PK solver found for " << substrate_name << " ." << std::endl
+              << "  We tried looking for " + model + ", but somehow failed." << std::endl;
+    exit(-1);
 }
 
 Pharmacokinetics_Model *create_pk_model(int substrate_index)
@@ -58,7 +223,7 @@ void PK_model(double current_time)
         
         if (parameters.strings.find_variable_index("PKPD_pk_substrate_names") == -1)
         {
-            std::cout << "WARNING: PKPD_pk_substrate_names was not found in User Parameters." << std::endl
+            std::cout << "PhysiPKPD WARNING: PKPD_pk_substrate_names was not found in User Parameters." << std::endl
                       << "  Will assume no PK substrates." << std::endl;
             s = "";
         }
@@ -77,18 +242,18 @@ void PK_model(double current_time)
             }
             else
             {
-                std::cout << "WARNING: " << token << " is not a substrate in the microenvironment." << std::endl;
+                std::cout << "PhysiPKPD WARNING: " << token << " is not a substrate in the microenvironment." << std::endl;
             }
             s.erase(0, pos + 1);
         }
-        if (microenvironment.find_density_index(s) != -1)
+        if (s.size()>0 && microenvironment.find_density_index(s) != -1)
         {
             PK_names.push_back(s);
             PK_ind.push_back(microenvironment.find_density_index(s));
         }
-        else
+        else if (s.size() > 0)
         {
-            std::cout << "WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
+            std::cout << "PhysiPKPD WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
         }
         need_to_parse_pk_names = false;
     }
@@ -101,20 +266,24 @@ void PK_model(double current_time)
         for (int n = 0; n < PK_ind.size(); n++)
         {
             all_pk.push_back(create_pk_model(PK_ind[n], PK_names[n]));
-            setup_pk_advancer(all_pk[n]);
         }
         need_to_setup = false;
     }
 
     for (int n = 0; n < all_pk.size(); n++)
     {
-        if (!all_pk[n]->setup_done)
+        if (!all_pk[n]->dosing_schedule_setup_done)
         {
             setup_pk_single_dosing_schedule(all_pk[n], current_time);
         }
-        all_pk[n]->advance(all_pk[n], current_time);
+        all_pk[n]->pk_solver->advance(all_pk[n], current_time);
     }
 
+    std::vector<double> dc_temp;
+    for (int j = 0; j < all_pk.size(); j++ )
+    {
+        dc_temp.push_back(all_pk[j]->get_circulation_concentration() * all_pk[j]->biot_number);
+    }
 #pragma omp parallel for
     for (unsigned int i = 0; i < microenvironment.mesh.voxels.size(); i++)
     {
@@ -124,54 +293,17 @@ void PK_model(double current_time)
             {
                 if (microenvironment.get_substrate_dirichlet_activation(all_pk[j]->substrate_index, i)) // no guarantee that the ordering in the user parameters matches the indexing order
                 {
-                    microenvironment.update_dirichlet_node(i, all_pk[j]->substrate_index, all_pk[j]->compartment_concentrations[0] * all_pk[j]->biot_number);
+                    microenvironment.update_dirichlet_node(i, all_pk[j]->substrate_index, dc_temp[j]);
                 }
             }
         }
     }
 }
 
-void setup_pk_advancer(Pharmacokinetics_Model *pPK)
-{
-    void(*setup_function)(Pharmacokinetics_Model *pPK);
-    if (parameters.strings.find_variable_index(pPK->substrate_name + "_pk_model")==-1)
-    {
-        std::cout << "WARNING: No PK model specified for " << pPK->substrate_name << "." << std::endl
-                  << "  Will attempt to set up a 2-compartment model." << std::endl
-                  << std::endl;
-        setup_function = &setup_pk_model_two_compartment;
-    }
-    else 
-    {
-        std::vector<std::string> current_options = {"2C","1C"};
-        std::vector<void (*)(Pharmacokinetics_Model*)> fns;
-        fns.push_back(&setup_pk_model_two_compartment);
-        fns.push_back(&setup_pk_model_one_compartment);
-
-        std::string model = parameters.strings(pPK->substrate_name + "_pk_model");
-        bool model_found = false;
-        for ( int i=0; i<current_options.size(); i++)
-        {
-            if (model==current_options[i])
-            {
-                setup_function = fns[i];
-                model_found = true;
-                break;
-            }
-        }
-        if (!model_found)
-        {
-            std::cout << "ERROR: " << pPK->substrate_name + " is set to follow " + parameters.strings(pPK->substrate_name + "_pk_model") + " but this is not an allowable option." << std::endl
-                      << "  Current options include: " << current_options << std::endl;
-            exit(-1);
-        }
-    }
-    setup_function(pPK);
-    return;
-}
-
 void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
 {
+    Analytic2C_PK_Solver *pSolver;
+    pSolver = new Analytic2C_PK_Solver;
 
     // pk parameters
     double k12;
@@ -181,32 +313,9 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
 
     /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
-    // assume for now that we are using a 2-compartment model and will be solving it analytically
-    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_biot_number") == -1)
-    {
-        std::cout << pPK->substrate_name << "_biot_number not set." << std::endl
-                  << "  Using a default value of 1.0." << std::endl;
-        pPK->biot_number = 1.0;
-    } // assume a default value of 1
-    else
-    {
-        pPK->biot_number = parameters.doubles(pPK->substrate_name + "_biot_number");
-    }
-
-    if (parameters.ints.find_variable_index(pPK->substrate_name + "_max_number_doses") == -1)
-    {
-        std::cout << pPK->substrate_name << "_max_number_doses not set." << std::endl
-                  << "  Using a default value of 0." << std::endl;
-        pPK->max_doses = 0;
-    } // assume a default value of 0
-    else
-    {
-        pPK->max_doses = parameters.ints(pPK->substrate_name + "_max_number_doses");
-    }
-
     if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_to_periphery_volume_ratio") == -1)
     {
-        std::cout << pPK->substrate_name << "_central_to_periphery_volume_ratio not set." << std::endl;
+        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_to_periphery_volume_ratio not set." << std::endl;
         if (parameters.doubles.find_variable_index("central_to_periphery_volume_ratio") != -1)
         {
             std::cout << "  Using central_to_periphery_volume_ratio instead." << std::endl
@@ -216,8 +325,8 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
         else
         {
             R = 1.0;
-            std::cout << "  You did not supply a volume ratio for the 2-compartment model for " << pPK->substrate_name << "." << std::endl
-                      << "    Assuming a ratio of R = " << 1.0 << std::endl;
+            std::cout << "  You did not supply a volume ratio for the 2-compartment model for " << pPK->substrate_name << " ." << std::endl
+                      << "  Assuming a ratio of R = " << 1.0 << std::endl;
         }
     }
     else
@@ -227,7 +336,7 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
 
     if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_to_periphery_clearance_rate") == -1)
     {
-        std::cout << pPK->substrate_name << "_central_to_periphery_clearance_rate not set." << std::endl;
+        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_to_periphery_clearance_rate not set." << std::endl;
         if (parameters.doubles.find_variable_index(pPK->substrate_name + "_flux_across_capillaries") != -1)
         {
             std::cout << "  " << pPK->substrate_name << "_flux_across_capillaries is set. Using that instead." << std::endl
@@ -246,10 +355,9 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
     {
         k12 = parameters.doubles(pPK->substrate_name + "_central_to_periphery_clearance_rate");
     }
-
     if (parameters.doubles.find_variable_index(pPK->substrate_name + "_periphery_to_central_clearance_rate") == -1)
     {
-        std::cout << pPK->substrate_name << "_periphery_to_central_clearance_rate not set." << std::endl;
+        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_periphery_to_central_clearance_rate not set." << std::endl;
         if (parameters.doubles.find_variable_index(pPK->substrate_name + "_flux_across_capillaries") != -1)
         {
             std::cout << "  " << pPK->substrate_name << "_flux_across_capillaries is set. Using that instead with the understanding that you are using the simplified 2-compartment PK model." << std::endl
@@ -271,7 +379,7 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
 
     if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_elimination_rate") == -1)
     {
-        std::cout << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
+        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
                   << "  Using a default value of 0.0." << std::endl;
         l = 0.0;
     } // assume a default value of 0
@@ -284,14 +392,17 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
 
     if (k12==0 || k21==0 || R==0)
     {
-        std::cout << "WARNING: Because at least one of the following PK parameters for " << pPK->substrate_name << " is 0: k12=" << k12 << ", k21=" << k21 << ", R=" << R << std::endl
+        std::cout << "PhysiPKPD WARNING: Because at least one of the following PK parameters for " << pPK->substrate_name << " is 0: k12=" << k12 << ", k21=" << k21 << ", R=" << R << std::endl
                   << "  This model will be treated as a 1-compartment model by updating the current central elimination rate to lambda = lambda + k12." << std::endl;
 
-        pPK->M = {{exp(-(l+k12) * diffusion_dt)}}; // M is defined as a vector of vectors, hence this expression
-        // std::cout << "M = " << pPK->M[0][0] << std::endl;
+        Analytic1C_PK_Solver *pSolver_1C;
+        pSolver_1C = new Analytic1C_PK_Solver;
 
-        pPK->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
-        pPK->advance = &single_pk_model_one_compartment;
+        pSolver_1C->M = exp(-(l+k12) * diffusion_dt); // M is defined as a vector of vectors, hence this expression
+
+        pSolver_1C->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
+        pPK->pk_solver = pSolver_1C;
+
         return;
     }
 
@@ -299,7 +410,7 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
     double beta = sqrt((k12 + k21) * (k12 + k21) + 2 * l * (k12 - k21) + l * l);
     if (beta == 0) // with the above if statement, this block should never trigger
     { 
-        std::cout << "WARNING: " << pPK->substrate_name << " has PK parameters that cannot used by this framework." << std::endl;
+        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << " has PK parameters that cannot used by this framework." << std::endl;
         std::cout << "  This is because k12=0 and k21=elimination rate." << std::endl;
         std::cout << "  Since k12=0 means the periphery never fills up, k21 is meaningless." << std::endl;
         std::cout << "  Will change k21 to make this work." << std::endl;
@@ -312,53 +423,30 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
     double b = 0.5 * beta;
     std::vector<double> ev = {a - b, a + b}; // eigenvalues
     std::vector<double> decay = {exp(ev[0] * diffusion_dt), exp(ev[1] * diffusion_dt)};
+    pSolver->M[0][0] = -0.5 * (alpha * (decay[1] - decay[0]) - beta * (decay[0] + decay[1])) / beta;
+    pSolver->M[0][1] = k21 * (decay[1] - decay[0]) / (beta * R);
+    pSolver->M[1][0] = R * k12 * (decay[1] - decay[0]) / beta;
+    pSolver->M[1][1] = -0.5 * (alpha * (decay[0] - decay[1]) - beta * (decay[0] + decay[1])) / beta;
+    // std::cout << "M = [" << pSolver->M[0][0] << "," << pSolver->M[0][1] << ";" << pSolver->M[1][0] << "," << pSolver->M[1][1] << "]" << std::endl;
+    pSolver->compartment_concentrations = {0, 0};
 
-    pPK->M = {{0, 0}, {0, 0}};
-    pPK->M[0][0] = -0.5 * (alpha * (decay[1] - decay[0]) - beta * (decay[0] + decay[1])) / beta;
-    pPK->M[0][1] = k21 * (decay[1] - decay[0]) / (beta * R);
-    pPK->M[1][0] = R * k12 * (decay[1] - decay[0]) / beta;
-    pPK->M[1][1] = -0.5 * (alpha * (decay[0] - decay[1]) - beta * (decay[0] + decay[1])) / beta;
-    // std::cout << "M = [" << pPK->M[0][0] << "," << pPK->M[0][1] << ";" << pPK->M[1][0] << "," << pPK->M[1][1] << "]" << std::endl;
-
-    pPK->compartment_concentrations = {0, 0};
-    pPK->advance = &single_pk_model_two_compartment;
+    pPK->pk_solver = pSolver;
     return;
 }
 
 void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
 {
+    Analytic1C_PK_Solver *pSolver;
+    pSolver = new Analytic1C_PK_Solver;
 
     // pk parameters
     double l;
 
     /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
-    // assume for now that we are using a 2-compartment model and will be solving it analytically
-    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_biot_number") == -1)
-    {
-        std::cout << pPK->substrate_name << "_biot_number not set." << std::endl
-                  << "  Using a default value of 1.0." << std::endl;
-        pPK->biot_number = 1.0;
-    } // assume a default value of 1
-    else
-    {
-        pPK->biot_number = parameters.doubles(pPK->substrate_name + "_biot_number");
-    }
-
-    if (parameters.ints.find_variable_index(pPK->substrate_name + "_max_number_doses") == -1)
-    {
-        std::cout << pPK->substrate_name << "_max_number_doses not set." << std::endl
-                  << "  Using a default value of 0." << std::endl;
-        pPK->max_doses = 0;
-    } // assume a default value of 0
-    else
-    {
-        pPK->max_doses = parameters.ints(pPK->substrate_name + "_max_number_doses");
-    }
-
     if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_elimination_rate") == -1)
     {
-        std::cout << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
+        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
                   << "  Using a default value of 0.0." << std::endl;
         l = 0.0;
     } // assume a default value of 0
@@ -370,42 +458,68 @@ void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
     /*    %%%%%%%%%%%% Made sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
     // pre-computed quantities to express solution to matrix exponential
-    pPK->M = {{exp(-l * diffusion_dt)}}; // M is defined as a vector of vectors, hence this expression
+    pSolver->M = exp(-l * diffusion_dt); // M is defined as a vector of vectors, hence this expression
     // std::cout << "M = " << pPK->M[0][0] << std::endl;
 
-    pPK->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
-    pPK->advance = &single_pk_model_one_compartment;
+    pSolver->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
+    pPK->pk_solver = pSolver;
     return;
 }
 
 void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time)
 {
-    if (!pPK->setup_done)
+    if (!pPK->dosing_schedule_setup_done)
     {
-        if ((parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time")) || (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") != -1 && (current_time > pPK->confluence_check_time - tolerance) && (confluence_computation() > parameters.doubles(pPK->substrate_name + "_confluence_condition"))))
+
+        bool setup_dosing_now = false;
+        setup_dosing_now |= (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") == -1); // start if user did not specify any of the parameters to determine when to start
+        setup_dosing_now |= (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1) && parameters.bools(pPK->substrate_name + "_set_first_dose_time"); // start if user parameter says to set first dose time
+        setup_dosing_now |= (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") != -1 && (current_time > pPK->pk_solver->confluence_check_time - tolerance) && (confluence_computation() > parameters.doubles(pPK->substrate_name + "_confluence_condition"))); // start if confluence check is given, its time for it, and if the confluence condition is met
+        if (setup_dosing_now)
         {
-            if (pPK->max_doses == 0)
+            // get max dose number
+            if (parameters.ints.find_variable_index(pPK->substrate_name + "_max_number_doses") == -1)
             {
-                pPK->setup_done = true;
+                std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_max_number_doses not set." << std::endl
+                          << "  Using a default value of 0." << std::endl;
+                pPK->pk_solver->max_doses = 0;
+            } // assume a default value of 0
+            else
+            {
+                pPK->pk_solver->max_doses = parameters.ints(pPK->substrate_name + "_max_number_doses");
+            }
+
+            if (pPK->pk_solver->max_doses == 0)
+            {
+                pPK->dosing_schedule_setup_done = true;
                 return;
             }
-            pPK->dose_times.resize(pPK->max_doses, 0);
-            pPK->dose_amounts.resize(pPK->max_doses, 0);
+
+            if ((parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") == -1))
+            {
+                std::cout << "PhysiPKPD WARNING: No specification of how to set first dose time." << std::endl
+                          << "  Defaulting to current_time." << std::endl
+                          << "  Specify this by setting " << pPK->substrate_name + "_set_first_dose_time" + " = true" << std::endl
+                          << "  Or setting " << pPK->substrate_name + "_confluence_condition" << std::endl;
+            }
+
+            pPK->pk_solver->dose_times.resize(pPK->pk_solver->max_doses, 0);
+            pPK->pk_solver->dose_amounts.resize(pPK->pk_solver->max_doses, 0);
             if (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time") && parameters.doubles.find_variable_index(pPK->substrate_name + "_first_dose_time") == -1)
             {
-                std::cout << pPK->substrate_name << " has a set time for the first dose, but the first time is not supplied. Assuming to begin now = " << current_time << std::endl
+                std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << " has a set time for the first dose, but the first time is not supplied. Assuming to begin now = " << current_time << std::endl
                           << "  This can be set by using " << pPK->substrate_name << "_first_dose_time" << std::endl;
             }
-            pPK->dose_times[0] = (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time")) ? (parameters.doubles.find_variable_index(pPK->substrate_name + "_first_dose_time") != -1 ? parameters.doubles(pPK->substrate_name + "_first_dose_time") : current_time) : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now; also if the defining parameters are not set, then set it to be the current time
-            for (unsigned int i = 1; i < pPK->max_doses; i++)
+            pPK->pk_solver->dose_times[0] = (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time")) ? (parameters.doubles.find_variable_index(pPK->substrate_name + "_first_dose_time") != -1 ? parameters.doubles(pPK->substrate_name + "_first_dose_time") : current_time) : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now; also if the defining parameters are not set, then set it to be the current time
+            for (unsigned int i = 1; i < pPK->pk_solver->max_doses; i++)
             {
                 if (parameters.doubles.find_variable_index(pPK->substrate_name + "_dose_interval") == -1)
                 {
-                    std::cout << "ERROR: " << pPK->substrate_name << " has multiple doses but no dose interval is given." << std::endl
+                    std::cout << "PhysiPKPD ERROR: " << pPK->substrate_name << " has multiple doses but no dose interval is given." << std::endl
                               << "  Set " << pPK->substrate_name << "_dose_interval" << std::endl;
                     exit(-1);
                 }
-                pPK->dose_times[i] = pPK->dose_times[i - 1] + parameters.doubles(pPK->substrate_name + "_dose_interval");
+                pPK->pk_solver->dose_times[i] = pPK->pk_solver->dose_times[i - 1] + parameters.doubles(pPK->substrate_name + "_dose_interval");
             }
             int num_loading = parameters.ints.find_variable_index(pPK->substrate_name + "_number_loading_doses") != -1 ? parameters.ints(pPK->substrate_name + "_number_loading_doses") : 0;
             double loading_dose;
@@ -417,13 +531,13 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                 }
                 else
                 {
-                    std::cout << "ERROR: " << pPK->substrate_name << " has loading doses but no loading dose amount is given." << std::endl
+                    std::cout << "PhysiPKPD ERROR: " << pPK->substrate_name << " has loading doses but no loading dose amount is given." << std::endl
                               << "  Set " << pPK->substrate_name << "_central_increase_on_loading_dose" << std::endl;
                     exit(-1);
                 }
             }
             double dose;
-            if (pPK->max_doses > num_loading)
+            if (pPK->pk_solver->max_doses > num_loading)
             {
                 if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_increase_on_dose") != -1)
                 {
@@ -431,53 +545,53 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                 }
                 else
                 {
-                    std::cout << "ERROR: " << pPK->substrate_name << " has normal doses but no normal dose amount is given." << std::endl
+                    std::cout << "PhysiPKPD ERROR: " << pPK->substrate_name << " has normal doses but no normal dose amount is given." << std::endl
                               << "  Set " << pPK->substrate_name << "_central_increase_on_dose" << std::endl;
                     exit(-1);
                 }
             }
-            for (unsigned int i = 0; i < pPK->max_doses; i++)
+            for (unsigned int i = 0; i < pPK->pk_solver->max_doses; i++)
             {
-                pPK->dose_amounts[i] = i < num_loading ? loading_dose : dose;
+                pPK->pk_solver->dose_amounts[i] = i < num_loading ? loading_dose : dose;
             }
-            pPK->setup_done = true;
+            pPK->dosing_schedule_setup_done = true;
         }
         else
         {
-            pPK->confluence_check_time += phenotype_dt;
+            pPK->pk_solver->confluence_check_time += phenotype_dt;
         }
     }
     return;
 }
 
-void single_pk_model_two_compartment(Pharmacokinetics_Model *pPK, double current_time)
+void Analytic2C_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
 {
     // add dose if time for that
-    if (pPK->dose_count < pPK->max_doses && current_time > pPK->dose_times[pPK->dose_count] - tolerance)
+    if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
     {
-        pPK->compartment_concentrations[0] += pPK->dose_amounts[pPK->dose_count];
-        pPK->dose_count++;
+        compartment_concentrations[0] += dose_amounts[dose_count];
+        dose_count++;
     }
 
     // store previous quantities for computation
-    std::vector<double> previous_compartment_concentrations = pPK->compartment_concentrations;
+    std::vector<double> previous_compartment_concentrations = compartment_concentrations;
 
-    pPK->compartment_concentrations[0] = pPK->M[0][0] * previous_compartment_concentrations[0] + pPK->M[0][1] * previous_compartment_concentrations[1];
-    pPK->compartment_concentrations[1] = pPK->M[1][0] * previous_compartment_concentrations[0] + pPK->M[1][1] * previous_compartment_concentrations[1];
+    compartment_concentrations[0] = M[0][0] * previous_compartment_concentrations[0] + M[0][1] * previous_compartment_concentrations[1];
+    compartment_concentrations[1] = M[1][0] * previous_compartment_concentrations[0] + M[1][1] * previous_compartment_concentrations[1];
 
     return;
 }
 
-void single_pk_model_one_compartment(Pharmacokinetics_Model *pPK, double current_time)
+void Analytic1C_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
 {
     // add dose if time for that
-    if (pPK->dose_count < pPK->max_doses && current_time > pPK->dose_times[pPK->dose_count] - tolerance)
+if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
     {
-        pPK->compartment_concentrations[0] += pPK->dose_amounts[pPK->dose_count];
-        pPK->dose_count++;
+        compartment_concentrations[0] += dose_amounts[dose_count];
+        dose_count++;
     }
 
-    pPK->compartment_concentrations[0] = pPK->M[0][0] * pPK->compartment_concentrations[0];
+    compartment_concentrations[0] = M * compartment_concentrations[0];
     return;
 }
 
@@ -540,7 +654,7 @@ void PD_model(double current_time)
 
         if (parameters.strings.find_variable_index("PKPD_pd_substrate_names") == -1)
         {
-            std::cout << "WARNING: PKPD_pd_substrate_names was not found in User Parameters." << std::endl
+            std::cout << "PhysiPKPD WARNING: PKPD_pd_substrate_names was not found in User Parameters." << std::endl
                       << "  Will assume no PD substrates." << std::endl;
             s = "";
         }
@@ -559,18 +673,18 @@ void PD_model(double current_time)
             }
             else
             {
-                std::cout << "WARNING: " << token << " is not a substrate in the microenvironment." << std::endl;
+                std::cout << "PhysiPKPD WARNING: " << token << " is not a substrate in the microenvironment." << std::endl;
             }
             s.erase(0, pos + 1);
         }
-        if (microenvironment.find_density_index(s) != -1)
+        if (s.size()>0 && microenvironment.find_density_index(s) != -1)
         {
             PD_names.push_back(s);
             PD_ind.push_back(microenvironment.find_density_index(s));
         }
-        else
+        else if (s.size() > 0)
         {
-            std::cout << "WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
+            std::cout << "PhysiPKPD WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
         }
         need_to_parse_pd_names = false;
     }
@@ -646,6 +760,47 @@ void PD_model(double current_time)
 
 void setup_pd_advancer(Pharmacodynamics_Model *pPD)
 {
+    void(*setup_function)(Pharmacodynamics_Model *pPD);
+    std::vector<std::string> current_options = {"AUC","SBML"};
+    if (parameters.strings.find_variable_index(pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model")==-1)
+    {
+        std::cout << "PhysiPKPD WARNING: No PD model specified for " << pPD->substrate_name << " affecting " << pPD->cell_type << " ." << std::endl
+                  << "  Specify with user parameter " << pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model"
+                  << " set to one of " << current_options << std::endl
+                  << "  Will attempt to set up the AUC model." << std::endl
+                  << std::endl;
+        setup_function = &setup_pd_model_auc;
+    }
+    else 
+    {
+        std::vector<void (*)(Pharmacodynamics_Model*)> fns;
+        fns.push_back(&setup_pd_model_auc);
+        fns.push_back(&setup_pd_model_sbml);
+
+        std::string model = parameters.strings(pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model");
+        bool model_found = false;
+        for ( int i=0; i<current_options.size(); i++)
+        {
+            if (model==current_options[i])
+            {
+                setup_function = fns[i];
+                model_found = true;
+                break;
+            }
+        }
+        if (!model_found)
+        {
+            std::cout << "PhysiPKPD ERROR: " << pPD->substrate_name + " acting on " + pPD->cell_type + " is set to follow " + parameters.strings(pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model") + " but this is not an allowable option." << std::endl
+                      << "  Current options include: " << current_options << std::endl;
+            exit(-1);
+        }
+    }
+    setup_function(pPD);
+    return;
+}
+
+void setup_pd_model_auc(Pharmacodynamics_Model *pPD)
+{
     pPD->use_precomputed_quantities = parameters.bools.find_variable_index("PKPD_precompute_all_pd_quantities") != -1 && parameters.bools("PKPD_precompute_all_pd_quantities");
     pPD->use_precomputed_quantities |= parameters.bools.find_variable_index(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type) != -1 && parameters.bools(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type);
     Cell_Definition *pCD = cell_definitions_by_index[pPD->cell_index];
@@ -667,7 +822,7 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
     {
         if(pCD->custom_data.find_variable_index(necessary_custom_fields[i])==-1)
         {
-            std::cout << pCD->name << " does not have " << necessary_custom_fields[i] << "." << std::endl;
+            std::cout << pCD->name << " does not have " << necessary_custom_fields[i] << " ." << std::endl;
             exit(-1);
         }
     }
@@ -676,7 +831,7 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
     {
         if (fabs(round(pPD->dt / diffusion_dt) - pPD->dt / diffusion_dt) > 0.0001)
         {
-            std::cout << "Error: Your PD time step for " << pPD->substrate_name << " affecting " << pPD->cell_type << " does not appear to be a multiple of your diffusion time step" << std::endl;
+            std::cout << "PhysiPKPD ERROR: Your PD time step for " << pPD->substrate_name << " affecting " << pPD->cell_type << " does not appear to be a multiple of your diffusion time step" << std::endl;
             std::cout << "  This will cause errors in solving the PD model using precomputed quantities because it assumes that the time step is constant across the simulation" << std::endl;
             std::cout << "  If you really want these time steps, restart the simulation with the user parameter " << pPD->substrate_name << "_precompute_pd_for_" << pPD->cell_type << " set to False" << std::endl
                       << std::endl;
@@ -708,6 +863,15 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
     }
 }
 
+void setup_pd_model_sbml(Pharmacodynamics_Model *pPD)
+{
+    std::cout << "PhysiPKPD ERROR: SBML-defined PD dynamics are not supported. Let us know if you are interested in this feature and how you would want to use it." << std::endl
+              << "  For now, you can only use the AUC model. Set " << pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model"
+              << " to AUC" << std::endl
+              << std::endl;
+    exit(-1);
+}
+
 void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
 {
     if (current_time > pPD->next_pd_time - tolerance)
@@ -731,13 +895,13 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
                     double damage_constant = pC->custom_data[pPD->substrate_name + "_repair_rate_constant"] / pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * (damage_initial_damage_term - 1); // +d_00...
                     // if (pPD->use_concentration) {damage_constant /= pC->phenotype.volume.total;}
                     double damage_initial_drug_term;
-                    if (pC->custom_data[pPD->substrate_name + "_metabolism_rate"] != pC->custom_data[pPD->substrate_name + "_repair_rate_linear"])                                                                // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
+                    if (pC->custom_data[pPD->substrate_name + "_metabolism_rate"] != pC->custom_data[pPD->substrate_name + "_repair_rate_linear"]) // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
                     {
                         damage_initial_drug_term = (metabolism_reduction_factor - damage_initial_damage_term) / (pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] - pC->custom_data[pPD->substrate_name + "_metabolism_rate"]);
                     }
                     else
                     {
-                        damage_initial_drug_term = dt * metabolism_reduction_factor; 
+                        damage_initial_drug_term = dt * metabolism_reduction_factor;
                     }
                     // if (pPD->use_concentration) {damage_initial_drug_term /= pC->phenotype.volume.total;}
                     pC->custom_data[pPD->damage_index] *= damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
@@ -749,16 +913,18 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
                     }
                     p.molecular.internalized_total_substrates[pPD->substrate_index] *= metabolism_reduction_factor;
                 }
-
-                pC->custom_data[pPD->damage_index] *= pPD->damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
-                pC->custom_data[pPD->damage_index] += pPD->damage_constant;                                                                            // + d_00 ...
-                // if (pPD->use_concentration) {damage_initial_drug_term /= pC->phenotype.volume.total;}
-                pC->custom_data[pPD->damage_index] += pPD->damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0)
-                if (pC->custom_data[pPD->damage_index] <= 0)
+                else
                 {
-                    pC->custom_data[pPD->damage_index] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
+                    pC->custom_data[pPD->damage_index] *= pPD->damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
+                    // if (pPD->use_concentration) {damage_initial_drug_term /= pC->phenotype.volume.total;}
+                    pC->custom_data[pPD->damage_index] += pPD->damage_constant;                                                                            // + d_00 ...
+                    pC->custom_data[pPD->damage_index] += pPD->damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0)
+                    if (pC->custom_data[pPD->damage_index] <= 0)
+                    {
+                        pC->custom_data[pPD->damage_index] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
+                    }
+                    p.molecular.internalized_total_substrates[pPD->substrate_index] *= pPD->metabolism_reduction_factor;
                 }
-                p.molecular.internalized_total_substrates[pPD->substrate_index] *= pPD->metabolism_reduction_factor;
             }
         }
     }
@@ -768,6 +934,10 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
 {
     Cell_Definition *pCD = find_cell_definition(pC->type);
 
+    if (get_single_signal(pC,"dead")==true)
+    {
+        std::cout << " a dead cell is getting pd effects?" << std::endl;
+    }
     // find index of apoptosis death model
     static int nApop = p.death.find_death_model_index("apoptosis");
     // find index of necrosis death model
@@ -1022,7 +1192,7 @@ void write_cell_data_for_plots(double current_time, char delim = ',')
         file_out.open(dataFilename, std::ios_base::app);
         if (!file_out)
         {
-            std::cout << "Error: could not open file " << dataFilename << "!" << std::endl;
+            std::cout << "PhysiPKPD ERROR: could not open file " << dataFilename << "!" << std::endl;
             return;
         }
         file_out << dataToAppend << std::endl;
@@ -1032,351 +1202,7 @@ void write_cell_data_for_plots(double current_time, char delim = ',')
     return;
 }
 
-/* these PK functions were used when hard-coding PKPD_drug_number_1 and PKPD_drug_number_2
-void setup_pk_dosing_schedule(std::vector<bool> &setup_done, double current_time, std::vector<double> &PKPD_D1_dose_times, std::vector<double> &PKPD_D1_dose_values, double &PKPD_D1_confluence_check_time, std::vector<double> &PKPD_D2_dose_times, std::vector<double> &PKPD_D2_dose_values, double &PKPD_D2_confluence_check_time)
-{
-    nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
-    nPKPD_D2 = microenvironment.find_density_index("PKPD_D2");
-    // set up first dose time for drug 1
-    if (!setup_done[0])
-    {
-        if (parameters.bools("PKPD_D1_set_first_dose_time") || ( current_time > PKPD_D1_confluence_check_time - tolerance && confluence_computation() > parameters.doubles("PKPD_D1_confluence_condition")))
-        {
-            PKPD_D1_dose_times.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
-            PKPD_D1_dose_values.resize(parameters.ints("PKPD_D1_max_number_doses"), 0);
-            PKPD_D1_dose_times[0] = parameters.bools("PKPD_D1_set_first_dose_time") ? parameters.doubles("PKPD_D1_first_dose_time") : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now
-            for (unsigned int i = 1; i < parameters.ints("PKPD_D1_max_number_doses"); i++)
-            {
-                PKPD_D1_dose_times[i] = PKPD_D1_dose_times[i - 1] + parameters.doubles("PKPD_D1_dose_interval");
-            }
-            for (unsigned int i = 0; i < parameters.ints("PKPD_D1_max_number_doses"); i++)
-            {
-                PKPD_D1_dose_values[i] = i < parameters.ints("PKPD_D1_number_loading_doses") ? parameters.doubles("PKPD_D1_central_increase_on_loading_dose") : parameters.doubles("PKPD_D1_central_increase_on_dose");
-            }
-            setup_done[0] = true;
-        }
-        else
-        {
-            PKPD_D1_confluence_check_time += phenotype_dt;
-        }
-    }
-
-    // set up first dose time for drug 2
-    if (!setup_done[1])
-    {
-        if (parameters.bools("PKPD_D2_set_first_dose_time") || ( current_time > PKPD_D2_confluence_check_time - tolerance && confluence_computation() > parameters.doubles("PKPD_D2_confluence_condition")))
-        {
-            PKPD_D2_dose_times.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
-            PKPD_D2_dose_values.resize(parameters.ints("PKPD_D2_max_number_doses"), 0);
-            PKPD_D2_dose_times[0] = parameters.bools("PKPD_D2_set_first_dose_time") ? parameters.doubles("PKPD_D2_first_dose_time") : current_time;
-            for (unsigned int i = 1; i < parameters.ints("PKPD_D2_max_number_doses"); i++)
-            {
-                PKPD_D2_dose_times[i] = PKPD_D2_dose_times[i - 1] + parameters.doubles("PKPD_D2_dose_interval");
-            }
-            for (unsigned int i = 0; i < parameters.ints("PKPD_D2_max_number_doses"); i++)
-            {
-                PKPD_D2_dose_values[i] = i < parameters.ints("PKPD_D2_number_loading_doses") ? parameters.doubles("PKPD_D2_central_increase_on_loading_dose") : parameters.doubles("PKPD_D2_central_increase_on_dose");
-            }
-            setup_done[1] = true;
-        }
-        else
-        {
-            PKPD_D2_confluence_check_time += phenotype_dt;
-        }
-    }
-}
-
-
-void pk_model_one_compartment(double current_time) // update the Dirichlet boundary conditions as systemic circulation decays and/or new doses given
-{
-    // Set up drug 1
-    static int PKPD_D1_dose_count = 0;
-    static std::vector<double> PKPD_D1_dose_times;
-    static std::vector<double> PKPD_D1_dose_values;
-
-    static double PKPD_D1_central_concentration = 0.0;
-
-    static double PKPD_D1_confluence_check_time = 0.0; // next time to check for confluence
-
-    // Set up drug 2
-    static int PKPD_D2_dose_count = 0;
-    static std::vector<double> PKPD_D2_dose_times;
-    static std::vector<double> PKPD_D2_dose_values;
-
-    static double PKPD_D2_central_concentration = 0.0;
-
-    static double PKPD_D2_confluence_check_time = 0.0; // next time to check for confluence
-
-    static std::vector<bool> setup_done = {false,false};
-    if( !setup_done[0] || !setup_done[1] )
-    {
-        // consider the pk setup if there are no doses
-        setup_done[0] = parameters.ints("PKPD_D1_max_number_doses")==0;
-        setup_done[1] = parameters.ints("PKPD_D2_max_number_doses")==0;
-
-        setup_pk_dosing_schedule(setup_done, current_time, PKPD_D1_dose_times, PKPD_D1_dose_values, PKPD_D1_confluence_check_time, PKPD_D2_dose_times, PKPD_D2_dose_values, PKPD_D2_confluence_check_time);
-    }
-
-    // add doses if time for that
-    // it should be possible to report that the dosing is all done by setting these update functions to null; something like pk_dose_fn = pk_dose; if( dose_count>max_number_doses ) {pk_dose_fn = null;}
-    if (PKPD_D1_dose_count < parameters.ints("PKPD_D1_max_number_doses") && current_time > PKPD_D1_dose_times[PKPD_D1_dose_count] - tolerance )
-    {
-        pk_dose(PKPD_D1_dose_values[PKPD_D1_dose_count],PKPD_D1_central_concentration);
-        PKPD_D1_dose_count++;
-    }
-
-    if (PKPD_D2_dose_count < parameters.ints("PKPD_D2_max_number_doses") && current_time > PKPD_D2_dose_times[PKPD_D2_dose_count] - tolerance )
-    {
-        pk_dose(PKPD_D2_dose_values[PKPD_D2_dose_count],PKPD_D2_central_concentration);
-        PKPD_D2_dose_count++;
-    }
-
-    static bool use_analytic_pk_solutions = true; // set this to true by default
-
-    if (use_analytic_pk_solutions)
-    {
-        // pre-computed quantities to express solution to matrix exponential
-        static double concentration_loss_1 = exp(parameters.doubles("PKPD_D1_central_elimination_rate") * diffusion_dt);
-        static double concentration_loss_2 = exp(parameters.doubles("PKPD_D2_central_elimination_rate") * diffusion_dt);
-
-        PKPD_D1_central_concentration *= concentration_loss_1;
-        PKPD_D2_central_concentration *= concentration_loss_2;
-    }
-    else // use direct euler
-    {
-        // update PK model for drug 1
-        pk_explicit_euler_one_compartment(diffusion_dt, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"));
-        // update PK model for drug 2
-        pk_explicit_euler_one_compartment(diffusion_dt, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"));
-    }
-
-    // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
-    std::vector<double> new_dirichlet_values(2, 0);
-    new_dirichlet_values[0] = PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number");
-    new_dirichlet_values[1] = PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number");
-
-    pk_update_dirichlet(new_dirichlet_values);
-
-    return;
-}
-
-void pk_model_two_compartment(double current_time)
-{
-    // Set up drug 1
-    static int PKPD_D1_dose_count = 0;
-    static std::vector<double> PKPD_D1_dose_times;
-    static std::vector<double> PKPD_D1_dose_values;
-
-    static double PKPD_D1_central_concentration = 0.0;
-    static double PKPD_D1_periphery_concentration = 0.0; // just a bucket to model drug distributing into the entire periphery; TME is not linked to this!!!
-
-    static double PKPD_D1_confluence_check_time = 0.0; // next time to check for confluence
-
-    // Set up drug 2
-    static int PKPD_D2_dose_count = 0;
-    static std::vector<double> PKPD_D2_dose_times;
-    static std::vector<double> PKPD_D2_dose_values;
-
-    static double PKPD_D2_central_concentration = 0.0;
-    static double PKPD_D2_periphery_concentration = 0.0; // just a bucket to model drug distributing into the entire periphery; TME is not linked to this!!!
-
-    static double PKPD_D2_confluence_check_time = 0.0; // next time to check for confluence
-
-    static std::vector<bool> setup_done = {false,false};
-    if( !setup_done[0] || !setup_done[1] )
-    {
-        // consider the pk setup if there are no doses
-        setup_done[0] = parameters.ints("PKPD_D1_max_number_doses")==0;
-        setup_done[1] = parameters.ints("PKPD_D2_max_number_doses")==0;
-
-        setup_pk_dosing_schedule(setup_done, current_time, PKPD_D1_dose_times, PKPD_D1_dose_values, PKPD_D1_confluence_check_time, PKPD_D2_dose_times, PKPD_D2_dose_values, PKPD_D2_confluence_check_time);
-    }
-
-    // add doses if time for that
-    // it should be possible to report that the dosing is all done by setting these update functions to null; something like pk_dose_fn = pk_dose; if( dose_count>max_number_doses ) {pk_dose_fn = null;}
-    if (PKPD_D1_dose_count < parameters.ints("PKPD_D1_max_number_doses") && current_time > PKPD_D1_dose_times[PKPD_D1_dose_count] - tolerance )
-    {
-        pk_dose(PKPD_D1_dose_values[PKPD_D1_dose_count],PKPD_D1_central_concentration);
-        PKPD_D1_dose_count++;
-    }
-
-    if (PKPD_D2_dose_count < parameters.ints("PKPD_D2_max_number_doses") && current_time > PKPD_D2_dose_times[PKPD_D2_dose_count] - tolerance )
-    {
-        pk_dose(PKPD_D2_dose_values[PKPD_D2_dose_count],PKPD_D2_central_concentration);
-        PKPD_D2_dose_count++;
-    }
-
-    static bool need_to_check_backwards_compatibility = true; // for the pk solver
-    static bool use_analytic_pk_solutions = true; // set this to true by default
-
-    static double R_1;
-    static double R_2;
-
-    static double k12_1;
-    static double k21_1;
-
-    static double k12_2;
-    static double k21_2;
-
-    if (need_to_check_backwards_compatibility)
-    {
-        try { use_analytic_pk_solutions = parameters.bools("PKPD_use_analytic_pk_solutions"); }
-        catch (bool dummy_input) {}
-
-        if (parameters.doubles("PKPD_D1_central_to_periphery_clearance_rate")!=0 || parameters.doubles("PKPD_D1_periphery_to_central_clearance_rate")!=0 ||
-            parameters.doubles("PKPD_D2_central_to_periphery_clearance_rate")!=0 || parameters.doubles("PKPD_D2_periphery_to_central_clearance_rate")!=0 ||
-            (parameters.doubles("PKPD_D1_flux_across_capillaries")==0 && parameters.doubles("PKPD_D2_flux_across_capillaries")==0))
-        {
-            // then do not need to worry about backwards compatibility
-            k12_1 = parameters.doubles("PKPD_D1_central_to_periphery_clearance_rate");
-            k21_1 = parameters.doubles("PKPD_D1_periphery_to_central_clearance_rate");
-
-            k12_2 = parameters.doubles("PKPD_D2_central_to_periphery_clearance_rate");
-            k21_2 = parameters.doubles("PKPD_D2_periphery_to_central_clearance_rate");
-        } else // the new clearance rates are all 0 and one of the old flux rates is nonzero, so it seems like they are using the old pk model syntax
-        {
-            std::cout << "You seem to be using the simplified PK dynamics with 2 compartments" << std::endl;
-            std::cout << "  You can achieve the same thing using PKPD_D1_central_to_periphery_clearance_rate = PKPD_D1_flux_across_capillaries" << std::endl;
-            std::cout << "  and PKPD_D1_periphery_to_central_clearance_rate = PKPD_D1_flux_across_capillaries * PKPD_D1_central_to_periphery_volume_ratio" << std::endl << std::endl;
-
-            k12_1 = parameters.doubles("PKPD_D1_flux_across_capillaries");
-            k21_1 = parameters.doubles("PKPD_D1_flux_across_capillaries") * parameters.doubles("PKPD_D1_central_to_periphery_volume_ratio");
-
-            k12_2 = parameters.doubles("PKPD_D2_flux_across_capillaries");
-            k21_2 = parameters.doubles("PKPD_D2_flux_across_capillaries") * parameters.doubles("PKPD_D2_central_to_periphery_volume_ratio");
-        }
-
-        if (parameters.doubles("PKPD_D1_central_to_periphery_volume_ratio") > 0)
-        {
-            R_1 = parameters.doubles("PKPD_D1_central_to_periphery_volume_ratio");
-        }
-        else if (parameters.doubles("central_to_periphery_volume_ratio") > 0)
-        {
-            R_1 = parameters.doubles("central_to_periphery_volume_ratio");
-        }
-        else
-        {
-            R_1 = 1.0;
-            std::cout << "You did not supply a volume ratio for your 2-compartment model." << std::endl
-                      << "  Assuming a ratio of R_1 = " << 1.0 << std::endl;
-        }
-
-        if (parameters.doubles("PKPD_D2_central_to_periphery_volume_ratio") > 0)
-        {
-            R_2 = parameters.doubles("PKPD_D2_central_to_periphery_volume_ratio");
-        }
-        else if (parameters.doubles("central_to_periphery_volume_ratio") > 0)
-        {
-            R_2 = parameters.doubles("central_to_periphery_volume_ratio");
-        }
-        else
-        {
-            R_2 = 1.0;
-            std::cout << "You did not supply a volume ratio for your 2-compartment model." << std::endl
-                      << "  Assuming a ratio of R_2 = " << 1.0 << std::endl;
-        }
-        need_to_check_backwards_compatibility = false;
-    }
-
-    if (use_analytic_pk_solutions)
-    {
-        // pk parameters
-        static double l_1 = parameters.doubles("PKPD_D1_central_elimination_rate");
-        static double l_2 = parameters.doubles("PKPD_D2_central_elimination_rate");
-
-        // pre-computed quantities to express solution to matrix exponential
-        static bool analytic_pk_solution_setup_done = false;
-
-        static double f_1 = k21_1 / k12_1;
-        static double alpha_1 = k12_1 + l_1 - f_1*k12_1;
-        static double beta_1 = sqrt(k12_1*k12_1*(f_1+1)*(f_1+1)-2*k12_1*l_1*f_1+2*k12_1*l_1+l_1*l_1);
-        static double a_1 = -0.5*(k12_1*(f_1+1)+l_1);
-        static double b_1 = 0.5*beta_1;
-        static double gamma_1 = 2*f_1*k12_1;
-        static std::vector<double> ev_1 = {a_1-b_1,a_1+b_1}; // eigenvalues
-        static std::vector<double> decay_1 = {exp(ev_1[0]*diffusion_dt),exp(ev_1[1]*diffusion_dt)};
-        static std::vector<std::vector<double>> M_1 = { {0.0,0.0}, {0.0,0.0} };
-
-        static double f_2 = k21_2 / k12_2;
-        static double alpha_2 = k12_2 + l_2 - f_2*k12_2;
-        static double beta_2 = sqrt(k12_2*k12_2*(f_2+1)*(f_2+1)-2*k12_2*l_2*f_2+2*k12_2*l_2+l_2*l_2);
-        static double a_2 = -0.5*(k12_2*(f_2+1)+l_2);
-        static double b_2 = 0.5*beta_2;
-        static double gamma_2 = 2*f_2*k12_2;
-        static std::vector<double> ev_2 = {a_2-b_2,a_2+b_2}; // eigenvalues
-        static std::vector<double> decay2 = {exp(ev_2[0]*diffusion_dt),exp(ev_2[1]*diffusion_dt)};
-        static std::vector<std::vector<double>> M_2 = { {0.0,0.0}, {0.0,0.0} };
-
-        // store previous quantities for computation
-        double PKPD_D1_central_concentration_previous = PKPD_D1_central_concentration;
-        double PKPD_D1_periphery_concentration_previous = PKPD_D1_periphery_concentration;
-
-        double PKPD_D2_central_concentration_previous = PKPD_D2_central_concentration;
-        double PKPD_D2_periphery_concentration_previous = PKPD_D2_periphery_concentration;
-
-        if (!analytic_pk_solution_setup_done)
-        {
-            M_1[0][0] = -0.5 * (alpha_1 * gamma_1 * (decay_1[1] - decay_1[0]) - beta_1 * gamma_1 * (decay_1[0] + decay_1[1])) / (beta_1 * gamma_1);
-            M_1[0][1] = -0.5 * f_1 * (alpha_1*alpha_1 - beta_1*beta_1) * (decay_1[1] - decay_1[0]) / (beta_1 * gamma_1 * R_1);
-            M_1[1][0] = -0.5 * R_1 * gamma_1*gamma_1 * (decay_1[0] - decay_1[1]) / (beta_1 * gamma_1 * f_1);
-            M_1[1][1] = -0.5 * gamma_1 * (alpha_1 * (decay_1[0] - decay_1[1]) - beta_1 * (decay_1[0] + decay_1[1])) / (beta_1 * gamma_1);
-
-            // std::cout << "M_1 = [" << M_1[0][0] << "," << M_1[0][1] << ";" << M_1[1][0] << "," << M_1[1][1] << "]" << std::endl;
-
-            M_2[0][0] = -0.5 * (alpha_2 * gamma_2 * (decay2[1] - decay2[0]) - beta_2 * gamma_2 * (decay2[0] + decay2[1])) / (beta_2 * gamma_2);
-            M_2[0][1] = -0.5 * f_2 * (alpha_2*alpha_2 - beta_2*beta_2) * (decay2[1] - decay2[0]) / (beta_2 * gamma_2 * R_2);
-            M_2[1][0] = -0.5 * R_2 * gamma_2*gamma_2 * (decay2[0] - decay2[1]) / (beta_2 * gamma_2 * f_2);
-            M_2[1][1] = -0.5 * gamma_2 * (alpha_2 * (decay2[0] - decay2[1]) - beta_2 * (decay2[0] + decay2[1])) / (beta_2 * gamma_2);
-
-            // std::cout << "M_2 = [" << M_2[0][0] << "," << M_2[0][1] << ";" << M_2[1][0] << "," << M_2[1][1] << "]" << std::endl;
-
-            analytic_pk_solution_setup_done = true;
-        }
-
-        PKPD_D1_central_concentration = M_1[0][0] * PKPD_D1_central_concentration_previous + M_1[0][1] * PKPD_D1_periphery_concentration_previous;
-        PKPD_D1_periphery_concentration = M_1[1][0] * PKPD_D1_central_concentration_previous + M_1[1][1] * PKPD_D1_periphery_concentration_previous;
-
-        PKPD_D2_central_concentration = M_2[0][0] * PKPD_D2_central_concentration_previous + M_2[0][1] * PKPD_D2_periphery_concentration_previous;
-        PKPD_D2_periphery_concentration = M_2[1][0] * PKPD_D2_central_concentration_previous + M_2[1][1] * PKPD_D2_periphery_concentration_previous;
-    }
-    else // use direct euler
-    {
-        // update PK model for drug 1
-        pk_explicit_euler_two_compartment(diffusion_dt, PKPD_D1_periphery_concentration, PKPD_D1_central_concentration, parameters.doubles("PKPD_D1_central_elimination_rate"), k12_1, k21_1, R_1);
-        // update PK model for drug 2
-        pk_explicit_euler_two_compartment(diffusion_dt, PKPD_D2_periphery_concentration, PKPD_D2_central_concentration, parameters.doubles("PKPD_D2_central_elimination_rate"), k12_2, k21_2, R_2);
-    }
-
-    // this block will work when BioFVM_microenvironment sets the dirichlet_activation_vectors correctly
-    std::vector<double> new_dirichlet_values(2, 0);
-    new_dirichlet_values[0] = PKPD_D1_central_concentration * parameters.doubles("PKPD_D1_biot_number");
-    new_dirichlet_values[1] = PKPD_D2_central_concentration * parameters.doubles("PKPD_D2_biot_number");
-
-    pk_update_dirichlet(new_dirichlet_values);
-
-    return;
-}
-
-void pk_update_dirichlet(std::vector<double> new_dirichlet_values)
-{
-    static std::vector<int> nPKPD_drugs{nPKPD_D1, nPKPD_D2};
-    #pragma omp parallel for
-    for( unsigned int i=0 ; i < microenvironment.mesh.voxels.size() ;i++ )
-    {
-        if( microenvironment.mesh.voxels[i].is_Dirichlet == true )
-        {
-            for( unsigned int j=0; j < nPKPD_drugs.size(); j++ )
-            {
-                if( microenvironment.get_substrate_dirichlet_activation(nPKPD_drugs[j], i) )
-                {
-                    microenvironment.update_dirichlet_node(i,nPKPD_drugs[j], new_dirichlet_values[j]);
-                }
-            }
-
-        }
-    }
-}
-
+/* these could be used in the future if any one is ever desperate to get numerical errors in their 1- and 2-compartment models
 void pk_explicit_euler_one_compartment( double dt, double &central_concentration, double elimination_rate )
 {
     central_concentration -= dt * elimination_rate * central_concentration;
@@ -1397,11 +1223,6 @@ void pk_explicit_euler_two_compartment( double dt, double &periphery_concentrati
 
     if (central_concentration < 0) {central_concentration = 0;}
     if (periphery_concentration < 0) {periphery_concentration = 0;}
-}
-
-void pk_dose(double next_dose, double &central_concentration)
-{
-    central_concentration += next_dose;
 }
 */
 
@@ -1557,8 +1378,8 @@ void PD_model_hardcoded(double current_time)
     {
         if (fabs(round(mechanics_dt / diffusion_dt) - mechanics_dt / diffusion_dt) > 0.0001)
         {
-            std::cout << "Error: Your mechanics time step does not appear to be a multiple of your diffusion time step" << std::endl;
-            std::cout << "  This will cause errors in solving the PD model using precomputed quantities because it assumes that the time step is constant across the simulation" << std::endl;
+            std::cout << "PhysiPKPD ERROR: Your mechanics time step does not appear to be a multiple of your diffusion time step" << std::endl;
+            std::cout << "  This will cause PhysiPKPD ERRORs in solving the PD model using precomputed quantities because it assumes that the time step is constant across the simulation" << std::endl;
             std::cout << "  If you really want these time steps, restart the simulation with the user parameter PKPD_precompute_pd_quantities set to False" << std::endl
                       << std::endl;
             exit(-1);
