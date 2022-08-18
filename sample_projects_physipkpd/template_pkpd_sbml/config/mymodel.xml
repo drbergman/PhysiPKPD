@@ -307,7 +307,13 @@
     <PKPD_D1_pk_model type="string">SBML</PKPD_D1_pk_model>
     <PKPD_D1_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D1_biot_number>
 
-    <PKPD_D2_pk_model type="string">SBML</PKPD_D2_pk_model>
+    <PKPD_D1_sbml_filename type="string">PK_baseo.xml</PKPD_D1_sbml_filename>
+    
+    <PKPD_D2_max_number_doses type="int">1</PKPD_D2_max_number_doses>
+    <PKPD_D2_central_increase_on_dose type="double">2e2</PKPD_D2_central_increase_on_dose>
+    <PKPD_D2_pk_model type="string">2C</PKPD_D2_pk_model>
+    <PKPD_D2_central_elimination_rate type="double">0.0027</PKPD_D2_central_elimination_rate>
+    <PKPD_D2_flux_across_capillaries type="double">0.0048</PKPD_D2_flux_across_capillaries>
     <PKPD_D2_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D2_biot_number>
 
     <PKPD_pk_substrate_names type="string">PKPD_D1,PKPD_D2</PKPD_pk_substrate_names>
