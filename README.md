@@ -53,6 +53,20 @@ PhysiPKPD comes hardcoded with two drugs and neither can be excluded. Of course,
 PK dynamics must be set for each drug and PD dynamics determined for each cell type for each drug.
 
 ### PK parameters <a name="pk_pars"></a>
+PK dynamics in PhysiPKPD currently follow a simplified 2-compartment model[^quasi-ss_assumption]:
+
+$$
+\begin{aligned}
+C' & = k(P-C) - \lambda C \\
+P' & = kR(C-P)
+\end{aligned}
+$$
+
+Soon, we will use separate intercompartmental clearance rates, i.e., $k_{12}$ and $k_{21}$.
+We are also working on including a way for users to implement even more complex PK dynamics.
+
+[^quasi-ss_assumption]: The reason for a single intercompartmental clearance parameter, $k$, is the assumption that when $C=P$ the system is at a quasi-steady state and there is no net intercompartmental clearance.
+
 For each drug, you can set the following parameters in `user_parameters`:
 
 | Parameter | Description |
@@ -69,10 +83,10 @@ For each drug, you can set the following parameters in `user_parameters`:
 | `d2_color_hp` | If `damage_coloring` is used for plotting, this is the Hill coefficient used to calculate the amount of blueshift in the nucleus |
 | `PKPD_D1_central_increase_on_loading_dose` | Increase in concentration in central compartment after a loading dose |
 | `PKPD_D1_central_increase_on_dose` | Increase in concentration in central compartment after a regular dose |
-| `PKPD_D1_central_elimination_rate` | Elimination rate in central compartment (in mintues<sup>-1</sup>) |
-| `PKPD_D1_flux_across_capillaries` | Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) |
+| `PKPD_D1_central_elimination_rate` $(\lambda)$ | Elimination rate in central compartment (in mintues<sup>-1</sup>) |
+| `PKPD_D1_flux_across_capillaries` $(k)$ | Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) |
 | `PKPD_D1_biot_number` | Ratio of drug concentration on boundary of microenvironment (Dirichlet condition) and concentration in systemic circulation |
-|`central_to_periphery_volume_ratio` | Ratio of central compartment to periphery compartment to determine effects of distribution and redistribution on periphery |
+|`central_to_periphery_volume_ratio` $(R)$ | Ratio of central compartment to periphery compartment to determine effects of distribution and redistribution on periphery |
 
 You can also set the following parameters in `microenvironment_setup` for each drug:
 | Parameter | Description |

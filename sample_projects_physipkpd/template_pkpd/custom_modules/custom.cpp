@@ -280,7 +280,7 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
         // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate
         if (pC->custom_data[nPKPD_D1_damage] > 0)
         {
-            temp = Hill_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_motility_EC50"], pC->custom_data["PKPD_D1_motility_hill_power"]);
+            temp = Hill_response_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_motility_EC50"], pC->custom_data["PKPD_D1_motility_hill_power"]);
             factor_change *= 1 + (fs_motility_D1 - 1) * temp;
         }
     }
@@ -291,7 +291,7 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
         // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate (this is unecesary when D1 also affects motility, but this is necessary when only D2 affects motility)
         if (pC->custom_data[nPKPD_D2_damage] > 0)
         {
-            temp = Hill_function(pC->custom_data[nPKPD_D2_damage], pC->custom_data["PKPD_D2_motility_EC50"], pC->custom_data["PKPD_D2_motility_hill_power"]);
+            temp = Hill_response_function(pC->custom_data[nPKPD_D2_damage], pC->custom_data["PKPD_D2_motility_EC50"], pC->custom_data["PKPD_D2_motility_hill_power"]);
             factor_change *= 1 + (fs_motility_D2 - 1) * temp;
         }
     }
