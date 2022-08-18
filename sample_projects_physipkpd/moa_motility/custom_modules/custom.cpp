@@ -306,6 +306,13 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
 
 void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
 {
+    if (p.death.dead == true)
+    {
+        p.secretion.set_all_secretion_to_zero();
+        p.secretion.set_all_uptake_to_zero();
+        pC->functions.update_phenotype = NULL;
+        return;
+    }
     // find my cell definition
     Cell_Definition *pCD = find_cell_definition(pC->type);
 
@@ -365,11 +372,5 @@ void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
         p.death.rates[nNec] = 9e99;
     }
 
-    if (p.death.dead == true)
-    {
-        p.secretion.set_all_secretion_to_zero();
-        p.secretion.set_all_uptake_to_zero();
-        pC->functions.update_phenotype = NULL;
-    }
     return;
 }

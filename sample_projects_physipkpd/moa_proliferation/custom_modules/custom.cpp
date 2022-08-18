@@ -220,18 +220,20 @@ void contact_function(Cell *pMe, Phenotype &phenoMe, Cell *pOther, Phenotype &ph
 
 void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
 {
+    if (p.death.dead == true)
+    {
+        p.secretion.set_all_secretion_to_zero();
+        p.secretion.set_all_uptake_to_zero();
+        pC->functions.update_phenotype = NULL;
+        return;
+    }
+
     Cell_Definition* pCD = find_cell_definition( pC->type );
     
     set_single_behavior( pC, "cycle entry", get_single_base_behavior( pC, "cycle entry") );    
 
     // update phenotype based on PD dynamics
     pd_function(pC, p, dt);
-
-    if (p.death.dead == true)
-    {
-        p.secretion.set_all_secretion_to_zero();
-        p.secretion.set_all_uptake_to_zero();
-        pC->functions.update_phenotype = NULL;
-    }
+    
     return;
 }
