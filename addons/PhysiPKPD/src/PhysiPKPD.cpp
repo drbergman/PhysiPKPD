@@ -483,16 +483,16 @@ void single_pk_model_one_compartment(Pharmacokinetics_Model *pPK, double current
 
 Pharmacodynamics_Model::Pharmacodynamics_Model()
 {
-    std::string substrate_name = "";
-    std::string cell_type = "";
-    int substrate_index = 0; // index of the substrate following pd dynamics
-    int cell_index = 0;      // index of the cell type following pd dynamics
+    substrate_name = "";
+    cell_type = "";
+    substrate_index = 0; // index of the substrate following pd dynamics
+    cell_index = 0;      // index of the cell type following pd dynamics
 
     dt = mechanics_dt; // mechanics_dt is the default time step for PD dynamics
     previous_pd_time = 0;
     next_pd_time = 0;
 
-    bool use_precomputed_quantities = true; // will default to this; TURN OFF IF PD parameters VARY (OR YOU HAVE A dt NOT A MULTIPLE OF diffusion_dt)
+    use_precomputed_quantities = true; // will default to this; TURN OFF IF PD parameters VARY (OR YOU HAVE A dt NOT A MULTIPLE OF diffusion_dt)
 
     advance = NULL;
 
@@ -729,6 +729,7 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
                     double metabolism_reduction_factor = exp(-pC->custom_data[pPD->substrate_name + "_metabolism_rate"] * dt);
                     double damage_initial_damage_term = exp(-pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * dt);
                     double damage_constant = pC->custom_data[pPD->substrate_name + "_repair_rate_constant"] / pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * (damage_initial_damage_term - 1); // +d_00...
+                    // if (pPD->use_concentration) {damage_constant /= pC->phenotype.volume.total;}
                     double damage_initial_drug_term;
                     if (pC->custom_data[pPD->substrate_name + "_metabolism_rate"] != pC->custom_data[pPD->substrate_name + "_repair_rate_linear"])                                                                // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
                     {
@@ -750,6 +751,7 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
 
                 pC->custom_data[pPD->damage_index] *= pPD->damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
                 pC->custom_data[pPD->damage_index] += pPD->damage_constant;                                                                            // + d_00 ...
+                // pC->custom_data[pPD->damage_index] += pPD->use_concentration ? pPD->damage_constant/pC->phenotype.volume.total : pPD->damage_constant;                                                                            // + d_00 ...
                 pC->custom_data[pPD->damage_index] += pPD->damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0)
                 if (pC->custom_data[pPD->damage_index] <= 0)
                 {
