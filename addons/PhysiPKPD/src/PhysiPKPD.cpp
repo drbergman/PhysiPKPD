@@ -761,7 +761,8 @@ void PD_model(double current_time)
 void setup_pd_advancer(Pharmacodynamics_Model *pPD)
 {
     void(*setup_function)(Pharmacodynamics_Model *pPD);
-    std::vector<std::string> current_options = {"AUC","SBML"};
+    std::vector<std::string> current_options = {"AUC","AUC_amount","SBML"};
+    std::string method;
     if (parameters.strings.find_variable_index(pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model")==-1)
     {
         std::cout << "PhysiPKPD WARNING: No PD model specified for " << pPD->substrate_name << " affecting " << pPD->cell_type << " ." << std::endl
@@ -775,6 +776,7 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
     {
         std::vector<void (*)(Pharmacodynamics_Model*)> fns;
         fns.push_back(&setup_pd_model_auc);
+        fns.push_back(&setup_pd_model_auc);
         fns.push_back(&setup_pd_model_sbml);
 
         std::string model = parameters.strings(pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model");
@@ -785,6 +787,7 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
             {
                 setup_function = fns[i];
                 model_found = true;
+                method = current_options[i];
                 break;
             }
         }
@@ -796,6 +799,7 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
         }
     }
     setup_function(pPD);
+    pPD->use_internalized_amount = (method=="AUC_amount");
     return;
 }
 
@@ -903,10 +907,13 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
                     {
                         damage_initial_drug_term = dt * metabolism_reduction_factor;
                     }
-                    // if (pPD->use_concentration) {damage_initial_drug_term /= pC->phenotype.volume.total;}
+                    if (!pPD->use_internalized_amount)
+                    {
+                        damage_initial_drug_term /= pC->phenotype.volume.total; // use concentration of internalized substrate to cause damage rather than internalized amount
+                    }
                     pC->custom_data[pPD->damage_index] *= damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
                     pC->custom_data[pPD->damage_index] += damage_constant;                                                                            // + d_00 ...
-                    pC->custom_data[pPD->damage_index] += damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0)
+                    pC->custom_data[pPD->damage_index] += damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0) or + d_10*C(0) if using concentration
                     if (pC->custom_data[pPD->damage_index] <= 0)
                     {
                         pC->custom_data[pPD->damage_index] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
@@ -916,9 +923,16 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
                 else
                 {
                     pC->custom_data[pPD->damage_index] *= pPD->damage_initial_damage_term;                                                                 // D(dt) = d_01 * D(0)...
-                    // if (pPD->use_concentration) {damage_initial_drug_term /= pC->phenotype.volume.total;}
                     pC->custom_data[pPD->damage_index] += pPD->damage_constant;                                                                            // + d_00 ...
-                    pC->custom_data[pPD->damage_index] += pPD->damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0)
+                    if (pPD->use_internalized_amount)
+                    {
+                        pC->custom_data[pPD->damage_index] += pPD->damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0)
+                    }
+                    else
+                    {
+                        pC->custom_data[pPD->damage_index] += pPD->damage_initial_drug_term * p.molecular.internalized_total_substrates[pPD->substrate_index] / pC->phenotype.volume.total; // + d_10*C(0)
+                    }
+
                     if (pC->custom_data[pPD->damage_index] <= 0)
                     {
                         pC->custom_data[pPD->damage_index] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)

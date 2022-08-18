@@ -99,7 +99,7 @@ class Pharmacodynamics_Model
 	int cell_index; // index of the cell type following pd dynamics
 
     int damage_index;
-
+    bool use_internalized_amount = false; // by default, use the PD dynamics where damage is accumulated based on concentration
     double dt;
     double previous_pd_time;
     double next_pd_time;
