@@ -29,20 +29,21 @@ The only changes from PhysiCell v1.10.4 are at [Lines 379-387](https://github.co
 
 Congratulations! You're ready to try out PhysiPKPD!
 
-## Running the samples
-There are 5 sample projects currently distributed with PhysiPKPD.
-There is one for each supported Mechanism of Action (MOA) and one combination treatment.
+## Running the sample projects
+There are 6 sample projects currently distributed with PhysiPKPD.
+There is one for each supported Mechanism of Action (MOA), one combination treatment, and one that starts therapy after a confluence condition is met.
 To run one of these samples, do the following:
 
 1. `make reset` to make sure you have the newly edited Makefile in your top directory
-2. Make your preferred project:
+2. Make your preferred sample project:
     * `make pkpd-proliferation-sample` 
     * `make pkpd-apoptosis-sample` 
     * `make pkpd-necrosis-sample` 
     * `make pkpd-motility-sample` 
     * `make pkpd-combo-sample`
-3. Compile your project: `make`
-4. Run your project: `./pkpd_sample ./config/pkpd_model.xml`
+    * `make pkpd-confluence-start-sample`
+3. Compile your model: `make`
+4. Run your model: `./pkpd_sample ./config/pkpd_model.xml`
 5. Look at the snapshots in `output/` and the living cell counts in `output/cell_counts.csv`
 
 ## Reconfiguring, editing, and re-running
@@ -58,7 +59,9 @@ After making these changes, you can run `make redo` and this will automatically 
 ## Setting parameters
 PhysiPKPD parameters are found in two areas in `pkpd_model.xml`: PK parameters are at the bottom in `user_parameters` and PD parameters are in `cell_definitions` in the `custom_data` for each cell type.
 PhysiPKPD can add PK and/or PD dynamics to any substrates in a PhysiCell simulation.
-PK dynamics must be set for each PK substrate and PD dynamics determined for each cell type affected by a particular substrate.
+PK dynamics must be set for each PK substrate.
+PD dynamics must be set for each pairing `(S,C)` where substrate `S` acts on cell type `C`.
+PhysiPKPD will attempt to use defaults if none are supplied and issue warnings/errors until you have fully specified everything.
 
 In what follows, `S` stands for the name of a substrate.
 
@@ -91,7 +94,22 @@ In addition, `myDrug` and `myDrug_no_PK` will lead to PD effects for any cell ty
 **Note:** Any spaces in these lists will cause PhysiPKPD to look for substrate names with those spaces.
 
 ### PK parameters <a name="pk_pars"></a>
-PK dynamics in PhysiPKPD currently follows a 2-compartment model[^oldpk]:
+There are three PK models to choose from.
+To specify which one `S` uses, set `S_pk_model` according to Specification below.
+
+**Note:** To use an SBML-defined PK model, you must have libRoadRunner installed.
+If you can run the `sample_projects_intracellular/ode` projects, you are ready to run these PhysiPKPD models.
+
+| Model | Description | Specification |
+| :-- | :-- | :-: |
+| 1-compartment | Circulation compartment with linear elimination | `1C` |
+| 2-compartment | `1C` plus a periphery compartment with linear intercompartmental clearance rates | `2C` |
+| SBML-defined | Any SBML-defined model. Place the file in the `./config/` folder. PhysiPKPD will treat the first Species as the circulation concentration and update Dirichlet nodes accordingly | `SBML` |
+<p align="center">
+    <b>Table:</b> PK model specifications
+</p>
+
+If `S_pk_model` is not set, PhysiPKPD will default to a 2-compartment model[^oldpk]:
 
 [^oldpk]: For those using the simplified 2-compartment model that PhysiPKPD used to use, see the [`S_flux_across_capillaries`](#old_flux_par) entry in the table.
 
@@ -102,14 +120,17 @@ P' & = k_{12}RC - k_{21}P
 \end{aligned}
 $$
 
-A 1-compartment model can be modeled by setting $k_{12}=0$[^divby0].
+For all PK models, a Biot number should be specified.
+This describes the ratio of substrate concentration just outside capillary walls to that inside the blood vessel.
+It can be related to a reflection coefficient.
 
-[^divby0]: The implemented analytical solution, in the case $k_{12}=0$, requires $k_{21}\neq\lambda$ to avoid a divide-by-zero error.
-Since the periphery is effectively excluded in this case, the value of $k_{21}$ is irrelevant, so PhysiPKPD updates `k_{21}+=1` and carries on.
+| Parameter | Type | Description | If Missing |
+| :-- | :-: | :-- | :-- |
+| `S_biot_number` | `double` | Ratio of substrate concentration on boundary of microenvironment (Dirichlet condition) and concentration in systemic circulation | Set to `1.0` |
 
-We are also working on including a way for users to implement even more complex PK dynamics.
+#### Non-SBML models
 
-For each substrate, you can set the following parameters in `user_parameters`.
+For each substrate following `1C` or `2C`, you can set the following parameters in `user_parameters`.
 For example, a substrate called `myDrug` with 10 doses administered would have the following in `user_parameters`: 
 
 ```
@@ -117,27 +138,39 @@ For example, a substrate called `myDrug` with 10 doses administered would have t
 ```
 
 | Parameter | Type | Description | If Missing |
-| :-- | --- | :-: | --- |
-| `S_number_loading_doses` | `int` | Number of loading doses to give before switching to regular doses | Set to `0` |
+| :-- | :-: | :-- | :-- |
 | `S_max_number_doses` | `int` | Total number of doses to give including loading doses | Set to `0` |
+| `S_number_loading_doses` | `int` | Number of loading doses to give before switching to regular doses | Set to `0` |
 | `S_dose_interval` | `double` | Time between successive doses, loading or regular (in minutes) | If `S_max_number_doses`>0, throws an error |
+| `S_central_increase_on_dose` | `double` | Increase in concentration in central compartment after a regular dose | If `S_max_number_doses`>`S_number_loading_doses`, throws an error |
+| `S_central_increase_on_loading_dose` | `double` | Increase in concentration in central compartment after a loading dose | If `S_number_loading_doses`>0, throws an error |
 | `S_set_first_dose_time` | `bool` | Boolean determining if the first dose time is fixed or if a confluence condition will be used to determine the first dose time | Set to `False` |
 | `S_first_dose_time` | `double` | Time of first dose if given at fixed time (in minutes) | Set to `current_time` |
 | `S_confluence_condition` | `double` | Proportion of microenvironment filled with cells at which to give first dose; confluence calculated by sum of cross-sectional area of all cells divided by area of microenvironment | Never check confluence condition |
-| `S_central_increase_on_loading_dose` | `double` | Increase in concentration in central compartment after a loading dose | If `S_number_loading_doses`>0, throws an error |
-| `S_central_increase_on_dose` | `double` | Increase in concentration in central compartment after a regular dose | If `S_max_number_doses`>`S_number_loading_doses`, throws an error |
 | `S_central_elimination_rate` $(\lambda)$ | `double` | Linear elimination rate in central compartment (in mintues<sup>-1</sup>) | Set to `0` |
 | `S_central_to_periphery_volume_ratio` $(R = V_1/V_2 = V_C/V_P)$ | `double` | Ratio of central compartment to periphery compartment | Set to `central_to_periphery_volume_ratio` |
-| `central_to_periphery_volume_ratio` $(R = V_1/V_2 = V_C/V_P)$ | `double` | Ratio of central compartment to periphery compartment *for any substrates without a specific volume ratio as above* | Set to `1` |
 | `S_central_to_periphery_clearance_rate` $(k_{12})$ | `double` | Rate of change in concentration in central compartment due to distribution (in minutes<sup>-1</sup>) | Set to `S_flux_across_capillaries`, if present. Otherwise, set to `0` |
 | `S_periphery_to_central_clearance_rate` $(k_{21})$ | `double` | Rate of change in concentration in periphery compartment due to redistribution (in minutes<sup>-1</sup>) | Set to `S_flux_across_capillaries` $\times$ `S_central_to_periphery_volume_ratio`, if present. Otherwise, set to `0` |
+| `central_to_periphery_volume_ratio` $(R = V_1/V_2 = V_C/V_P)$ | `double` | Ratio of central compartment to periphery compartment *for any substrates without a specific volume ratio as above* | Set to `1` |
 | `S_flux_across_capillaries`<a name="old_flux_par"></a> | `double` | **While this is still allowed, consider using the above two parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) | See above |
-| `S_biot_number` | `double` | Ratio of substrate concentration on boundary of microenvironment (Dirichlet condition) and concentration in systemic circulation | Set to `1` |
 <p align="center">
     <b>Table:</b> PK Parameters
 </p>
 
 [^1]: To use these new parameters, you will want to set $k_{12}$ as your original flux rate and $k_{21}$ as `S_flux_across_capillaries * S_central_to_periphery_volume_ratio`.
+
+#### SBML-defined models
+
+You must supply a user parameter with the name of the SBML file:
+
+| Parameter | Type | Description | If Missing |
+| :-- | :-: | :-- | :-- |
+| `S_sbml_filename` | `string` | Filename of SBML file, e.g. `PK_default.xml` | Set to `PK_default.xml` |
+
+Currently, you must specify dosing events yourself in SBML files.
+We will soon allow you to specify a CSV file with the dosing events.
+
+#### PhysiCell PK parameters
 
 You can also set the following parameters in `microenvironment_setup` for each substrate:
 | Parameter | Description |
@@ -151,10 +184,13 @@ You can also set the following parameters in `microenvironment_setup` for each s
 ### PD parameters <a name="pd_pars"></a>
 For each cell type, all of the PD parameters are in `custom_data`.
 
-
 #### Damage Accumulation Parameters <a name="dam_pars"></a>
-Each cell affected by a substrate `S` accumulates damage, $D$, based on the *amount*, $A$ of the substrate internalized.
+Each cell affected by a substrate `S` accumulates damage, $D$, based on the internalized substrate, $A$[^auc].
 This accumulation of damage obeys the following differential equation:
+
+[^auc]: By default, PhysiPKPD uses the concentration of the internalized substrate.
+You can change this by setting `S_on_C_pd_model` to `AUC_amount`.
+You may also set it to `AUC` to suppress the PhysiPKPD warning message.
 
 $$
 \begin{aligned}
@@ -166,13 +202,6 @@ $$
 Note that since damage is an abstract quantity, we do not include a rate parameter as a coefficient for $A$ in the equation for $D'$.
 Each of these parameters **must** be set[^old_repair].
 If they are not set, PhysiPKPD will throw an error.
-By default, PhysiPKPD uses the `mechanics_dt` set in the configuration file.
-You can change this by adding a user parameter of the format `S_dt_C`.
-For example, if you wish to use a timestep of `0.01` for updating the damage of `myDrug` on `tumor`, then add the following to `user_parameters`:
-
-```
-<myDrug_dt_tumor type="double">0.01</myDrug_dt_tumor>
-```
 
 [^old_repair]: Old versions of PhysiPKPD only had a constant repair rate. For backwards compatibility, `S_repair_rate` can be set instead.
 If the repair rates in the [table](#dam_pars_table) are not set, then PhysiPKPD will use this value to set a constant repair rate.
@@ -187,6 +216,14 @@ If the repair rates in the [table](#dam_pars_table) are not set, then PhysiPKPD 
 <p align="center">
     <b>Table:</b> Damage Accumulation Parameters <a name="dam_pars_table"></a>
 </p>
+
+By default, PhysiPKPD uses the `mechanics_dt` set in the configuration file.
+You can change this by adding a user parameter of the format `S_dt_C`.
+For example, if you wish to use a timestep of `0.01` for updating the damage of `myDrug` on `tumor`, then add the following to `user_parameters`:
+
+```
+<myDrug_dt_tumor type="double">0.01</myDrug_dt_tumor>
+```
 
 #### Cell Effect Parameters
 The accumulated damage then affects the cell through one or more mechanisms of action (MOA).
@@ -247,7 +284,7 @@ If, for example the current apoptosis rate of `C` is not `1E-5` but instead `1E-
 
 ### Miscellaneous parameters
 The following are user parameters that provide some control over how the dynamics are solved.
-Currently, the only PK and PD models implemented in PhysiPKPD are readily solved using analytic techniques.
+Currently, the only (non-SBML) PK and PD models implemented in PhysiPKPD are readily solved using analytic techniques.
 By informal observation, the analytic methods are not slower than numerical methods.
 If anything the analtyic methods are faster.
 Therefore, all simulations use analytic solutions.
@@ -265,16 +302,16 @@ For example, if a substrate `myDrug` affects cell type `tumor` and you want to p
 ```
 
 |Parameter|Type|Description| If Missing |
-|---|---|---|:--|
-| `PKPD_precompute_all_pd_quantities` | 'bool' | Boolean to determine whether to pre-compute values used to analytically solve *all* PD dynamics; **turn this off if PD parameters can vary within a cell type OR if your `mechanics_dt` is not a multiple of your `diffusion_dt`** | Set to `False` |
-| `S_precompute_pd_for_C` | 'bool' | **Only affects simulations if `PKPD_precompute_all_pd_quantities==False`** Boolean to determine whether to pre-compute values used to analytically solve PD dynamics for a single (substrate, cell type) pairing; **turn this off if PD parameters can vary within this cell type OR if your `mechanics_dt` is not a multiple of your `diffusion_dt`** | Set to `False` |
+|---|:-:|---|:--|
+| `PKPD_precompute_all_pd_quantities` | `bool` | Boolean to determine whether to pre-compute values used to analytically solve *all* PD dynamics; **turn this off if PD parameters can vary within a cell type OR if your PD time step is not a multiple of your `diffusion_dt`** | Set to `False` |
+| `S_precompute_pd_for_C` | `bool` | **Only affects simulations if `PKPD_precompute_all_pd_quantities==False`** Boolean to determine whether to pre-compute values used to analytically solve PD dynamics for a single (substrate, cell type) pairing; **turn this off if PD parameters can vary within this cell type OR if your PD time step is not a multiple of your `diffusion_dt`** | Set to `False` |
 <p align="center">
     <b>Table:</b> Miscellaneous Parameters
 </p>
 
 ## Making your own project using PhysiPKPD
 If you wish to make your own project that uses PhysiPKPD (and not just one of the pre-built sample projects), this is how you can proceed.
-1. Make the PKPD template project: `make pkpd-template`
+1. Make one of the PKPD template projects: `make pkpd-template` or `make pkpd-template-sbml`
 2. Edit the configuration file to set the Dirichlet conditions, [PK Parameters](#pk_pars), and [PD Parameters](#pd_pars) for the two PKPD substrates and the default cell type `cell`.
 3. Add additional substrates as normal (using the Model Builder for this is untested)
 4. Add additional cell types as normal (using the Model Builder for this is untested).
