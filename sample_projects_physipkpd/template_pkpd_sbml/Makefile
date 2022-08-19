@@ -1,5 +1,5 @@
 VERSION := $(shell grep . VERSION.txt | cut -f1 -d:)
-PROGRAM_NAME := project
+PROGRAM_NAME := pkpd_project
 
 CC := g++
 # CC := g++-mp-7 # typical macports compiler name
@@ -129,9 +129,7 @@ all: libRoadrunner main.cpp $(ALL_OBJECTS)
 	@echo LIBRR_LIBS= $(LIBRR_LIBS)
 	@echo 
 	$(COMPILE_COMMAND) $(OMP_LIB) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp -L$(LIBRR_LIBS) -lroadrunner_c_api
-	@echo
-	@echo created $(PROGRAM_NAME)
-	@echo
+	make name
 
 name:
 	@echo ""
@@ -254,6 +252,7 @@ reset:
 	touch ./custom_modules/empty.txt
 	touch ALL_CITATIONS.txt
 	touch ./core/PhysiCell_cell.cpp
+	touch ./addons/PhysiPKPD/src/PhysiPKPD.cpp
 	rm ALL_CITATIONS.txt
 	cp ./config/PhysiCell_settings-backup.xml ./config/PhysiCell_settings.xml
 	touch ./config/empty.csv
@@ -320,10 +319,9 @@ data-plots:
 
 redo:
 	make reset
-	make template_pkpd_sbml
+	make pkpd-template-sbml
 	make
 
 rc: # reconfig
-	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/mymodel.xml ./config/
-	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/PD_v0.xml ./config/
-	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/PK_base.xml ./config/
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/pkpd_model.xml ./config/
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/PK_default.xml ./config/

@@ -9,27 +9,19 @@ SBML_PK_Solver::SBML_PK_Solver()
 
 void SBML_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
 {
-    double dose;
-
-    //------------- To PhysiPKPD Team : please provide proper start/end time -------------
-	static double start_time = 0.0;
-	static double end_time = diffusion_dt;
-
 	//create Data Pointer
 	rrc::RRCDataPtr result;
 	//freeing memory
 	rrc::freeRRCData(result);
 
 	// simulate SBML
-	result = rrc::simulateEx(rrHandle, start_time, end_time, 2);
+	result = rrc::simulateEx(rrHandle, current_time, current_time+diffusion_dt, 2);
 
 	// parsing results
 	rrc::RRVectorPtr vptr;
 	vptr = rrc::getFloatingSpeciesConcentrations(rrHandle);
 
 	// Getting "Concentrations"
-	// std::string species_names_str = stringArrayToString(rrc::getFloatingSpeciesIds(rrHandle));
-
 	compartment_concentrations[0] = vptr->Data[0]; // @Supriya: Please confirm that vptr->Data[0] will always be the value of the first Species at end_time
 
 	rrc::freeVector(vptr);
@@ -41,41 +33,16 @@ void SBML_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
 static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots for determining when to do these
 
 Analytic2C_PK_Solver::Analytic2C_PK_Solver()
-{
-    M = {{0, 0},{0,0}};
-    return;
-}
+{ return; }
 
 Analytic1C_PK_Solver::Analytic1C_PK_Solver()
-{
-    M = 0;
-    return;
-}
+{ return; }
 
 Pharmacokinetics_Solver::Pharmacokinetics_Solver()
-{
-    // dose_times = {};
-    // dose_amounts = {};
-
-    dose_count = 0;
-    max_doses = 0;
-
-    // dosing_schedule_setup_done = false;
-
-    confluence_check_time = 0.0;
-
-    return;
-}
+{ return; }
 
 Pharmacokinetics_Model::Pharmacokinetics_Model()
-{
-    substrate_index = 0;
-    biot_number = 1.0;
-    dosing_schedule_setup_done = false;
-    pk_solver = NULL;
-
-    return;
-}
+{ return; }
 
 Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substrate_name)
 {
@@ -97,7 +64,7 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
     std::string model;
     if (parameters.strings.find_variable_index(substrate_name + "_pk_model")==-1)
     {
-        std::cout << "PhysiPKPD WARNING: No PK model specified for " << substrate_name << " ." << std::endl
+        std::cout << "PhysiPKPD WARNING: No PK model specified for " << substrate_name << std::endl
                   << "  Will attempt to set up a 2-compartment model." << std::endl
                   << std::endl;
         setup_function = &setup_pk_model_two_compartment;
@@ -150,21 +117,21 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
         {
             // read in csv into events for the xml file
             std::cout << "PhysiPKPD WARNING: Reading in a dosing schedule from a CSV is not yet supported." << std::endl
-                      << "  Will use ./config/PK_base.xml as is for the PK dynamics of " << substrate_name << std::endl
+                      << "  Will use ./config/PK_default.xml as is for the PK dynamics of " << substrate_name << std::endl
                       << std::endl;
 
         }
         pNew->dosing_schedule_setup_done = true;
 
         // reading given SBML
-        std::string sbml_filename = "PK_base.xml";
+        std::string sbml_filename = "PK_default.xml";
         if (parameters.strings.find_variable_index(substrate_name + "_sbml_filename")==-1)
         {
             std::cout << "PhysiPKPD WARNING: No SBML filename provided for " << substrate_name << "." << std::endl
-                      << "  You may include a filename as a string in " << substrate_name + "_sbml_filename ." << std::endl
-                      << "  For example: <" << substrate_name << "_sbml_filename type=\"string\">PK_base.xml</" << substrate_name + "_sbml_filename>" << std::endl
+                      << "  You may include a filename as a string in " << substrate_name + "_sbml_filename" << std::endl
+                      << "  For example: <" << substrate_name << "_sbml_filename type=\"string\">PK_default.xml</" << substrate_name + "_sbml_filename>" << std::endl
                       << "  Place that file in ./config/ for PhysiPKPD to properly locate it." << std::endl
-                      << "  For now, PhysiPKPD will use ./config/PK_base.xml." << std::endl
+                      << "  For now, PhysiPKPD will use ./config/" + sbml_filename << std::endl
                       << std::endl;
         }
         else
@@ -190,7 +157,7 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
     }
 #endif
 
-    std::cout << "PhysiPKPD ERROR: No PK solver found for " << substrate_name << " ." << std::endl
+    std::cout << "PhysiPKPD ERROR: No PK solver found for " << substrate_name << std::endl
               << "  We tried looking for " + model + ", but somehow failed." << std::endl;
     exit(-1);
 }
@@ -325,7 +292,7 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
         else
         {
             R = 1.0;
-            std::cout << "  You did not supply a volume ratio for the 2-compartment model for " << pPK->substrate_name << " ." << std::endl
+            std::cout << "  You did not supply a volume ratio for the 2-compartment model for " << pPK->substrate_name << std::endl
                       << "  Assuming a ratio of R = " << 1.0 << std::endl;
         }
     }
@@ -346,7 +313,7 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
         }
         else
         {
-            std::cout << "  Also could not find " << pPK->substrate_name << "_flux_across_capillaries." << std::endl
+            std::cout << "  Also could not find " << pPK->substrate_name << "_flux_across_capillaries" << std::endl
                       << "  Setting k12 = 0." << std::endl;
             k12 = 0;
         }
@@ -361,13 +328,13 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
         if (parameters.doubles.find_variable_index(pPK->substrate_name + "_flux_across_capillaries") != -1)
         {
             std::cout << "  " << pPK->substrate_name << "_flux_across_capillaries is set. Using that instead with the understanding that you are using the simplified 2-compartment PK model." << std::endl
-                      << "  You can achieve the same thing using " << pPK->substrate_name << "_periphery_to_central_clearance_rate = " << pPK->substrate_name << "_flux_across_capillaries * " << pPK->substrate_name << "_central_to_periphery_volume_ratio." << std::endl
+                      << "  You can achieve the same thing using " << pPK->substrate_name << "_periphery_to_central_clearance_rate = " << pPK->substrate_name << "_flux_across_capillaries * " << pPK->substrate_name << "_central_to_periphery_volume_ratio" << std::endl
                       << std::endl;
             k21 = parameters.doubles(pPK->substrate_name + "_flux_across_capillaries") * R;
         }
         else
         {
-            std::cout << "  Also could not find " << pPK->substrate_name << "_flux_across_capillaries." << std::endl
+            std::cout << "  Also could not find " << pPK->substrate_name << "_flux_across_capillaries" << std::endl
                       << "  Setting k21 = 0." << std::endl;
             k21 = 0;
         }
@@ -458,8 +425,8 @@ void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
     /*    %%%%%%%%%%%% Made sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
     // pre-computed quantities to express solution to matrix exponential
-    pSolver->M = exp(-l * diffusion_dt); // M is defined as a vector of vectors, hence this expression
-    // std::cout << "M = " << pPK->M[0][0] << std::endl;
+    pSolver->M = exp(-l * diffusion_dt);
+    // std::cout << "M = " << pSolver->M << std::endl;
 
     pSolver->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
     pPK->pk_solver = pSolver;
@@ -470,11 +437,10 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
 {
     if (!pPK->dosing_schedule_setup_done)
     {
-
-        bool setup_dosing_now = false;
-        setup_dosing_now |= (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") == -1); // start if user did not specify any of the parameters to determine when to start
-        setup_dosing_now |= (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1) && parameters.bools(pPK->substrate_name + "_set_first_dose_time"); // start if user parameter says to set first dose time
-        setup_dosing_now |= (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") != -1 && (current_time > pPK->pk_solver->confluence_check_time - tolerance) && (confluence_computation() > parameters.doubles(pPK->substrate_name + "_confluence_condition"))); // start if confluence check is given, its time for it, and if the confluence condition is met
+        bool setup_dosing_now;
+        setup_dosing_now = (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") == -1) // start if user did not specify any of the parameters to determine when to start
+                        || (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1) && parameters.bools(pPK->substrate_name + "_set_first_dose_time")                                                // start if user parameter says to set first dose time
+                        || (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") != -1 && (current_time > pPK->pk_solver->confluence_check_time - tolerance) && (confluence_computation() > parameters.doubles(pPK->substrate_name + "_confluence_condition"))); // start if confluence check is given, its time for it, and if the confluence condition is met
         if (setup_dosing_now)
         {
             // get max dose number
@@ -556,8 +522,15 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
             }
             pPK->dosing_schedule_setup_done = true;
         }
-        else
+        else if (current_time > pPK->pk_solver->confluence_check_time - tolerance)
         {
+            if (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") == -1)
+            {
+                std::cout << "PhysiPKPD ERROR: Not setting first dose time of " << pPK->substrate_name << " means to use a confluence check to start dosing." << std::endl
+                          << "  However, no confluence condition is supplied. Set " << pPK->substrate_name + "_confluence_condition to a value between 0 and 1." << std::endl
+                          << std::endl;
+                exit(-1);
+            }
             pPK->pk_solver->confluence_check_time += phenotype_dt;
         }
     }
@@ -596,28 +569,27 @@ if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
 }
 
 Pharmacodynamics_Model::Pharmacodynamics_Model()
-{
-    substrate_name = "";
-    cell_type = "";
-    substrate_index = 0; // index of the substrate following pd dynamics
-    cell_index = 0;      // index of the cell type following pd dynamics
-
-    dt = mechanics_dt; // mechanics_dt is the default time step for PD dynamics
-    previous_pd_time = 0;
-    next_pd_time = 0;
-
-    use_precomputed_quantities = true; // will default to this; TURN OFF IF PD parameters VARY (OR YOU HAVE A dt NOT A MULTIPLE OF diffusion_dt)
-
-    advance = NULL;
-
-    return;
-}
+{ return; }
 
 Pharmacodynamics_Model *create_pd_model(int substrate_index, std::string substrate_name, int cell_index, std::string cell_type)
 {
     Pharmacodynamics_Model *pNew = create_pd_model(substrate_index, cell_index);
     pNew->substrate_name = substrate_name;
     pNew->cell_type = cell_type;
+
+    if (parameters.doubles.find_variable_index(substrate_name + "_dt_" + cell_type)==-1)
+    {
+        std::cout << "PhysiPKPD WARNING: No PD time step supplied for " << substrate_name << " effects on " << cell_type << std::endl
+                  << "  Will use the mechanics_dt by default." << std::endl
+                  << "  Specify one using " << substrate_name + "_dt_" + cell_type << std::endl << std::endl;
+
+        pNew->dt = mechanics_dt;
+    }
+    else
+    {
+        pNew->dt = parameters.doubles(substrate_name + "_dt_" + cell_type);
+    }
+
     return pNew;
 }
 
@@ -718,12 +690,12 @@ void PD_model(double current_time)
                     {
                         set_these_moas_for_cell_type[k][moa_counter] = false;
                     }
-                    is_type_affected_by_drug |= pCD->custom_data[moa_strings[moa_counter]] > 0.5;
+                    is_type_affected_by_drug = is_type_affected_by_drug || pCD->custom_data[moa_strings[moa_counter]] > 0.5;
                 }                             // finished looping over moas for this (substrate,cell type) pair
                 if (is_type_affected_by_drug) // then set up PD model for this (substrate, cell type) pairing
                 {
                     all_pd.push_back(create_pd_model(PD_ind[n], PD_names[n], k, pCD->name));
-                    all_pd[n]->dt = parameters.doubles.find_variable_index(PD_names[n] + "_dt_" + pCD->name)==-1 ? mechanics_dt : parameters.doubles(PD_names[n] + "_dt_" + pCD->name); // default to mechanics_dt
+                    // all_pd[n]->dt = parameters.doubles.find_variable_index(PD_names[n] + "_dt_" + pCD->name)==-1 ? mechanics_dt : parameters.doubles(PD_names[n] + "_dt_" + pCD->name); // default to mechanics_dt
                     setup_pd_advancer(all_pd[n]);
                     all_pd[n]->previous_pd_time = current_time;
                     all_pd[n]->next_pd_time = current_time;
@@ -765,7 +737,7 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
     std::string method;
     if (parameters.strings.find_variable_index(pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model")==-1)
     {
-        std::cout << "PhysiPKPD WARNING: No PD model specified for " << pPD->substrate_name << " affecting " << pPD->cell_type << " ." << std::endl
+        std::cout << "PhysiPKPD WARNING: No PD model specified for " << pPD->substrate_name << " affecting " << pPD->cell_type << std::endl
                   << "  Specify with user parameter " << pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model"
                   << " set to one of " << current_options << std::endl
                   << "  Will attempt to set up the AUC model." << std::endl
@@ -805,8 +777,8 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
 
 void setup_pd_model_auc(Pharmacodynamics_Model *pPD)
 {
-    pPD->use_precomputed_quantities = parameters.bools.find_variable_index("PKPD_precompute_all_pd_quantities") != -1 && parameters.bools("PKPD_precompute_all_pd_quantities");
-    pPD->use_precomputed_quantities |= parameters.bools.find_variable_index(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type) != -1 && parameters.bools(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type);
+    pPD->use_precomputed_quantities = (parameters.bools.find_variable_index("PKPD_precompute_all_pd_quantities") != -1 && parameters.bools("PKPD_precompute_all_pd_quantities"))
+                                   || (parameters.bools.find_variable_index(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type) != -1 && parameters.bools(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type));
     Cell_Definition *pCD = cell_definitions_by_index[pPD->cell_index];
 
     // add backwards compatibility for usinge PKPD_D1_repair_rate to mean the constant repair rate
@@ -826,7 +798,7 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD)
     {
         if(pCD->custom_data.find_variable_index(necessary_custom_fields[i])==-1)
         {
-            std::cout << pCD->name << " does not have " << necessary_custom_fields[i] << " ." << std::endl;
+            std::cout << pCD->name << " does not have " << necessary_custom_fields[i] << std::endl;
             exit(-1);
         }
     }
@@ -888,7 +860,7 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
         for (int i = 0; i < (*all_cells).size(); i++)
         {
             Cell *pC = (*all_cells)[i];
-            if (pC->type == pPD->cell_index)
+            if (!pC->phenotype.death.dead && pC->type == pPD->cell_index) // only update for living cells
             {
                 Phenotype &p = pC->phenotype;
 
@@ -897,7 +869,6 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
                     double metabolism_reduction_factor = exp(-pC->custom_data[pPD->substrate_name + "_metabolism_rate"] * dt);
                     double damage_initial_damage_term = exp(-pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * dt);
                     double damage_constant = pC->custom_data[pPD->substrate_name + "_repair_rate_constant"] / pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * (damage_initial_damage_term - 1); // +d_00...
-                    // if (pPD->use_concentration) {damage_constant /= pC->phenotype.volume.total;}
                     double damage_initial_drug_term;
                     if (pC->custom_data[pPD->substrate_name + "_metabolism_rate"] != pC->custom_data[pPD->substrate_name + "_repair_rate_linear"]) // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
                     {
@@ -964,7 +935,7 @@ void pd_function(Cell *pC, Phenotype &p, double dt)
     // this is to handle the case when the two drugs have the same target. then will multiply these factors
     double factor_change; // factor change from drugs
 
-    if (get_single_behavior(pC, "cycle entry") > 0)
+    if (get_single_behavior(pC, "cycle entry") > 0) // we assume that proliferation effects are anti-proliferative, so it only matters if the cells are already cycling
     {
         factor_change = 1.0; // set factor
         for (int n = 0; n < PD_names.size(); n++)
@@ -1147,6 +1118,8 @@ std::vector<std::string> damage_coloring(Cell *pC)
 // compute confluence as total cellular volume divided by 2D area of TME
 double confluence_computation(void)
 {
+
+    // this function is not made for 3D simulations
     double output = 0;
     Cell *pC = NULL;
     double cV;
@@ -1167,6 +1140,9 @@ double confluence_computation(void)
     output /= microenvironment.mesh.bounding_box[3] - microenvironment.mesh.bounding_box[0];
     output /= microenvironment.mesh.bounding_box[4] - microenvironment.mesh.bounding_box[1];
     //    output /= microenvironment.mesh.bounding_box[5] - microenvironment.mesh.bounding_box[2]; // use this if doing a 3D check for confluence (see choice of cell volume/area above)
+    
+    std::cout << "PhysiPKPD Update: Confluence currently at " << output << "." << std::endl << std::endl;
+
     return output;
 }
 
@@ -1206,7 +1182,7 @@ void write_cell_data_for_plots(double current_time, char delim = ',')
         file_out.open(dataFilename, std::ios_base::app);
         if (!file_out)
         {
-            std::cout << "PhysiPKPD ERROR: could not open file " << dataFilename << "!" << std::endl;
+            std::cout << "PhysiPKPD ERROR: Could not open file " << dataFilename << "!" << std::endl;
             return;
         }
         file_out << dataToAppend << std::endl;
@@ -1237,327 +1213,5 @@ void pk_explicit_euler_two_compartment( double dt, double &periphery_concentrati
 
     if (central_concentration < 0) {central_concentration = 0;}
     if (periphery_concentration < 0) {periphery_concentration = 0;}
-}
-*/
-
-/* these PD functions were used when hard-coding PKPD_drug_number_1 and PKPD_drug_number_2
-void pd_function_hardcoded(Cell *pC, Phenotype &p, double dt)
-{
-    Cell_Definition *pCD = find_cell_definition(pC->type);
-    // find index of damage variable for drug 1
-    int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
-    // find index of damage variable for drug 2
-    int nPKPD_D2_damage = pC->custom_data.find_variable_index("PKPD_D2_damage");
-
-    // find index of apoptosis death model
-    static int nApop = p.death.find_death_model_index("apoptosis");
-    // find index of necrosis death model
-    static int nNec = p.death.find_death_model_index("Necrosis");
-
-    // Now start deciding how drug affects cell
-
-    double temp; // used for Hill calculations
-
-    // this is to handle the case when the two drugs have the same target. then will multiply these factors
-    double factor_change; // factor change from drugs
-
-    if ( get_single_behavior(pC,"cycle entry") > 0 )
-    {
-        factor_change = 1.0; // set factor
-        if (get_single_behavior( pC, "custom:PKPD_D1_moa_is_prolif" ) > 0.5)
-        {
-            double fs_prolif_D1 = get_single_behavior( pC, "custom:PKPD_D1_prolif_saturation_rate" ) / get_single_base_behavior( pC, "cycle entry" ); // saturation factor of proliferation for drug 1
-            if (pC->custom_data[nPKPD_D1_damage] > 0)
-            {
-                temp = Hill_response_function( pC->custom_data[nPKPD_D1_damage], get_single_behavior(pC,"custom:PKPD_D1_prolif_EC50"), get_single_behavior(pC,"custom:PKPD_D1_prolif_hill_power") );
-                factor_change *= 1 + (fs_prolif_D1 - 1) * temp;
-            }
-        }
-
-        if (get_single_behavior(pC,"custom:PKPD_D2_moa_is_prolif") > 0.5)
-        {
-            double fs_prolif_D2 = get_single_behavior(pC,"custom:PKPD_D2_prolif_saturation_rate") / get_single_base_behavior( pC, "cycle entry" ); // saturation factor of proliferation for drug 2
-            if (pC->custom_data[nPKPD_D2_damage] > 0)
-            {
-                temp = Hill_response_function( pC->custom_data[nPKPD_D2_damage], get_single_behavior(pC,"custom:PKPD_D2_prolif_EC50"), get_single_behavior(pC,"custom:PKPD_D2_prolif_hill_power") );
-                factor_change *= 1 + (fs_prolif_D2 - 1) * temp;
-            }
-        }
-        set_single_behavior( pC, "cycle entry", get_single_behavior( pC, "cycle entry") * factor_change );
-    }
-
-    // apoptosis effect
-    factor_change = 1.0; // set factor
-    if (get_single_behavior(pC,"custom:PKPD_D1_moa_is_apop") > 0.5)
-    {
-        double fs_apop_D1 = get_single_behavior(pC,"custom:PKPD_D1_apop_saturation_rate") / get_single_base_behavior( pC, "apoptosis" ); // saturation factor of apoptosis for drug 1
-        if (pC->custom_data[nPKPD_D1_damage] > 0)
-        {
-            temp = Hill_response_function( pC->custom_data[nPKPD_D1_damage], get_single_behavior(pC,"custom:PKPD_D1_apop_EC50"), get_single_behavior(pC,"custom:PKPD_D1_apop_hill_power") );
-            factor_change *= 1 + (fs_apop_D1 - 1) * temp;
-        }
-    }
-
-    if (get_single_behavior(pC,"custom:PKPD_D2_moa_is_apop") > 0.5)
-    {
-        double fs_apop_D2 = get_single_behavior(pC,"custom:PKPD_D2_apop_saturation_rate") / get_single_base_behavior( pC, "apoptosis" ); // saturation factor of apoptosis for drug 2
-        if (pC->custom_data[nPKPD_D2_damage] > 0)
-        {
-            temp = Hill_response_function(pC->custom_data[nPKPD_D2_damage], get_single_behavior(pC,"custom:PKPD_D2_apop_EC50"), get_single_behavior(pC,"custom:PKPD_D2_apop_hill_power"));
-            factor_change *= 1 + (fs_apop_D2 - 1) * temp;
-        }
-    }
-    p.death.rates[nApop] *= factor_change;
-    // set_single_behavior( pC, "apoptosis", get_single_behavior( pC, "apoptosis") * factor_change );
-
-    // necrosis effect (we will assume that the necrosis rate is set to 0 for each cell type, so multiplying effects does not work, instead we will assume that effects on necrosis rates are additive)
-    factor_change = 0.0; // in the case of necrosis, we will assume that the effects sum, so this "factor change" is actually just an increase
-    if (get_single_behavior(pC,"custom:PKPD_D1_moa_is_necrosis") > 0.5)
-    {
-        // double fs_necrosis_D1 = get_single_behavior(pC,"custom:PKPD_D1_necrosis_saturation_rate") / pCD->phenotype.death.rates[nNec]; // saturation factor of necrosis for drug 1
-
-        if (pC->custom_data[nPKPD_D1_damage] > 0)
-        {
-            // temp = Hill_response_function(pC->custom_data[nPKPD_D1_damage], get_single_behavior(pC,"custom:PKPD_D1_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D1_necrosis_hill_power"));
-            // factor_change *= 1 + (fs_necrosis_D1 - 1) * temp;
-            factor_change += get_single_behavior(pC,"custom:PKPD_D1_necrosis_saturation_rate") * Hill_response_function(pC->custom_data[nPKPD_D1_damage], get_single_behavior(pC,"custom:PKPD_D1_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D1_necrosis_hill_power"));
-        }
-    }
-
-    if (get_single_behavior(pC,"custom:PKPD_D2_moa_is_necrosis") > 0.5)
-    {
-        // double fs_necrosis_D2 = get_single_behavior(pC,"custom:PKPD_D2_necrosis_saturation_rate") / pCD->phenotype.death.rates[nNec]; // saturation factor of necrosis for drug 2
-
-        if (pC->custom_data[nPKPD_D2_damage] > 0)
-        {
-            // temp = Hill_response_function(pC->custom_data[nPKPD_D2_damage], get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"));
-            // factor_change *= 1 + (fs_necrosis_D2 - 1) * temp;
-            factor_change += get_single_behavior(pC,"custom:PKPD_D2_necrosis_saturation_rate") * Hill_response_function(pC->custom_data[nPKPD_D2_damage], get_single_behavior(pC,"custom:PKPD_D2_necrosis_EC50"), get_single_behavior(pC,"custom:PKPD_D2_necrosis_hill_power"));
-        }
-    }
-    p.death.rates[nNec] += factor_change;
-    // set_single_behavior( pC, "necrosis", get_single_behavior( pC, "necrosis") + factor_change );
-}
-
-void PD_model_hardcoded(double current_time)
-{
-    static double PKPD_previous_PD_time = 0;
-    static double PKPD_next_PD_time = 0;
-    static double dt;
-
-    // setup variables for analytic solutions for each cell type
-    static bool use_analytic_pd_solutions; // whether to use analytic pd solutions (note this initializes to false, which backwards compatibility checks take advantage of)
-    static bool use_precomputed_quantities; // whether to precompute pd quantities (should not be done if pd parameters can vary within the cell type) (note this initializes to false, which backwards compatibility checks take advantage of)
-    static bool analytic_pd_solution_setup_done = false;
-
-    static std::vector<double> metabolism_reduction_factor_D1;
-    static std::vector<double> metabolism_reduction_factor_D2;
-    static std::vector<double> damage_contant_D1;
-    static std::vector<double> damage_contant_D2;
-    static std::vector<double> damage_initial_drug_term_D1;
-    static std::vector<double> damage_initial_drug_term_D2;
-    static std::vector<double> damage_initial_damage_term_D1;
-    static std::vector<double> damage_initial_damage_term_D2;
-
-    static bool need_to_check_backwards_compatibility = true;
-
-    if (need_to_check_backwards_compatibility)
-    {
-        try {use_analytic_pd_solutions = parameters.bools("PKPD_use_analytic_pd_solutions");}
-        catch (bool dummy_input) {}; // the previous behavior had been to use the direct Euler method
-        try {use_precomputed_quantities = parameters.bools("PKPD_precompute_pd_quantities");}
-        catch (bool dummy_input) {}; // the previous behavior had been to use the direct Euler method
-
-        for (int k = 0; k < cell_definitions_by_index.size(); k++)
-        {
-            Cell_Definition *pCD = cell_definitions_by_index[k];
-
-            // add backwards compatibility for usinge PKPD_D1_repair_rate to mean the constant repair rate
-            if (pCD->custom_data.find_variable_index("PKPD_D1_repair_rate") != -1 && (pCD->custom_data.find_variable_index("PKPD_D1_repair_rate_constant") == -1 || pCD->custom_data.find_variable_index("PKPD_D1_repair_rate_linear") == -1))
-            {
-                pCD->custom_data.add_variable("PKPD_D1_repair_rate_constant", "damage/min", pCD->custom_data["PKPD_D1_repair_rate"]);
-                pCD->custom_data.add_variable("PKPD_D1_repair_rate_linear", "1/min", 0.0);
-            }
-
-            if (pCD->custom_data.find_variable_index("PKPD_D2_repair_rate") != -1 && (pCD->custom_data.find_variable_index("PKPD_D2_repair_rate_constant") == -1 || pCD->custom_data.find_variable_index("PKPD_D2_repair_rate_linear") == -1))
-            {
-                pCD->custom_data.add_variable("PKPD_D2_repair_rate_constant", "damage/min", pCD->custom_data["PKPD_D2_repair_rate"]);
-                pCD->custom_data.add_variable("PKPD_D2_repair_rate_linear", "1/min", 0.0);
-            }
-        }
-        need_to_check_backwards_compatibility = false;
-    }
-
-    if (use_analytic_pd_solutions && use_precomputed_quantities && !analytic_pd_solution_setup_done) // time to setup precomputed quanities (if not using precomputed quantities, there is currently nothing to set up)
-    {
-        if (fabs(round(mechanics_dt / diffusion_dt) - mechanics_dt / diffusion_dt) > 0.0001)
-        {
-            std::cout << "PhysiPKPD ERROR: Your mechanics time step does not appear to be a multiple of your diffusion time step" << std::endl;
-            std::cout << "  This will cause PhysiPKPD ERRORs in solving the PD model using precomputed quantities because it assumes that the time step is constant across the simulation" << std::endl;
-            std::cout << "  If you really want these time steps, restart the simulation with the user parameter PKPD_precompute_pd_quantities set to False" << std::endl
-                      << std::endl;
-            exit(-1);
-        }
-
-        static int n_types = cell_definitions_by_index.size();
-
-        metabolism_reduction_factor_D1.resize(n_types, 0.0);
-        metabolism_reduction_factor_D2.resize(n_types, 0.0);
-        damage_contant_D1.resize(n_types, 0.0);
-        damage_contant_D2.resize(n_types, 0.0);
-        damage_initial_drug_term_D1.resize(n_types, 0.0);
-        damage_initial_drug_term_D2.resize(n_types, 0.0);
-        damage_initial_damage_term_D1.resize(n_types, 0.0);
-        damage_initial_damage_term_D2.resize(n_types, 0.0);
-
-        for (int k = 0; k < cell_definitions_by_index.size(); k++)
-        {
-            Cell_Definition *pCD = cell_definitions_by_index[k];
-
-            // internalized drug amount (or concentration) simply decreases as A(dt) = A0 * exp(-metabolism_rate * dt);
-            metabolism_reduction_factor_D1[k] = exp(-pCD->custom_data["PKPD_D1_metabolism_rate"] * mechanics_dt);
-            metabolism_reduction_factor_D2[k] = exp(-pCD->custom_data["PKPD_D2_metabolism_rate"] * mechanics_dt);
-
-            // Damage (D) follows D' = A - linear_rate * D - constant_rate ==> D(dt) = d_00 + d_10 * A0 + d_01 * D0; defining d_00, d_10, and d_01 here
-            damage_initial_damage_term_D1[k] = exp(-pCD->custom_data["PKPD_D1_repair_rate_linear"] * mechanics_dt);
-            damage_initial_damage_term_D2[k] = exp(-pCD->custom_data["PKPD_D2_repair_rate_linear"] * mechanics_dt);
-
-            damage_contant_D1[k] = pCD->custom_data["PKPD_D1_repair_rate_constant"];
-            damage_contant_D1[k] /= pCD->custom_data["PKPD_D1_repair_rate_linear"];
-            damage_contant_D1[k] *= damage_initial_damage_term_D1[k] - 1;
-            damage_contant_D2[k] = pCD->custom_data["PKPD_D2_repair_rate_constant"];
-            damage_contant_D2[k] /= pCD->custom_data["PKPD_D2_repair_rate_linear"];
-            damage_contant_D2[k] *= damage_initial_damage_term_D2[k] - 1;
-
-            // if the metabolism and repair rates are equal, then the system has repeated eigenvalues and the analytic solution is qualitatively different; notice the division by the difference of these rates in the first case
-            if (pCD->custom_data["PKPD_D1_metabolism_rate"] != pCD->custom_data["PKPD_D1_repair_rate_linear"])
-            {
-                damage_initial_drug_term_D1[k] = metabolism_reduction_factor_D1[k];
-                damage_initial_drug_term_D1[k] -= damage_initial_damage_term_D1[k];
-                damage_initial_drug_term_D1[k] /= pCD->custom_data["PKPD_D1_repair_rate_linear"] - pCD->custom_data["PKPD_D1_metabolism_rate"]; // this would be bad if these rates were equal!
-            }
-            else
-            {
-                damage_initial_drug_term_D1[k] = mechanics_dt;
-                damage_initial_drug_term_D1[k] *= damage_initial_damage_term_D1[k];
-            }
-
-            if (pCD->custom_data["PKPD_D2_metabolism_rate"] != pCD->custom_data["PKPD_D2_repair_rate_linear"])
-            {
-                damage_initial_drug_term_D2[k] = metabolism_reduction_factor_D2[k];
-                damage_initial_drug_term_D2[k] -= damage_initial_damage_term_D2[k];
-                damage_initial_drug_term_D2[k] /= pCD->custom_data["PKPD_D2_repair_rate_linear"] - pCD->custom_data["PKPD_D2_metabolism_rate"]; // this would be bad if these rates were equal!
-            }
-            else
-            {
-                damage_initial_drug_term_D2[k] = mechanics_dt;
-                damage_initial_drug_term_D2[k] *= damage_initial_damage_term_D2[k];
-            }
-        }
-        analytic_pd_solution_setup_done = true;
-    }
-
-    if (current_time > PKPD_next_PD_time - tolerance)
-    {
-        dt = current_time - PKPD_previous_PD_time;
-        PKPD_previous_PD_time = current_time;
-        PKPD_next_PD_time += mechanics_dt;
-
-#pragma omp parallel for
-        for (int i = 0; i < (*all_cells).size(); i++)
-        {
-            Cell *pC = (*all_cells)[i];
-            Phenotype &p = pC->phenotype;
-            // find index of damage variable for drug 1
-            int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
-            // find index of damage variable for drug 2
-            int nPKPD_D2_damage = pC->custom_data.find_variable_index("PKPD_D2_damage");
-
-            if (!use_analytic_pd_solutions)  // Using a Euler direct here to solve.
-            {
-                // internalized drug 1 causes damage
-                pC->custom_data[nPKPD_D1_damage] -= (pC->custom_data["PKPD_D1_repair_rate_constant"] + pC->custom_data["PKPD_D1_repair_rate_linear"] * pC->custom_data[nPKPD_D1_damage]) * dt; // repair damage
-                pC->custom_data[nPKPD_D1_damage] += p.molecular.internalized_total_substrates[nPKPD_D1] * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
-                if (pC->custom_data[nPKPD_D1_damage] <= 0)
-                {
-                    pC->custom_data[nPKPD_D1_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
-                }
-
-                p.molecular.internalized_total_substrates[nPKPD_D1] -= pC->custom_data["PKPD_D1_metabolism_rate"] * p.molecular.internalized_total_substrates[nPKPD_D1] * dt; // metabolism within cell to clear drug 1
-                if (p.molecular.internalized_total_substrates[nPKPD_D1] < 0)
-                {
-                    p.molecular.internalized_total_substrates[nPKPD_D1] = 0;
-                }
-
-                // internalized drug 2 causes damage
-                pC->custom_data[nPKPD_D2_damage] -= (pC->custom_data["PKPD_D2_repair_rate_constant"] + pC->custom_data["PKPD_D2_repair_rate_linear"] * pC->custom_data[nPKPD_D2_damage]) * dt; // repair damage
-                pC->custom_data[nPKPD_D2_damage] += p.molecular.internalized_total_substrates[nPKPD_D2] * dt; // this damage can be understood as AUC of the internalized drug, but with cellular repair mechanisms continuously decreasing it
-                if (pC->custom_data[nPKPD_D2_damage] <= 0)
-                {
-                    pC->custom_data[nPKPD_D2_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
-                }
-
-                p.molecular.internalized_total_substrates[nPKPD_D2] -= pC->custom_data["PKPD_D2_metabolism_rate"] * p.molecular.internalized_total_substrates[nPKPD_D2] * dt; // metabolism within cell to clear drug 2
-                if (p.molecular.internalized_total_substrates[nPKPD_D2] < 0)
-                {
-                    p.molecular.internalized_total_substrates[nPKPD_D2] = 0;
-                }
-            }
-            else // using analytic solutions
-            {
-                if (use_precomputed_quantities)
-                {
-                    pC->custom_data[nPKPD_D1_damage] *= damage_initial_damage_term_D1[pC->type]; // D(dt) = d_01 * D(0)...
-                    pC->custom_data[nPKPD_D1_damage] += damage_contant_D1[pC->type]; // + d_00 ...
-                    pC->custom_data[nPKPD_D1_damage] += damage_initial_drug_term_D1[pC->type] * p.molecular.internalized_total_substrates[nPKPD_D1]; // + d_10*A(0)
-                    if (pC->custom_data[nPKPD_D1_damage] <= 0)
-                    {
-                        pC->custom_data[nPKPD_D1_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
-                    }
-                    p.molecular.internalized_total_substrates[nPKPD_D1] *= metabolism_reduction_factor_D1[pC->type];
-
-                    pC->custom_data[nPKPD_D2_damage] *= damage_initial_damage_term_D2[pC->type]; // D(dt) = d_01 * D(0)...
-                    pC->custom_data[nPKPD_D2_damage] += damage_contant_D2[pC->type]; // + d_00 ...
-                    pC->custom_data[nPKPD_D2_damage] += damage_initial_drug_term_D2[pC->type] * p.molecular.internalized_total_substrates[nPKPD_D2]; // + d_10*A(0)
-                    if (pC->custom_data[nPKPD_D2_damage] <= 0)
-                    {
-                        pC->custom_data[nPKPD_D2_damage] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
-                    }
-                    p.molecular.internalized_total_substrates[nPKPD_D2] *= metabolism_reduction_factor_D2[pC->type];
-                } else // solve it analytically without precomputed quantities here (good for arbitrary dts rather than fixed mechanics_dt)
-                {
-
-                    double repair_decay = exp(-pC->custom_data["PKPD_D1_repair_rate_linear"] * dt);
-                    double metabolism_decay = exp(-pC->custom_data["PKPD_D1_metabolism_rate"] * dt);
-                    pC->custom_data[nPKPD_D1_damage] *= repair_decay; // D(dt) = d_01*D0...
-                    pC->custom_data[nPKPD_D1_damage] += pC->custom_data["PKPD_D1_repair_rate_constant"] / pC->custom_data["PKPD_D1_repair_rate_linear"] * (repair_decay - 1); // +d_00...
-                    if (pC->custom_data["PKPD_D1_metabolism_rate"] != pC->custom_data["PKPD_D1_repair_rate_linear"]) // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
-                    {
-                        pC->custom_data[nPKPD_D1_damage] += (metabolism_decay - repair_decay)/(pC->custom_data["PKPD_D1_repair_rate_linear"] - pC->custom_data["PKPD_D1_metabolism_rate"]) * p.molecular.internalized_total_substrates[nPKPD_D1];
-                    }
-                    else
-                    {
-                        pC->custom_data[nPKPD_D1_damage] += dt * metabolism_decay * p.molecular.internalized_total_substrates[nPKPD_D1]; // in this case, metabolism_decay = repair_decay
-                    }
-                    p.molecular.internalized_total_substrates[nPKPD_D1] *=metabolism_decay;
-
-                    repair_decay = exp(-pC->custom_data["PKPD_D2_repair_rate_linear"] * dt);
-                    metabolism_decay = exp(-pC->custom_data["PKPD_D2_metabolism_rate"] * dt);
-                    pC->custom_data[nPKPD_D2_damage] *= repair_decay; // D(dt) = d_01*D0...
-                    pC->custom_data[nPKPD_D2_damage] += pC->custom_data["PKPD_D2_repair_rate_constant"] / pC->custom_data["PKPD_D2_repair_rate_linear"] * (repair_decay - 1); // +d_00...
-                    if (pC->custom_data["PKPD_D2_metabolism_rate"] != pC->custom_data["PKPD_D2_repair_rate_linear"]) // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
-                    {
-                        pC->custom_data[nPKPD_D2_damage] += (metabolism_decay - repair_decay)/(pC->custom_data["PKPD_D2_repair_rate_linear"] - pC->custom_data["PKPD_D2_metabolism_rate"]) * p.molecular.internalized_total_substrates[nPKPD_D2];
-                    }
-                    else
-                    {
-                        pC->custom_data[nPKPD_D2_damage] += dt * metabolism_decay * p.molecular.internalized_total_substrates[nPKPD_D2]; // in this case, metabolism_decay = repair_decay
-                    }
-                    p.molecular.internalized_total_substrates[nPKPD_D2] *= metabolism_decay;
-                }
-            }
-        }
-    }
-    return;
 }
 */

@@ -67,23 +67,6 @@
             </Dirichlet_options>
         </variable>
 
-        <variable name="oxygen" units="dimensionless" ID="1">
-            <physical_parameter_set>
-                <diffusion_coefficient units="micron^2/min">100000.0</diffusion_coefficient>
-                <decay_rate units="1/min">.1</decay_rate>
-            </physical_parameter_set>
-            <initial_condition units="mmHg">38</initial_condition>
-            <Dirichlet_boundary_condition units="mmHg" enabled="true">38</Dirichlet_boundary_condition>
-            <Dirichlet_options>
-                <boundary_value ID="xmin" enabled="true">38</boundary_value>
-                <boundary_value ID="xmax" enabled="true">38</boundary_value>
-                <boundary_value ID="ymin" enabled="true">38</boundary_value>
-                <boundary_value ID="ymax" enabled="true">38</boundary_value>
-                <boundary_value ID="zmin" enabled="true">38</boundary_value>
-                <boundary_value ID="zmax" enabled="true">38</boundary_value>
-            </Dirichlet_options>
-        </variable>
-
         <options>
             <calculate_gradients>true</calculate_gradients>
             <track_internalized_substrates_in_each_agent>true</track_internalized_substrates_in_each_agent>
@@ -165,16 +148,16 @@
                 </mechanics>
 
                 <motility>  
-					<speed units="micron/min">10</speed>
-					<persistence_time units="min">15</persistence_time>
+					<speed units="micron/min">1</speed>
+					<persistence_time units="min">1</persistence_time>
 					<migration_bias units="dimensionless">.5</migration_bias>
 					
 					<options>
-						<enabled>true</enabled>
+						<enabled>false</enabled>
 						<use_2D>true</use_2D>
 						<chemotaxis>
-                            <enabled>true</enabled>
-                            <substrate>oxygen</substrate>
+							<enabled>false</enabled>
+							<substrate>PKPD_D1</substrate>
 							<direction>1</direction>
 						</chemotaxis>
 					</options>
@@ -187,12 +170,6 @@
                         <uptake_rate units="1/min">20</uptake_rate>
                         <net_export_rate units="total substrate/min">0</net_export_rate>
                     </substrate>
-                    <substrate name="oxygen">
-                        <secretion_rate units="1/min">0</secretion_rate>
-                        <secretion_target units="substrate density">1</secretion_target>
-                        <uptake_rate units="1/min">10</uptake_rate>
-                        <net_export_rate units="total substrate/min">0</net_export_rate>
-                    </substrate>
                 </secretion>
 
             </phenotype>
@@ -200,25 +177,15 @@
 
                 <!-- <div_drugs type="divider" description="-Starting Drug 1 PD parameters-"/> -->
 
-                <PKPD_D1_moa_is_motility>1.0</PKPD_D1_moa_is_motility>
-                <PKPD_D1_motility_saturation_rate>0.0</PKPD_D1_motility_saturation_rate>
-                <PKPD_D1_motility_EC50>1e8</PKPD_D1_motility_EC50>
-                <PKPD_D1_motility_hill_power>2</PKPD_D1_motility_hill_power>
+                <PKPD_D1_moa_is_apop units="bool">1.0</PKPD_D1_moa_is_apop>
+                <PKPD_D1_apop_saturation_rate units="1/min">5e-3</PKPD_D1_apop_saturation_rate>
+                <PKPD_D1_apop_EC50 units="damage">1e5</PKPD_D1_apop_EC50>
+                <PKPD_D1_apop_hill_power units="dimensionless">2</PKPD_D1_apop_hill_power>
 
-                <PKPD_D1_damage>0</PKPD_D1_damage>
-                <PKPD_D1_repair_rate_constant>5e6</PKPD_D1_repair_rate_constant>
-                <PKPD_D1_repair_rate_linear>1e-2</PKPD_D1_repair_rate_linear>
-                <PKPD_D1_metabolism_rate>0.05</PKPD_D1_metabolism_rate>
-
-                <!-- <div_drugs type="divider" description="-Done with PD parameters-"/> -->
-
-                <pO2_proliferation_saturation>38</pO2_proliferation_saturation>
-                <pO2_proliferation_threshold>5</pO2_proliferation_threshold>
-                <pO2_necrosis_threshold>5</pO2_necrosis_threshold>
-                <pO2_necrosis_saturation>2.5</pO2_necrosis_saturation>
-                <max_necrosis_rate>0.0028</max_necrosis_rate>
-                <pO2_half_max>4</pO2_half_max>
-                <pO2_hill_power>2</pO2_hill_power>
+                <PKPD_D1_damage units="damage">0</PKPD_D1_damage>
+                <PKPD_D1_repair_rate_constant units="damage/min">2e3</PKPD_D1_repair_rate_constant>
+                <PKPD_D1_repair_rate_linear units="damage/min">1e-2</PKPD_D1_repair_rate_linear>
+                <PKPD_D1_metabolism_rate units="1/min">0.05</PKPD_D1_metabolism_rate>
 
             </custom_data>
         </cell_definition>
@@ -233,46 +200,49 @@
 
     <user_parameters>
 
-        <div_initialization type="divider" description="---Initialization settings---"/>
+<!-- <div type="divider" description="-Initialization settings-"/> -->
 
         <random_seed type="int" units="dimensionless" description="">0</random_seed>
         <number_of_tumor_cells type="int" units="none" description="initial number of tumor cells">1500</number_of_tumor_cells>
-        <csv_data_interval type="double" units="min" description="time between writing data to CSV">30</csv_data_interval>
         <max_initial_distance type="double" units="micron" description="max initial cell distance from origin">250.0</max_initial_distance>
 
 
+<!-- <div type="divider" description="-PKPD Substrates and miscellaneous-"/> -->
+
+        <PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pk_substrate_names>
+        <PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pd_substrate_names>
+        <PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True></PKPD_precompute_all_pd_quantities>
+        <csv_data_interval type="double" units="min" description="time between writing data to CSV">30</csv_data_interval>
 
 
-        <div_drug1 type="divider" description="---Drug 1 Settings---"/>
+<!-- <div type="divider" description="-Drug 1 General PK Settings-"/> -->
 
-        <PKPD_D1_number_loading_doses type="int" units="none" description="number of loading doses of drug 1">0</PKPD_D1_number_loading_doses>
+        <PKPD_D1_pk_model type="string" description="What PK model to use. Some options: 2C">2C</PKPD_D1_pk_model>
+        <PKPD_D1_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D1_biot_number>
+
+
+<!-- <div type="divider" description="-Drug 1 Specific PK model Settings-"/> -->
+
         <PKPD_D1_max_number_doses type="int" units="none" description="max doses of drug 1, including loading doses">1</PKPD_D1_max_number_doses>
+        <PKPD_D1_number_loading_doses type="int" units="none" description="number of loading doses of drug 1">0</PKPD_D1_number_loading_doses>
         <PKPD_D1_dose_interval type="double" units="min" description="time between dosings of drug 1">360.0</PKPD_D1_dose_interval>
+        <PKPD_D1_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">5e2</PKPD_D1_central_increase_on_dose>
+        <PKPD_D1_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">400.0</PKPD_D1_central_increase_on_loading_dose>
+
         <PKPD_D1_set_first_dose_time type="bool" units="none" description="user sets first dose time to start therapy for drug 1; false=user gives confluence condition">True</PKPD_D1_set_first_dose_time>
         <PKPD_D1_first_dose_time type="double" units="min" description="time of first dose for drug 1">0.0</PKPD_D1_first_dose_time>
         <PKPD_D1_confluence_condition type="double" units="none" description="confluence as proportion at which to start therapy for drug 1">0.6</PKPD_D1_confluence_condition>
 
-
-
-        <div_drug1_PK type="divider" description="---Drug 1 PK---"/>
-
-        <PKPD_D1_pk_model type="string" description="What PK model to use. Some options: 2C">2C</PKPD_D1_pk_model>
-        <PKPD_D1_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">400.0</PKPD_D1_central_increase_on_loading_dose>
-        <PKPD_D1_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">2e3</PKPD_D1_central_increase_on_dose>
         <PKPD_D1_central_elimination_rate type="double" units="1/min" description="decay rate of drug 1 in systemic circulation">0.0027</PKPD_D1_central_elimination_rate>
         <PKPD_D1_central_to_periphery_clearance_rate type="double" units="1/min" description="rate of central concentration change of drug 1 due to distribution">0.0048</PKPD_D1_central_to_periphery_clearance_rate>
         <PKPD_D1_periphery_to_central_clearance_rate type="double" units="1/min" description="rate of periphery concentration change of drug 1 due to redistribution">0.0048</PKPD_D1_periphery_to_central_clearance_rate>
-        <PKPD_D1_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D1_biot_number>
-
-
-
-        <div_generalPK type="divider" description="---PK---"/>
-
         <PKPD_D1_central_to_periphery_volume_ratio type="double" units="dimensionless" description="ratio of volume in systemic circulation to the volume of the periphery">1.0</PKPD_D1_central_to_periphery_volume_ratio>
-        <PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True></PKPD_precompute_all_pd_quantities>
-        <PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pk_substrate_names>
-        <PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pd_substrate_names>
-        
-    </user_parameters>
 
+<!-- <div type="divider" description="-Drug 1 General PD Settings-"/> -->
+
+        <PKPD_D1_on_tumor_pd_model type="string">AUC</PKPD_D1_on_tumor_pd_model>
+        <PKPD_D1_dt_tumor type="double">0.1</PKPD_D1_dt_tumor>
+
+    </user_parameters>
+    
 </PhysiCell_settings>

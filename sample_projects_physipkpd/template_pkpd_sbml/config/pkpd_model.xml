@@ -242,7 +242,7 @@
 
           <PKPD_D1_moa_is_apop units="bool">1.0</PKPD_D1_moa_is_apop>
           <PKPD_D1_apop_saturation_rate units="1/min">1e-2</PKPD_D1_apop_saturation_rate>
-          <PKPD_D1_apop_EC50 units="damage">1e8</PKPD_D1_apop_EC50>
+          <PKPD_D1_apop_EC50 units="damage">1e5</PKPD_D1_apop_EC50>
           <PKPD_D1_apop_hill_power units="dimensionless">2</PKPD_D1_apop_hill_power>
 
           <PKPD_D1_moa_is_necrosis units="bool">0.0</PKPD_D1_moa_is_necrosis>
@@ -256,7 +256,7 @@
           <PKPD_D1_motility_hill_power units="dimensionless">2</PKPD_D1_motility_hill_power>
 
           <PKPD_D1_damage units="damage">0</PKPD_D1_damage>
-          <PKPD_D1_repair_rate_constant units="damage/min">5e6</PKPD_D1_repair_rate_constant>
+          <PKPD_D1_repair_rate_constant units="damage/min">5e3</PKPD_D1_repair_rate_constant>
           <PKPD_D1_repair_rate_linear units="damage/min">1e-2</PKPD_D1_repair_rate_linear>
           <PKPD_D1_metabolism_rate units="1/min">0.05</PKPD_D1_metabolism_rate>
 
@@ -264,7 +264,7 @@
 
           <PKPD_D2_moa_is_prolif units="bool">1.0</PKPD_D2_moa_is_prolif>
           <PKPD_D2_prolif_saturation_rate units="1/min">1e-2</PKPD_D2_prolif_saturation_rate>
-          <PKPD_D2_prolif_EC50 units="damage">1e8</PKPD_D2_prolif_EC50>
+          <PKPD_D2_prolif_EC50 units="damage">1e5</PKPD_D2_prolif_EC50>
           <PKPD_D2_prolif_hill_power units="dimensionless">2</PKPD_D2_prolif_hill_power>
 
           <PKPD_D2_moa_is_apop units="bool">0.0</PKPD_D2_moa_is_apop>
@@ -283,7 +283,7 @@
           <PKPD_D2_motility_hill_power units="dimensionless">2</PKPD_D2_motility_hill_power>
 
           <PKPD_D2_damage>0</PKPD_D2_damage>
-          <PKPD_D2_repair_rate_constant units="damage/min">1e7</PKPD_D2_repair_rate_constant>
+          <PKPD_D2_repair_rate_constant units="damage/min">1e4</PKPD_D2_repair_rate_constant>
           <PKPD_D2_repair_rate_linear units="damage/min">1e-2</PKPD_D2_repair_rate_linear>
           <PKPD_D2_metabolism_rate units="1/min">0.05</PKPD_D2_metabolism_rate>
 
@@ -300,27 +300,61 @@
 	</initial_conditions>	
 	
 	<user_parameters>
+
+<!-- <div type="divider" description="-Initialization settings-"/> -->
+
 		<random_seed type="int" units="dimensionless">0</random_seed>
-    <max_initial_distance type="double">250</max_initial_distance>
     <number_of_cells type="int" units="none" description="initial number of cells">1500</number_of_cells>
+    <max_initial_distance type="double">250</max_initial_distance>
 
-    <PKPD_D1_pk_model type="string">SBML</PKPD_D1_pk_model>
-    <PKPD_D1_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D1_biot_number>
 
-    <PKPD_D1_sbml_filename type="string">PK_baseo.xml</PKPD_D1_sbml_filename>
-    
-    <PKPD_D2_max_number_doses type="int">1</PKPD_D2_max_number_doses>
-    <PKPD_D2_central_increase_on_dose type="double">2e2</PKPD_D2_central_increase_on_dose>
-    <PKPD_D2_pk_model type="string">2C</PKPD_D2_pk_model>
-    <PKPD_D2_central_elimination_rate type="double">0.0027</PKPD_D2_central_elimination_rate>
-    <PKPD_D2_flux_across_capillaries type="double">0.0048</PKPD_D2_flux_across_capillaries>
-    <PKPD_D2_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D2_biot_number>
+<!-- <div type="divider" description="-PKPD Substrates and miscellaneous-"/> -->
 
     <PKPD_pk_substrate_names type="string">PKPD_D1,PKPD_D2</PKPD_pk_substrate_names>
     <PKPD_pd_substrate_names type="string">PKPD_D1,PKPD_D2</PKPD_pd_substrate_names>
+    <PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True></PKPD_precompute_all_pd_quantities>
+    <csv_data_interval type="double" units="min" description="time between writing data to CSV">30</csv_data_interval>
+
+
+<!-- <div type="divider" description="-Drug 1 General PK Settings-"/> -->
+
+    <PKPD_D1_pk_model type="string" description="What PK model to use. Some options: 2C, 1C, SBML">SBML</PKPD_D1_pk_model>
+    <PKPD_D1_sbml_filename type="string">PK_default.xml</PKPD_D1_sbml_filename>
+    <PKPD_D1_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D1_biot_number>
+
+
+<!-- <div type="divider" description="-Drug 1 Specific PK model Settings-"/> -->
+
+
+<!-- <div type="divider" description="-Drug 1 General PD Settings-"/> -->
 
     <PKPD_D1_on_cell_pd_model type="string">AUC</PKPD_D1_on_cell_pd_model>
+    <PKPD_D1_dt_cell type="double">0.1</PKPD_D1_dt_cell>
+
+
+<!-- <div type="divider" description="-Drug 2 General PK Settings-"/> -->
+
+    <PKPD_D2_pk_model type="string">2C</PKPD_D2_pk_model>
+    <PKPD_D2_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation">1.0</PKPD_D2_biot_number>
+
+
+<!-- <div type="divider" description="-Drug 2 Specific PK model Settings-"/> -->
+
+    <PKPD_D2_max_number_doses type="int">1</PKPD_D2_max_number_doses>
+    <PKPD_D2_dose_interval type="double" units="min" description="time between dosings">360.0</PKPD_D2_dose_interval>
+    <PKPD_D2_central_increase_on_dose type="double">5e2</PKPD_D2_central_increase_on_dose>
+    <PKPD_D2_set_first_dose_time type="bool">true</PKPD_D2_set_first_dose_time>
+    <PKPD_D2_first_dose_time type="double">0.0</PKPD_D2_first_dose_time>
+    <PKPD_D2_central_elimination_rate type="double">0.0027</PKPD_D2_central_elimination_rate>
+    <PKPD_D2_flux_across_capillaries type="double">0.0048</PKPD_D2_flux_across_capillaries>
+    <PKPD_D2_central_to_periphery_volume_ratio type="double">1.0</PKPD_D2_central_to_periphery_volume_ratio>
+
+
+<!-- <div type="divider" description="-Drug 2 General PD Settings-"/> -->
+
     <PKPD_D2_on_cell_pd_model type="string">AUC</PKPD_D2_on_cell_pd_model>
-  </user_parameters>
+    <PKPD_D2_dt_cell type="double">0.1</PKPD_D2_dt_cell>
+
+    </user_parameters>
 	
 </PhysiCell_settings>

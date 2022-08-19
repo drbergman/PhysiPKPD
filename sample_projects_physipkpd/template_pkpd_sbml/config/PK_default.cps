@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- generated with COPASI 4.36 (Build 260) (http://www.copasi.org) at 2022-08-16T22:22:46Z -->
+<!-- generated with COPASI 4.36 (Build 260) (http://www.copasi.org) at 2022-08-19T00:29:57Z -->
 <?oxygen RNGSchema="http://www.copasi.org/static/schema/CopasiML.rng" type="xml"?>
 <COPASI xmlns="http://www.copasi.org/static/schema" versionMajor="4" versionMinor="36" versionDevel="260" copasiSourcesModified="0">
   <ListOfFunctions>
@@ -54,7 +54,7 @@ Reaction scheme where the products are created from the reactants and the change
       </ListOfParameterDescriptions>
     </Function>
   </ListOfFunctions>
-  <Model key="Model_1" name="PK_base" simulationType="time" timeUnit="s" volumeUnit="l" areaUnit="m²" lengthUnit="m" quantityUnit="mol" type="deterministic" avogadroConstant="6.0221407599999999e+23">
+  <Model key="Model_1" name="PK_default" simulationType="time" timeUnit="s" volumeUnit="l" areaUnit="m²" lengthUnit="m" quantityUnit="mol" type="deterministic" avogadroConstant="6.0221407599999999e+23">
     <MiriamAnnotation>
 <rdf:RDF
    xmlns:dcterms="http://purl.org/dc/terms/"
@@ -134,9 +134,9 @@ Reaction scheme where the products are created from the reactants and the change
           <Substrate metabolite="Metabolite_0" stoichiometry="1"/>
         </ListOfSubstrates>
         <ListOfConstants>
-          <Constant key="Parameter_249" name="k1" value="0.0027"/>
+          <Constant key="Parameter_250" name="k1" value="0.0027"/>
         </ListOfConstants>
-        <KineticLaw function="Function_13" unitType="Default" scalingCompartment="CN=Root,Model=PK_base,Vector=Compartments[Patient]">
+        <KineticLaw function="Function_13" unitType="Default" scalingCompartment="CN=Root,Model=PK_default,Vector=Compartments[Patient]">
           <ListOfCallParameters>
             <CallParameter functionParameter="FunctionParameter_80">
               <SourceParameter reference="ModelValue_0"/>
@@ -158,10 +158,10 @@ Reaction scheme where the products are created from the reactants and the change
           <Product metabolite="Metabolite_1" stoichiometry="1"/>
         </ListOfProducts>
         <ListOfConstants>
-          <Constant key="Parameter_250" name="k2" value="0.0048"/>
-          <Constant key="Parameter_251" name="k1" value="0.0048"/>
+          <Constant key="Parameter_251" name="k2" value="0.0048"/>
+          <Constant key="Parameter_252" name="k1" value="0.0048"/>
         </ListOfConstants>
-        <KineticLaw function="Function_14" unitType="Default" scalingCompartment="CN=Root,Model=PK_base,Vector=Compartments[Patient]">
+        <KineticLaw function="Function_14" unitType="Default" scalingCompartment="CN=Root,Model=PK_default,Vector=Compartments[Patient]">
           <ListOfCallParameters>
             <CallParameter functionParameter="FunctionParameter_69">
               <SourceParameter reference="ModelValue_1"/>
@@ -179,6 +179,40 @@ Reaction scheme where the products are created from the reactants and the change
         </KineticLaw>
       </Reaction>
     </ListOfReactions>
+    <ListOfEvents>
+      <Event key="Event_0" name="Dose 1" fireAtInitialTime="0" persistentTrigger="0">
+        <MiriamAnnotation>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+
+        </MiriamAnnotation>
+        <TriggerExpression>
+          &lt;CN=Root,Model=PK_default,Reference=Time> > 60
+        </TriggerExpression>
+        <ListOfAssignments>
+          <Assignment target="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" targetKey="Metabolite_0">
+            <Expression>
+              &lt;CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration],Reference=Concentration>+5000
+            </Expression>
+          </Assignment>
+        </ListOfAssignments>
+      </Event>
+      <Event key="Event_1" name="Dose 2" fireAtInitialTime="0" persistentTrigger="0">
+        <MiriamAnnotation>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+
+        </MiriamAnnotation>
+        <TriggerExpression>
+          &lt;CN=Root,Model=PK_default,Reference=Time> > 90
+        </TriggerExpression>
+        <ListOfAssignments>
+          <Assignment target="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" targetKey="Metabolite_0">
+            <Expression>
+              &lt;CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration],Reference=Concentration>+50000
+            </Expression>
+          </Assignment>
+        </ListOfAssignments>
+      </Event>
+    </ListOfEvents>
     <ListOfModelParameterSets activeSet="ModelParameterSet_1">
       <ModelParameterSet key="ModelParameterSet_1" name="Initial State">
         <MiriamAnnotation>
@@ -190,37 +224,37 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 </rdf:RDF>
         </MiriamAnnotation>
         <ModelParameterGroup cn="String=Initial Time" type="Group">
-          <ModelParameter cn="CN=Root,Model=PK_base" value="0" type="Model" simulationType="time"/>
+          <ModelParameter cn="CN=Root,Model=PK_default" value="0" type="Model" simulationType="time"/>
         </ModelParameterGroup>
         <ModelParameterGroup cn="String=Initial Compartment Sizes" type="Group">
-          <ModelParameter cn="CN=Root,Model=PK_base,Vector=Compartments[Patient]" value="1" type="Compartment" simulationType="fixed"/>
+          <ModelParameter cn="CN=Root,Model=PK_default,Vector=Compartments[Patient]" value="1" type="Compartment" simulationType="fixed"/>
         </ModelParameterGroup>
         <ModelParameterGroup cn="String=Initial Species Values" type="Group">
-          <ModelParameter cn="CN=Root,Model=PK_base,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" value="3.0110703799999998e+26" type="Species" simulationType="reactions"/>
-          <ModelParameter cn="CN=Root,Model=PK_base,Vector=Compartments[Patient],Vector=Metabolites[periphery_concentration]" value="0" type="Species" simulationType="reactions"/>
+          <ModelParameter cn="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" value="3.0110703799999977e+26" type="Species" simulationType="reactions"/>
+          <ModelParameter cn="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[periphery_concentration]" value="0" type="Species" simulationType="reactions"/>
         </ModelParameterGroup>
         <ModelParameterGroup cn="String=Initial Global Quantities" type="Group">
-          <ModelParameter cn="CN=Root,Model=PK_base,Vector=Values[lambda]" value="0.0027000000000000001" type="ModelValue" simulationType="fixed"/>
-          <ModelParameter cn="CN=Root,Model=PK_base,Vector=Values[k12]" value="0.0047999999999999996" type="ModelValue" simulationType="fixed"/>
-          <ModelParameter cn="CN=Root,Model=PK_base,Vector=Values[k21]" value="0.0047999999999999996" type="ModelValue" simulationType="fixed"/>
+          <ModelParameter cn="CN=Root,Model=PK_default,Vector=Values[lambda]" value="0.0027000000000000001" type="ModelValue" simulationType="fixed"/>
+          <ModelParameter cn="CN=Root,Model=PK_default,Vector=Values[k12]" value="0.0047999999999999996" type="ModelValue" simulationType="fixed"/>
+          <ModelParameter cn="CN=Root,Model=PK_default,Vector=Values[k21]" value="0.0047999999999999996" type="ModelValue" simulationType="fixed"/>
         </ModelParameterGroup>
         <ModelParameterGroup cn="String=Kinetic Parameters" type="Group">
-          <ModelParameterGroup cn="CN=Root,Model=PK_base,Vector=Reactions[elimination]" type="Reaction">
-            <ModelParameter cn="CN=Root,Model=PK_base,Vector=Reactions[elimination],ParameterGroup=Parameters,Parameter=k1" value="0.0027000000000000001" type="ReactionParameter" simulationType="assignment">
+          <ModelParameterGroup cn="CN=Root,Model=PK_default,Vector=Reactions[elimination]" type="Reaction">
+            <ModelParameter cn="CN=Root,Model=PK_default,Vector=Reactions[elimination],ParameterGroup=Parameters,Parameter=k1" value="0.0027000000000000001" type="ReactionParameter" simulationType="assignment">
               <InitialExpression>
-                &lt;CN=Root,Model=PK_base,Vector=Values[lambda],Reference=InitialValue>
+                &lt;CN=Root,Model=PK_default,Vector=Values[lambda],Reference=InitialValue>
               </InitialExpression>
             </ModelParameter>
           </ModelParameterGroup>
-          <ModelParameterGroup cn="CN=Root,Model=PK_base,Vector=Reactions[Q12]" type="Reaction">
-            <ModelParameter cn="CN=Root,Model=PK_base,Vector=Reactions[Q12],ParameterGroup=Parameters,Parameter=k2" value="0.0047999999999999996" type="ReactionParameter" simulationType="assignment">
+          <ModelParameterGroup cn="CN=Root,Model=PK_default,Vector=Reactions[Q12]" type="Reaction">
+            <ModelParameter cn="CN=Root,Model=PK_default,Vector=Reactions[Q12],ParameterGroup=Parameters,Parameter=k2" value="0.0047999999999999996" type="ReactionParameter" simulationType="assignment">
               <InitialExpression>
-                &lt;CN=Root,Model=PK_base,Vector=Values[k21],Reference=InitialValue>
+                &lt;CN=Root,Model=PK_default,Vector=Values[k21],Reference=InitialValue>
               </InitialExpression>
             </ModelParameter>
-            <ModelParameter cn="CN=Root,Model=PK_base,Vector=Reactions[Q12],ParameterGroup=Parameters,Parameter=k1" value="0.0047999999999999996" type="ReactionParameter" simulationType="assignment">
+            <ModelParameter cn="CN=Root,Model=PK_default,Vector=Reactions[Q12],ParameterGroup=Parameters,Parameter=k1" value="0.0047999999999999996" type="ReactionParameter" simulationType="assignment">
               <InitialExpression>
-                &lt;CN=Root,Model=PK_base,Vector=Values[k12],Reference=InitialValue>
+                &lt;CN=Root,Model=PK_default,Vector=Values[k12],Reference=InitialValue>
               </InitialExpression>
             </ModelParameter>
           </ModelParameterGroup>
@@ -237,7 +271,7 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
       <StateTemplateVariable objectReference="ModelValue_2"/>
     </StateTemplate>
     <InitialState type="initialState">
-      0 3.0110703799999998e+26 0 1 0.0027000000000000001 0.0047999999999999996 0.0047999999999999996 
+      0 3.0110703799999977e+26 0 1 0.0027000000000000001 0.0047999999999999996 0.0047999999999999996 
     </InitialState>
   </Model>
   <ListOfTasks>
@@ -645,7 +679,8 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   </ListOfReports>
   <GUI>
   </GUI>
-  <SBMLReference file="PK_base.xml">
+  <SBMLReference file="PK_default.xml">
+    <SBMLMap SBMLid="Dose_1" COPASIkey="Event_0"/>
     <SBMLMap SBMLid="Patient" COPASIkey="Compartment_0"/>
     <SBMLMap SBMLid="Q12" COPASIkey="Reaction_1"/>
     <SBMLMap SBMLid="circulation_concentration" COPASIkey="Metabolite_0"/>

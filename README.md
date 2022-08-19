@@ -36,27 +36,27 @@ To run one of these samples, do the following:
 
 1. `make reset` to make sure you have the newly edited Makefile in your top directory
 2. Make your preferred project:
-    * `make moa_proliferation` 
-    * `make moa_apoptosis` 
-    * `make moa_necrosis` 
-    * `make moa_motility` 
-    * `make combo`
+    * `make pkpd-proliferation-sample` 
+    * `make pkpd-apoptosis-sample` 
+    * `make pkpd-necrosis-sample` 
+    * `make pkpd-motility-sample` 
+    * `make pkpd-combo-sample`
 3. Compile your project: `make`
-4. Run your project: `./project ./config/mymodel.xml`
+4. Run your project: `./pkpd_sample ./config/pkpd_model.xml`
 5. Look at the snapshots in `output/` and the living cell counts in `output/cell_counts.csv`
 
 ## Reconfiguring, editing, and re-running
 **Note:** *While the below functionality is present, it is discouraged because it is likely to inadvertently affect the work of others.
 Instead, it is recommended to instead save any changes to these files in a non-tracked directory and manually copy them into their proper places after `make`-ing the sample project.*
 
-Instead of editing the configuration file copied into `PhysiCell/config/mymodel.xml`, you can choose to edit the original in `PhysiCell/sample_projects_physipkpd/[project_name]/config/mymodel.xml` to save the changes for future runs.
-The command `make rc` will reconfigure from the original `mymodel.xml` to facilitate editing in the latter fashion.
+Instead of editing the configuration file copied into `PhysiCell/config/pkpd_model.xml`, you can choose to edit the original in `PhysiCell/sample_projects_physipkpd/[project_name]/config/pkpd_model.xml` to save the changes for future runs.
+The command `make rc` will reconfigure from the original `pkpd_model.xml` to facilitate editing in the latter fashion.
 
 Similarly, you can edit the custom modules in `PhysiCell/sample_projects_physipkpd/[project_name]/custom_modules/` to save changes for future runs.
 After making these changes, you can run `make redo` and this will automatically move those changes to their proper places and recompile the project.
 
 ## Setting parameters
-PhysiPKPD parameters are found in two areas in `mymodel.xml`: PK parameters are at the bottom in `user_parameters` and PD parameters are in `cell_definitions` in the `custom_data` for each cell type.
+PhysiPKPD parameters are found in two areas in `pkpd_model.xml`: PK parameters are at the bottom in `user_parameters` and PD parameters are in `cell_definitions` in the `custom_data` for each cell type.
 PhysiPKPD can add PK and/or PD dynamics to any substrates in a PhysiCell simulation.
 PK dynamics must be set for each PK substrate and PD dynamics determined for each cell type affected by a particular substrate.
 
@@ -274,7 +274,7 @@ For example, if a substrate `myDrug` affects cell type `tumor` and you want to p
 
 ## Making your own project using PhysiPKPD
 If you wish to make your own project that uses PhysiPKPD (and not just one of the pre-built sample projects), this is how you can proceed.
-1. Make the PKPD template project: `make template_pkpd`
+1. Make the PKPD template project: `make pkpd-template`
 2. Edit the configuration file to set the Dirichlet conditions, [PK Parameters](#pk_pars), and [PD Parameters](#pd_pars) for the two PKPD substrates and the default cell type `cell`.
 3. Add additional substrates as normal (using the Model Builder for this is untested)
 4. Add additional cell types as normal (using the Model Builder for this is untested).
@@ -283,7 +283,7 @@ Add new phenotype functions as desired for each cell type.
 6. For each phenotype function, make sure to uncomment the line resetting the mechanism of action to its base value.
 7. If the mechanism of action is motility, then uncomment the line setting the `update_migration_bias` or add that line for each cell type that undergoes a motility effect[^mot].
 
-**Note:** The `custom.cpp` file that is loaded with the `template_pkpd` project has two substrates hardcoded to use for the motility MOA.
+**Note:** The `custom.cpp` file that is loaded with the `pkpd-template` project has two substrates hardcoded to use for the motility MOA.
 If you wish to add additional substrates that have a motility MOA (or change the names of the default substrates), you will need to change the `motility_rule` to reflect this for these substrates to affect cell migration speed.
 
 [^mot]: You must manually put any any chemotactic signals in the `update_migration_bias` function if you use a motility effect.
