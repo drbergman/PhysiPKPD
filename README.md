@@ -309,11 +309,8 @@ If anything the analtyic methods are faster.
 Therefore, all simulations use analytic solutions.
 
 To maximize the efficiency of these analytic solutions, many terms are pre-computed ahead of time.
-**However**, if the parameters governing your PD dynamics vary--e.g., due to heterogeneity within the affected cell type--then you will not want to do pre-computations.
-These pre-computations are an all-or-nothing for every (substrate, cell type) pairing.
-In other words, you cannot specify that some of the pre-computations can be done but not others.
+**However**, if the parameters governing your PD dynamics vary&mdash;e.g., due to heterogeneity within the affected cell type&mdash;then you will not want to do pre-computations.
 You can include the following as Booleans in `user_parameters` to control this.
-In the following table, `C` stands for a cell type name.
 For example, if a substrate `myDrug` affects cell type `tumor` and you want to pre-compute the PD quantities, include the following in `user_parameters`:
 
 ```
