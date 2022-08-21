@@ -141,7 +141,7 @@ For example, a substrate called `myDrug` with 10 doses administered would have t
 | :-- | :-: | :-- | :-- |
 | `S_max_number_doses` | `int` | Total number of doses to give including loading doses | Set to `0` |
 | `S_number_loading_doses` | `int` | Number of loading doses to give before switching to regular doses | Set to `0` |
-| `S_dose_interval` | `double` | Time between successive doses, loading or regular (in minutes) | If `S_max_number_doses`>0, throws an error |
+| `S_dose_interval` | `double` | Time between successive doses, loading or regular (in minutes) | If `S_max_number_doses`>1, throws an error |
 | `S_central_increase_on_dose` | `double` | Increase in concentration in central compartment after a regular dose | If `S_max_number_doses`>`S_number_loading_doses`, throws an error |
 | `S_central_increase_on_loading_dose` | `double` | Increase in concentration in central compartment after a loading dose | If `S_number_loading_doses`>0, throws an error |
 | `S_set_first_dose_time` | `bool` | Boolean determining if the first dose time is fixed or if a confluence condition will be used to determine the first dose time | Set to `False` |
@@ -309,11 +309,8 @@ If anything the analtyic methods are faster.
 Therefore, all simulations use analytic solutions.
 
 To maximize the efficiency of these analytic solutions, many terms are pre-computed ahead of time.
-**However**, if the parameters governing your PD dynamics vary--e.g., due to heterogeneity within the affected cell type--then you will not want to do pre-computations.
-These pre-computations are an all-or-nothing for every (substrate, cell type) pairing.
-In other words, you cannot specify that some of the pre-computations can be done but not others.
+**However**, if the parameters governing your PD dynamics vary&mdash;e.g., due to heterogeneity within the affected cell type&mdash;then you will not want to do pre-computations.
 You can include the following as Booleans in `user_parameters` to control this.
-In the following table, `C` stands for a cell type name.
 For example, if a substrate `myDrug` affects cell type `tumor` and you want to pre-compute the PD quantities, include the following in `user_parameters`:
 
 ```
