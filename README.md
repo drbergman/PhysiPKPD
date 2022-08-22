@@ -78,7 +78,7 @@ Omitting `PKPD_pk_substrate_names` will result in no PK dynamics and similarly f
 | `PKPD_pk_substrate_names` | Comma-separated list of substrates also following PK dynamics |
 | `PKPD_pd_substrate_names` | Comma-separated list of substrates also producing PD dynamics in some cells |
 <p align="center">
-    <b>Table:</b> Identifying PK and PD Substrates
+    <b>Table:</b> Identifying PK and PD substrates
 </p>
 
 PhysiPKPD will issue a warning if it finds a name in either of these lists that is not a substrate.
@@ -154,7 +154,7 @@ For example, a substrate called `myDrug` with 10 doses administered would have t
 | `central_to_periphery_volume_ratio` $(R = V_1/V_2 = V_C/V_P)$ | `double` | Ratio of central compartment to periphery compartment *for any substrates without a specific volume ratio as above* | Set to `1` |
 | `S_flux_across_capillaries`<a name="old_flux_par"></a> | `double` | **While this is still allowed, consider using the above two parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) | See above |
 <p align="center">
-    <b>Table:</b> PK Parameters
+    <b>Table:</b> PK parameters
 </p>
 
 [^1]: To use these new parameters, you will want to set $k_{12}$ as your original flux rate and $k_{21}$ as `S_flux_across_capillaries * S_central_to_periphery_volume_ratio`.
@@ -179,7 +179,7 @@ You can also set the following parameters in `microenvironment_setup` for each s
 | `decay_rate` | Rate of decay in the microenvironment |
 
 <p align="center">
-    <b>Table:</b> PK Parameters in PhysiCell
+    <b>Table:</b> PK parameters in PhysiCell
 </p>
 
 ### PD parameters <a name="pd_pars"></a>
@@ -232,7 +232,7 @@ If the repair rates in the [table](#dam_pars_table) are not set, then PhysiPKPD 
 | `S_metabolism_rate` $(m)$ | Rate of elimination of `S` from inside a cell (in minutes<sup>-1</sup>) |
 
 <p align="center">
-    <b>Table:</b> Damage Accumulation Parameters <a name="dam_pars_table"></a>
+    <b>Table:</b> Damage accumulation parameters <a name="dam_pars_table"></a>
 </p>
 
 By default, PhysiPKPD uses the `mechanics_dt` set in the configuration file to determine how often to update these dynamics.
@@ -273,7 +273,7 @@ If you target `motility`, do the same but within `update_migration_bias`.
 | `S_X_hill_power` | Hill coefficient for calculating the effect of `S` on the rate of `X` |
 
 <p align="center">
-    <b>Table:</b> Cell Effect Parameters
+    <b>Table:</b> Cell effect parameters
 </p>
 
 In the event that multiple substrates have the same MOA for a given cell type, PhysiPKPD combines their effects multiplicatively.
@@ -319,10 +319,10 @@ For example, if a substrate `myDrug` affects cell type `tumor` and you want to p
 
 |Parameter|Type|Description| If Missing |
 |---|:-:|---|:--|
-| `PKPD_precompute_all_pd_quantities` | `bool` | Boolean to determine whether to pre-compute values used to analytically solve *all* PD dynamics; **turn this off if PD parameters can vary within a cell type OR if your PD time step is not a multiple of your `diffusion_dt`** | Set to `False` |
-| `S_precompute_pd_for_C` | `bool` | **Only affects simulations if `PKPD_precompute_all_pd_quantities==False`** Boolean to determine whether to pre-compute values used to analytically solve PD dynamics for a single (substrate, cell type) pairing; **turn this off if PD parameters can vary within this cell type OR if your PD time step is not a multiple of your `diffusion_dt`** | Set to `False` |
+| `PKPD_precompute_all_pd_quantities` | `bool` | Boolean to determine the default behavior for pre-computations for *all* PD dynamics | Set to `True` |
+| `S_precompute_pd_for_C` | `bool` | Boolean to override default behavior for a single (substrate, cell type) pairing; **turn this off if PD parameters can vary within this cell type OR if your PD time step is not a multiple of your `diffusion_dt`** | No effect |
 <p align="center">
-    <b>Table:</b> Miscellaneous Parameters
+    <b>Table:</b> Miscellaneous parameters
 </p>
 
 ## Making your own project using PhysiPKPD

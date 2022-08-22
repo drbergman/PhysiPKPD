@@ -777,8 +777,21 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
 
 void setup_pd_model_auc(Pharmacodynamics_Model *pPD)
 {
-    pPD->use_precomputed_quantities = (parameters.bools.find_variable_index("PKPD_precompute_all_pd_quantities") != -1 && parameters.bools("PKPD_precompute_all_pd_quantities"))
-                                   || (parameters.bools.find_variable_index(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type) != -1 && parameters.bools(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type));
+    if (parameters.bools.find_variable_index(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type) != -1) // then use this value
+    {
+        pPD->use_precomputed_quantities = parameters.bools(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type);
+    }
+    else if (parameters.bools.find_variable_index("PKPD_precompute_all_pd_quantities") != -1) // use the value that sets the default for all PD dynamics in this simulation
+    {
+        pPD->use_precomputed_quantities = parameters.bools("PKPD_precompute_all_pd_quantities");
+    }
+    else
+    {
+        std::cout << "PhysiPKPD WARNING: Unspecified whether or not to use pre-computed quantities for solving PD dynamics of " << pPD->substrate_name << " on " << pPD->cell_type << std::endl
+                  << "  Will default to using pre-computations. Set PKPD_precompute_all_pd_quantities to apply to all PD dynamics." << std::endl
+                  << "  Or set " << pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type << " for this particular pairing." << std::endl;
+    }
+
     Cell_Definition *pCD = cell_definitions_by_index[pPD->cell_index];
 
     // add backwards compatibility for usinge PKPD_D1_repair_rate to mean the constant repair rate
