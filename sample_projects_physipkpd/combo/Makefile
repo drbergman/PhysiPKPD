@@ -1,5 +1,5 @@
 VERSION := $(shell grep . VERSION.txt | cut -f1 -d:)
-PROGRAM_NAME := project
+PROGRAM_NAME := pkpd_sample
 
 CC := g++
 # CC := g++-mp-7 # typical macports compiler name
@@ -70,6 +70,12 @@ ALL_OBJECTS := $(PhysiCell_OBJECTS) $(PhysiCell_custom_module_OBJECTS) $(PhysiPK
 
 all: main.cpp $(ALL_OBJECTS)
 	$(COMPILE_COMMAND) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp
+	make name
+
+name:
+	@echo ""
+	@echo "Executable name is" $(PROGRAM_NAME)
+	@echo ""
 
 # PhysiCell core components
 
@@ -177,6 +183,7 @@ reset:
 	touch ./custom_modules/empty.txt
 	touch ALL_CITATIONS.txt
 	touch ./core/PhysiCell_cell.cpp
+	touch ./addons/PhysiPKPD/src/PhysiPKPD.cpp
 	rm ALL_CITATIONS.txt
 	cp ./config/PhysiCell_settings-backup.xml ./config/PhysiCell_settings.xml
 	touch ./config/empty.csv
@@ -243,8 +250,8 @@ data-plots:
 
 redo:
 	make reset
-	make combo
+	make pkpd-combo-sample
 	make
 
 rc: # reconfig
-	cp ./sample_projects_physipkpd/combo/config/mymodel.xml ./config/
+	cp ./sample_projects_physipkpd/combo/config/pkpd_model.xml ./config/

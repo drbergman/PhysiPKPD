@@ -33,7 +33,7 @@
 #                                                                             #
 # BSD 3-Clause License (see https://opensource.org/licenses/BSD-3-Clause)     #
 #                                                                             #
-# Copyright (c) 2015-2021, Paul Macklin and the PhysiCell Project             #
+# Copyright (c) 2015-2018, Paul Macklin and the PhysiCell Project             #
 # All rights reserved.                                                        #
 #                                                                             #
 # Redistribution and use in source and binary forms, with or without          #
@@ -64,177 +64,158 @@
 #                                                                             #
 ###############################################################################
 */
+
+#ifndef __PhysiCell_settings_h__
+#define __PhysiCell_settings_h__
+
 #include <iostream>
-#include <fstream>
-#include "./custom.h"
+#include <ctime>
+#include <cmath>
+#include <string>
+#include <vector>
+#include <random>
+#include <chrono>
+#include <unordered_map>
 
-void create_cell_types(void)
+#include "./PhysiCell_pugixml.h"
+#include "../BioFVM/BioFVM.h"
+
+#include "../core/PhysiCell_constants.h" 
+#include "../core/PhysiCell_utilities.h"
+
+using namespace BioFVM; 
+
+namespace PhysiCell{
+ 	
+extern pugi::xml_node physicell_config_root; 
+
+bool load_PhysiCell_config_file( std::string filename );
+
+class PhysiCell_Settings
 {
-    // set the random seed
-    SeedRandom(parameters.ints("random_seed"));
+ private:
+ public:
+	// overall 
+	double max_time = 60*24*45;   
 
-    /*
-       Put any modifications to default cell definition here if you
-       want to have "inherited" by other cell types.
+	// units
+	std::string time_units = "min"; 
+	std::string space_units = "micron"; 
+ 
+	// parallel options 
+	int omp_num_threads = 2; 
+	
+	// save options
+	std::string folder = "."; 
 
-       This is a good place to set default functions.
-    */
+	double full_save_interval = 60;  
+	bool enable_full_saves = true; 
+	bool enable_legacy_saves = false; 
+	
+	double SVG_save_interval = 60; 
+	bool enable_SVG_saves = true; 
 
-    initialize_default_cell_definition();
-    cell_defaults.phenotype.secretion.sync_to_microenvironment(&microenvironment);
+	double intracellular_save_interval = 60; 
+	bool enable_intracellular_saves = false; 
+	
+	PhysiCell_Settings();
+	
+	void read_from_pugixml( void ); 
+};
 
-    cell_defaults.functions.volume_update_function = standard_volume_update_function;
-    cell_defaults.functions.update_velocity = standard_update_cell_velocity;
+class PhysiCell_Globals
+{
+ private:
+ public:
+	double current_time = 0.0; 
+	double next_full_save_time = 0.0; 
+	double next_SVG_save_time = 0.0; 
+	double next_intracellular_save_time = 0.0; 
+	int full_output_index = 0; 
+	int SVG_output_index = 0; 
+	int intracellular_output_index = 0; 
+};
 
-    cell_defaults.functions.update_migration_bias = NULL;
-    cell_defaults.functions.update_phenotype = NULL; // update_cell_and_death_parameters_O2_based;
-    cell_defaults.functions.custom_cell_rule = NULL;
-    cell_defaults.functions.contact_function = NULL;
+template <class T> 
+class Parameter
+{
+ private:
+	template <class Y>
+	friend std::ostream& operator<<(std::ostream& os, const Parameter<Y>& param); 
 
-    cell_defaults.functions.add_cell_basement_membrane_interactions = NULL;
-    cell_defaults.functions.calculate_distance_to_membrane = NULL;
+ public: 
+	std::string name; 
+	std::string units; 
+	T value; 
+	
+	Parameter();
+	Parameter( std::string my_name ); 
+	
+	void operator=( T& rhs ); 
+	void operator=( T rhs ); 
+	void operator=( Parameter& p ); 
+};
 
-    /*
-       This parses the cell definitions in the XML config file.
-    */
+template <class T>
+class Parameters
+{
+ private:
+	std::unordered_map<std::string,int> name_to_index_map; 
+	
+	template <class Y>
+	friend std::ostream& operator<<( std::ostream& os , const Parameters<Y>& params ); 
 
-    initialize_cell_definitions_from_pugixml();
+ public: 
+	Parameters(); 
+ 
+	std::vector< Parameter<T> > parameters; 
+	
+	void add_parameter( std::string my_name ); 
+	void add_parameter( std::string my_name , T my_value ); 
+//	void add_parameter( std::string my_name , T my_value ); 
+	void add_parameter( std::string my_name , T my_value , std::string my_units ); 
+//	void add_parameter( std::string my_name , T my_value , std::string my_units ); 
+	
+	void add_parameter( Parameter<T> param );
+	
+	int find_index( std::string search_name );
+	int find_variable_index (std::string search_name); // same as above, but will return -1 if search_name is not a parameter
+	
+	// these access the values 
+	T& operator()( int i );
+	T& operator()( std::string str ); 
 
-    /*
-       Put any modifications to individual cell definitions here.
+	// these access the full, raw parameters 
+	Parameter<T>& operator[]( int i );
+	Parameter<T>& operator[]( std::string str ); 
+	
+	int size( void ) const; 
+};
 
-       This is a good place to set custom functions.
-    */
+class User_Parameters
+{
+ private:
+	friend std::ostream& operator<<( std::ostream& os , const User_Parameters up ); 
+ 
+ public:
+	Parameters<bool> bools; 
+	Parameters<int> ints; 
+	Parameters<double> doubles; 
+	Parameters<std::string> strings; 
+	
+	void read_from_pugixml( pugi::xml_node parent_node );
+}; 
 
-    cell_defaults.functions.update_phenotype = phenotype_function;
-    cell_defaults.functions.custom_cell_rule = custom_function;
-    cell_defaults.functions.contact_function = contact_function;
+extern PhysiCell_Globals PhysiCell_globals; 
 
-    for (int k = 0; k < cell_definitions_by_index.size(); k++)
-    {
-        cell_definitions_by_index[k]->functions.update_phenotype = tumor_phenotype;
-    }
+extern PhysiCell_Settings PhysiCell_settings; 
 
-    /*
-       This builds the map of cell definitions and summarizes the setup.
-    */
+extern User_Parameters parameters; 
 
-    build_cell_definitions_maps();
+bool setup_microenvironment_from_XML( pugi::xml_node root_node );
+bool setup_microenvironment_from_XML( void );
 
-	/*
-	   This intializes cell signal and response dictionaries 
-	*/
-
-	setup_signal_behavior_dictionaries(); 
-
-    /* 
-	   Put any modifications to individual cell definitions here. 
-	   
-	   This is a good place to set custom functions. 
-	*/ 
-
-    display_cell_definitions(std::cout);
-
-    return;
 }
 
-void setup_microenvironment(void)
-{
-    // set domain parameters
+#endif 
 
-    // put any custom code to set non-homogeneous initial conditions or
-    // extra Dirichlet nodes here.
-
-    // initialize BioFVM
-
-    initialize_microenvironment();
-
-    return;
-}
-
-void setup_tissue(void)
-{
-    double Xmin = microenvironment.mesh.bounding_box[0];
-    double Ymin = microenvironment.mesh.bounding_box[1];
-    double Zmin = microenvironment.mesh.bounding_box[2];
-
-    double Xmax = microenvironment.mesh.bounding_box[3];
-    double Ymax = microenvironment.mesh.bounding_box[4];
-    double Zmax = microenvironment.mesh.bounding_box[5];
-
-    if (default_microenvironment_options.simulate_2D == true)
-    {
-        Zmin = 0.0;
-        Zmax = 0.0;
-    }
-
-    double Xrange = Xmax - Xmin;
-    double Yrange = Ymax - Ymin;
-    double Zrange = Zmax - Zmin;
-
-    // create some of each type of cell
-
-    Cell *pC;
-
-    // place tumor cells
-    double max_distance = parameters.doubles("max_initial_distance");
-    Cell_Definition *pCD = find_cell_definition("tumor");
-
-    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
-    for (int n = 0; n < parameters.ints("number_of_tumor_cells"); n++)
-    {
-        std::vector<double> position = {0, 0, 0};
-        double r = sqrt(UniformRandom()) * max_distance;
-        double theta = UniformRandom() * 6.2831853;
-        position[0] = r * cos(theta);
-        position[1] = r * sin(theta);
-        pC = create_cell(*pCD);
-        pC->assign_position(position);
-    }
-
-    // load cells from your CSV file (if enabled)
-    load_cells_from_pugixml();
-
-    return;
-}
-
-std::vector<std::string> my_coloring_function(Cell *pC)
-{
-    return damage_coloring(pC);
-}
-
-void phenotype_function(Cell *pC, Phenotype &phenotype, double dt)
-{
-    return;
-}
-
-void custom_function(Cell *pC, Phenotype &phenotype, double dt)
-{
-    return;
-}
-
-void contact_function(Cell *pMe, Phenotype &phenoMe, Cell *pOther, Phenotype &phenoOther, double dt)
-{
-    return;
-}
-
-void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
-{
-    if (p.death.dead == true)
-    {
-        p.secretion.set_all_secretion_to_zero();
-        p.secretion.set_all_uptake_to_zero();
-        pC->functions.update_phenotype = NULL;
-        return;
-    }
-    
-    Cell_Definition* pCD = find_cell_definition( pC->type );
-
-    // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
-    set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
-
-    // update phenotype based on PD dynamics
-    pd_function(pC, p, dt);
-
-    return;
-}

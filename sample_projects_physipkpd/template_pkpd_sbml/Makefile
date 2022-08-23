@@ -1,5 +1,5 @@
 VERSION := $(shell grep . VERSION.txt | cut -f1 -d:)
-PROGRAM_NAME := pkpd_sample
+PROGRAM_NAME := pkpd_project
 
 CC := g++
 # CC := g++-mp-7 # typical macports compiler name
@@ -30,26 +30,79 @@ ARCH := native # best auto-tuning
 # ARCH := nocona #64-bit pentium 4 or later
 
 # CFLAGS := -march=$(ARCH) -Ofast -s -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11
-CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11
+CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER
+
 ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
+		UNAME_P := $(shell uname -p)
 		var := $(shell which $(CC) | xargs file)
 		ifeq ($(lastword $(var)),arm64)
-			CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -fopenmp -m64 -std=c++11
+		  CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER
 		endif
 	endif
 endif
 
-COMPILE_COMMAND := $(CC) $(CFLAGS)
+OSFLAG 	:=
+ifeq ($(OS),Windows_NT)
+	OSFLAG += -D WIN32
+	OMP_LIB := 
+#	LIBRR_DIR := C:\Users\heiland\libroadrunner\roadrunner-win64-vs14-cp35m
+#	LIBRR_LIBS := C:\Users\heiland\libroadrunner\roadrunner-win64-vs14-cp35m/bin
+#	LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+#	CFLAGS := -march=$(ARCH) -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER 
+	LIBRR_DIR := .\addons\libRoadrunner\roadrunner
+	LIBRR_CFLAGS := -I${LIBRR_DIR}\include\rr\C
+	LIBRR_LIBS := ${LIBRR_DIR}\lib
+	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+		OSFLAG += -D AMD64
+	endif
+	ifeq ($(PROCESSOR_ARCHITECTURE),x86)
+		OSFLAG += -D IA32
+	endif
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		OSFLAG += -D LINUX
+		OMP_LIB :=
+#		LIBRR_DIR := $(shell pwd)/intracellular_libs/roadrunner
+		LIBRR_DIR := ./addons/libRoadrunner/roadrunner
+		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+		LIBRR_LIBS := ${LIBRR_DIR}/lib
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		OSFLAG += -D OSX
+		LIBRR_DIR := ./addons/libRoadrunner/roadrunner
+		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+		LIBRR_LIBS := ${LIBRR_DIR}/lib
+	endif
+
+#	 Not sure if useful later or not.
+#	UNAME_P := $(shell uname -p)
+#	ifeq ($(UNAME_P),x86_64)
+#		OSFLAG += -D AMD64
+#		LIBRR_DIR := $(shell pwd)/intracellular_libs/roadrunner
+#		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+#		# CFLAGS := -march=$(ARCH) -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D LIBROADRUNNER 
+#		CFLAGS := -march=$(ARCH) -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER 
+#	endif
+#	ifneq ($(filter %86,$(UNAME_P)),)
+#		OSFLAG += -D IA32
+#	endif
+#	ifneq ($(filter arm%,$(UNAME_P)),)
+#		OSFLAG += -D ARM
+#	endif
+endif
+
+COMPILE_COMMAND := $(CC) $(CFLAGS) $(LIBRR_CFLAGS)
 
 BioFVM_OBJECTS := BioFVM_vector.o BioFVM_mesh.o BioFVM_microenvironment.o BioFVM_solvers.o BioFVM_matlab.o \
 BioFVM_utilities.o BioFVM_basic_agent.o BioFVM_MultiCellDS.o BioFVM_agent_container.o
 
 PhysiCell_core_OBJECTS := PhysiCell_phenotype.o PhysiCell_cell_container.o PhysiCell_standard_models.o \
 PhysiCell_cell.o PhysiCell_custom.o PhysiCell_utilities.o PhysiCell_constants.o PhysiCell_basic_signaling.o \
-PhysiCell_signal_behavior.o 
+PhysiCell_signal_behavior.o
 
 PhysiCell_module_OBJECTS := PhysiCell_SVG.o PhysiCell_pathology.o PhysiCell_MultiCellDS.o PhysiCell_various_outputs.o \
 PhysiCell_pugixml.o PhysiCell_settings.o PhysiCell_geometry.o
@@ -63,20 +116,25 @@ PhysiCell_custom_module_OBJECTS := custom.o
 
 pugixml_OBJECTS := pugixml.o
 
+ROADRUNNER_OBJECTS := librr_intracellular.o 
+
 PhysiCell_OBJECTS := $(BioFVM_OBJECTS)  $(pugixml_OBJECTS) $(PhysiCell_core_OBJECTS) $(PhysiCell_module_OBJECTS)
-ALL_OBJECTS := $(PhysiCell_OBJECTS) $(PhysiCell_custom_module_OBJECTS) $(PhysiPKPD_OBJECTS)
+ALL_OBJECTS := $(PhysiCell_OBJECTS) $(PhysiCell_custom_module_OBJECTS) $(PhysiPKPD_OBJECTS) $(ROADRUNNER_OBJECTS)
 
 # compile the project
 
-all: main.cpp $(ALL_OBJECTS)
-	$(COMPILE_COMMAND) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp 
+all: libRoadrunner main.cpp $(ALL_OBJECTS)
+	@echo Your OS= $(OSFLAG)
+	@echo LIBRR_CFLAGS= $(LIBRR_CFLAGS)
+	@echo LIBRR_LIBS= $(LIBRR_LIBS)
+	@echo 
+	$(COMPILE_COMMAND) $(OMP_LIB) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp -L$(LIBRR_LIBS) -lroadrunner_c_api
 	make name
 
 name:
 	@echo ""
 	@echo "Executable name is" $(PROGRAM_NAME)
 	@echo ""
-
 
 # PhysiCell core components
 
@@ -172,8 +230,18 @@ PhysiPKPD.o: ./addons/PhysiPKPD/src/PhysiPKPD.cpp
 
 # user-defined PhysiCell modules
 
+libRoadrunner: 
+ifeq ($(OS), Windows_NT)
+	python beta/setup_libroadrunner.py
+else
+	python3 beta/setup_libroadrunner.py
+endif
+
 custom.o: ./custom_modules/custom.cpp
 	$(COMPILE_COMMAND) -c ./custom_modules/custom.cpp
+
+librr_intracellular.o: ./addons/libRoadrunner/src/librr_intracellular.cpp ./addons/libRoadrunner/src/librr_intracellular.h
+	$(COMPILE_COMMAND) -c ./addons/libRoadrunner/src/librr_intracellular.cpp
 
 # cleanup
 
@@ -205,13 +273,13 @@ checkpoint:
 	zip -r $$(date +%b_%d_%Y_%H%M).zip Makefile *.cpp *.h config/*.xml custom_modules/*
 
 zip:
-	zip -r latest.zip Makefile* *.cpp *.h BioFVM/* config/* core/* custom_modules/* matlab/* modules/* sample_projects_physipkpd/moa_apoptosis/*
+	zip -r latest.zip Makefile* *.cpp *.h BioFVM/* config/* core/* custom_modules/* matlab/* modules/* sample_projects_physipkpd/template_pkpd_sbml/*
 	cp latest.zip $$(date +%b_%d_%Y_%H%M).zip
 	cp latest.zip VERSION_$(VERSION).zip
 	mv *.zip archives/
 
 tar:
-	tar --ignore-failed-read -czf latest.tar Makefile* *.cpp *.h BioFVM/* config/* core/* custom_modules/* matlab/* modules/* sample_projects_physipkpd/moa_apoptosis/*
+	tar --ignore-failed-read -czf latest.tar Makefile* *.cpp *.h BioFVM/* config/* core/* custom_modules/* matlab/* modules/* sample_projects_physipkpd/template_pkpd_sbml/*
 	cp latest.tar $$(date +%b_%d_%Y_%H%M).tar
 	cp latest.tar VERSION_$(VERSION).tar
 	mv *.tar archives/
@@ -247,10 +315,13 @@ movie:
 data-plots:
 	python custom_modules/createDataPlots.py -i $(OUTPUT)/cell_counts.csv -o $(OUTPUT)/cell_plot.png
 
+# resetting project
+
 redo:
 	make reset
-	make pkpd-apoptosis-sample
+	make pkpd-template-sbml
 	make
 
 rc: # reconfig
-	cp ./sample_projects_physipkpd/moa_apoptosis/config/pkpd_model.xml ./config/
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/pkpd_model.xml ./config/
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/PK_default.xml ./config/

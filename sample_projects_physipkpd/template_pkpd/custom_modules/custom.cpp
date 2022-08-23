@@ -222,6 +222,14 @@ void contact_function(Cell *pMe, Phenotype &phenoMe, Cell *pOther, Phenotype &ph
 
 void cell_phenotype(Cell *pC, Phenotype &p, double dt)
 {
+    if (p.death.dead == true)
+    {
+        p.secretion.set_all_secretion_to_zero();
+        p.secretion.set_all_uptake_to_zero();
+        pC->functions.update_phenotype = NULL;
+        return;
+    }
+
     Cell_Definition* pCD = find_cell_definition( pC->type );
 
     // find index of apoptosis death model
@@ -230,36 +238,38 @@ void cell_phenotype(Cell *pC, Phenotype &p, double dt)
     static int nNec = p.death.find_death_model_index( "Necrosis" );
     
     // first reset the rate of the affected process to its base values. Otherwise drug effects will stack, which is (probably) not what you want.
-    // if( pC->custom_data["PKPD_D1_moa_is_prolif"] > 0.5 || pC->custom_data["PKPD_D2_moa_is_prolif"] > 0.5 )
-    // { p.cycle.data.transition_rate(0,0) = pCD->phenotype.cycle.data.transition_rate(0,0); }
-    // if( pC->custom_data["PKPD_D1_moa_is_apop"] > 0.5 || pC->custom_data["PKPD_D2_moa_is_apop"] > 0.5 )
-    // { p.death.rates[nApop] = pCD->phenotype.death.rates[nApop]; }
-    // if( pC->custom_data["PKPD_D1_moa_is_necrosis"] > 0.5 || pC->custom_data["PKPD_D2_moa_is_necrosis"] > 0.5 )
-    // { p.death.rates[nNec] = pCD->phenotype.death.rates[nNec]; }
     
+    // if this phenotype has a prolif moa
+    // set_single_behavior( pC, "cycle entry", get_single_base_behavior( pC, "cycle entry") );
     
+    // if this phenotype has a apop moa
+    // set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
+    
+    // if this phenotype has a necrosis moa
+    // set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
+        
 
     // update phenotype based on PD dynamics
     pd_function(pC, p, dt);
 
-    if (p.death.dead == true)
-    {
-        p.secretion.set_all_secretion_to_zero();
-        p.secretion.set_all_uptake_to_zero();
-        pC->functions.update_phenotype = NULL;
-    }
     return;
 }
 
 void motility_rule(Cell *pC, Phenotype &p, double dt)
 {
+    // trick: if dead, overwrite with NULL function pointer.
+    if (p.death.dead == true)
+    {
+        pC->functions.update_migration_bias = NULL;
+        return;
+    }
     // find my cell definition
     Cell_Definition *pCD = find_cell_definition(pC->type);
 
     // find index of drug 1 in the microenvironment
-    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
+    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
     // find index of drug 2 in the microenvironment
-    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
+    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_D2");
 
     // find index of damage variable for drug 1
     int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
@@ -297,9 +307,5 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
     }
     p.motility.migration_speed *= factor_change;
 
-    // trick: if dead, overwrite with NULL function pointer.
-    if (p.death.dead == true)
-    {
-        pC->functions.update_migration_bias = NULL;
-    }
+
 }
