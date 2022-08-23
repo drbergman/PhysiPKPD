@@ -33,7 +33,7 @@
 #                                                                             #
 # BSD 3-Clause License (see https://opensource.org/licenses/BSD-3-Clause)     #
 #                                                                             #
-# Copyright (c) 2015-2021, Paul Macklin and the PhysiCell Project             #
+# Copyright (c) 2015-2018, Paul Macklin and the PhysiCell Project             #
 # All rights reserved.                                                        #
 #                                                                             #
 # Redistribution and use in source and binary forms, with or without          #
@@ -64,9 +64,16 @@
 #                                                                             #
 ###############################################################################
 */
-#include <iostream>
-#include <fstream>
+
 #include "./custom.h"
+#include "../BioFVM/BioFVM.h"  
+using namespace BioFVM;
+
+
+#include "rrc_api.h"
+#include "rrc_types.h"
+// #include "rrc_utilities.h"
+extern "C" rrc::RRHandle createRRInstance();
 
 void create_cell_types(void)
 {
@@ -112,7 +119,9 @@ void create_cell_types(void)
 
     for (int k = 0; k < cell_definitions_by_index.size(); k++)
     {
-        cell_definitions_by_index[k]->functions.update_phenotype = tumor_phenotype;
+        cell_definitions_by_index[k]->functions.update_phenotype = cell_phenotype;
+        // uncomment the following line if motility is a mechanism of action for one of your drugs. WARNING: I think this will overwrite any migration biases set by chemotaxis.
+        // cell_definitions_by_index[k]->functions.update_migration_bias = motility_rule;
     }
 
     /*
@@ -176,12 +185,12 @@ void setup_tissue(void)
 
     Cell *pC;
 
-    // place tumor cells
+    // place cells
     double max_distance = parameters.doubles("max_initial_distance");
-    Cell_Definition *pCD = find_cell_definition("tumor");
+    Cell_Definition *pCD = find_cell_definition("cell");
 
     std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
-    for (int n = 0; n < parameters.ints("number_of_tumor_cells"); n++)
+    for (int n = 0; n < parameters.ints("number_of_cells"); n++)
     {
         std::vector<double> position = {0, 0, 0};
         double r = sqrt(UniformRandom()) * max_distance;
@@ -218,23 +227,90 @@ void contact_function(Cell *pMe, Phenotype &phenoMe, Cell *pOther, Phenotype &ph
     return;
 }
 
-void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
+void cell_phenotype(Cell *pC, Phenotype &p, double dt)
 {
-    if (p.death.dead == true)
+	if (p.death.dead == true)
     {
         p.secretion.set_all_secretion_to_zero();
         p.secretion.set_all_uptake_to_zero();
         pC->functions.update_phenotype = NULL;
-        return;
+		return;
     }
-    
+	
     Cell_Definition* pCD = find_cell_definition( pC->type );
 
-    // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
+    // find index of apoptosis death model
+    static int nApop = p.death.find_death_model_index( "apoptosis" );
+    // find index of necrosis death model
+    static int nNec = p.death.find_death_model_index( "Necrosis" );
+    
+    // first reset the rate of the affected process to its base values. Otherwise drug effects will stack, which is (probably) not what you want.
+    
+    // if this phenotype has a prolif moa
+    set_single_behavior( pC, "cycle entry", get_single_base_behavior( pC, "cycle entry") );
+    
+    // if this phenotype has a apop moa
+    set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
+    
+    // if this phenotype has a necrosis moa
     set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
+        
 
     // update phenotype based on PD dynamics
     pd_function(pC, p, dt);
 
     return;
+}
+
+void motility_rule(Cell *pC, Phenotype &p, double dt)
+{
+    // find my cell definition
+    Cell_Definition *pCD = find_cell_definition(pC->type);
+
+    // find index of drug 1 in the microenvironment
+    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
+    // find index of drug 2 in the microenvironment
+    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_D2");
+
+    // find index of damage variable for drug 1
+    int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
+    // find index of damage variable for drug 2
+    int nPKPD_D2_damage = pC->custom_data.find_variable_index("PKPD_D2_damage");
+
+    // set the Hill multiplier
+    double temp;
+
+    // set speed to base phenotype speed
+    p.motility.migration_speed = pCD->phenotype.motility.migration_speed;
+
+    // motility effect
+    double factor_change = 1.0; // set factor
+    if (pC->custom_data["PKPD_D1_moa_is_motility"] > 0.5)
+    {
+        static double fs_motility_D1 = pC->custom_data["PKPD_D1_motility_saturation_rate"] / pCD->phenotype.motility.migration_speed; // saturation factor of motility for drug 1
+        // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate
+        if (pC->custom_data[nPKPD_D1_damage] > 0)
+        {
+            temp = Hill_response_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_motility_EC50"], pC->custom_data["PKPD_D1_motility_hill_power"]);
+            factor_change *= 1 + (fs_motility_D1 - 1) * temp;
+        }
+    }
+
+    if (pC->custom_data["PKPD_D2_moa_is_motility"] > 0.5)
+    {
+        static double fs_motility_D2 = pC->custom_data["PKPD_D2_motility_saturation_rate"] / pCD->phenotype.motility.migration_speed; // saturation factor of motility for drug 2
+        // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate (this is unecesary when D1 also affects motility, but this is necessary when only D2 affects motility)
+        if (pC->custom_data[nPKPD_D2_damage] > 0)
+        {
+            temp = Hill_response_function(pC->custom_data[nPKPD_D2_damage], pC->custom_data["PKPD_D2_motility_EC50"], pC->custom_data["PKPD_D2_motility_hill_power"]);
+            factor_change *= 1 + (fs_motility_D2 - 1) * temp;
+        }
+    }
+    p.motility.migration_speed *= factor_change;
+
+    // trick: if dead, overwrite with NULL function pointer.
+    if (p.death.dead == true)
+    {
+        pC->functions.update_migration_bias = NULL;
+    }
 }

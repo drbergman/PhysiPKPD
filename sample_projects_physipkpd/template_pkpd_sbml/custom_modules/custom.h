@@ -33,7 +33,7 @@
 #                                                                             #
 # BSD 3-Clause License (see https://opensource.org/licenses/BSD-3-Clause)     #
 #                                                                             #
-# Copyright (c) 2015-2021, Paul Macklin and the PhysiCell Project             #
+# Copyright (c) 2015-2018, Paul Macklin and the PhysiCell Project             #
 # All rights reserved.                                                        #
 #                                                                             #
 # Redistribution and use in source and binary forms, with or without          #
@@ -64,177 +64,34 @@
 #                                                                             #
 ###############################################################################
 */
-#include <iostream>
-#include <fstream>
-#include "./custom.h"
 
-void create_cell_types(void)
-{
-    // set the random seed
-    SeedRandom(parameters.ints("random_seed"));
+#include "../core/PhysiCell.h"
+#include "../modules/PhysiCell_standard_modules.h" 
+#include "../addons/PhysiPKPD/src/PhysiPKPD.h"
 
-    /*
-       Put any modifications to default cell definition here if you
-       want to have "inherited" by other cell types.
+// #include "rrc_api.h"
+// #include "rrc_types.h"
 
-       This is a good place to set default functions.
-    */
+using namespace BioFVM; 
+using namespace PhysiCell;
 
-    initialize_default_cell_definition();
-    cell_defaults.phenotype.secretion.sync_to_microenvironment(&microenvironment);
+// setup functions to help us along 
 
-    cell_defaults.functions.volume_update_function = standard_volume_update_function;
-    cell_defaults.functions.update_velocity = standard_update_cell_velocity;
+void create_cell_types( void );
+void setup_tissue( void ); 
+void create_output_csv_files( void );
 
-    cell_defaults.functions.update_migration_bias = NULL;
-    cell_defaults.functions.update_phenotype = NULL; // update_cell_and_death_parameters_O2_based;
-    cell_defaults.functions.custom_cell_rule = NULL;
-    cell_defaults.functions.contact_function = NULL;
+// set up the BioFVM microenvironment 
+void setup_microenvironment( void ); 
 
-    cell_defaults.functions.add_cell_basement_membrane_interactions = NULL;
-    cell_defaults.functions.calculate_distance_to_membrane = NULL;
+// custom pathology coloring function 
 
-    /*
-       This parses the cell definitions in the XML config file.
-    */
+std::vector<std::string> my_coloring_function( Cell* );
 
-    initialize_cell_definitions_from_pugixml();
+// custom functions can go here 
 
-    /*
-       Put any modifications to individual cell definitions here.
-
-       This is a good place to set custom functions.
-    */
-
-    cell_defaults.functions.update_phenotype = phenotype_function;
-    cell_defaults.functions.custom_cell_rule = custom_function;
-    cell_defaults.functions.contact_function = contact_function;
-
-    for (int k = 0; k < cell_definitions_by_index.size(); k++)
-    {
-        cell_definitions_by_index[k]->functions.update_phenotype = tumor_phenotype;
-    }
-
-    /*
-       This builds the map of cell definitions and summarizes the setup.
-    */
-
-    build_cell_definitions_maps();
-
-	/*
-	   This intializes cell signal and response dictionaries 
-	*/
-
-	setup_signal_behavior_dictionaries(); 
-
-    /* 
-	   Put any modifications to individual cell definitions here. 
-	   
-	   This is a good place to set custom functions. 
-	*/ 
-
-    display_cell_definitions(std::cout);
-
-    return;
-}
-
-void setup_microenvironment(void)
-{
-    // set domain parameters
-
-    // put any custom code to set non-homogeneous initial conditions or
-    // extra Dirichlet nodes here.
-
-    // initialize BioFVM
-
-    initialize_microenvironment();
-
-    return;
-}
-
-void setup_tissue(void)
-{
-    double Xmin = microenvironment.mesh.bounding_box[0];
-    double Ymin = microenvironment.mesh.bounding_box[1];
-    double Zmin = microenvironment.mesh.bounding_box[2];
-
-    double Xmax = microenvironment.mesh.bounding_box[3];
-    double Ymax = microenvironment.mesh.bounding_box[4];
-    double Zmax = microenvironment.mesh.bounding_box[5];
-
-    if (default_microenvironment_options.simulate_2D == true)
-    {
-        Zmin = 0.0;
-        Zmax = 0.0;
-    }
-
-    double Xrange = Xmax - Xmin;
-    double Yrange = Ymax - Ymin;
-    double Zrange = Zmax - Zmin;
-
-    // create some of each type of cell
-
-    Cell *pC;
-
-    // place tumor cells
-    double max_distance = parameters.doubles("max_initial_distance");
-    Cell_Definition *pCD = find_cell_definition("tumor");
-
-    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
-    for (int n = 0; n < parameters.ints("number_of_tumor_cells"); n++)
-    {
-        std::vector<double> position = {0, 0, 0};
-        double r = sqrt(UniformRandom()) * max_distance;
-        double theta = UniformRandom() * 6.2831853;
-        position[0] = r * cos(theta);
-        position[1] = r * sin(theta);
-        pC = create_cell(*pCD);
-        pC->assign_position(position);
-    }
-
-    // load cells from your CSV file (if enabled)
-    load_cells_from_pugixml();
-
-    return;
-}
-
-std::vector<std::string> my_coloring_function(Cell *pC)
-{
-    return damage_coloring(pC);
-}
-
-void phenotype_function(Cell *pC, Phenotype &phenotype, double dt)
-{
-    return;
-}
-
-void custom_function(Cell *pC, Phenotype &phenotype, double dt)
-{
-    return;
-}
-
-void contact_function(Cell *pMe, Phenotype &phenoMe, Cell *pOther, Phenotype &phenoOther, double dt)
-{
-    return;
-}
-
-void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
-{
-    if (p.death.dead == true)
-    {
-        p.secretion.set_all_secretion_to_zero();
-        p.secretion.set_all_uptake_to_zero();
-        pC->functions.update_phenotype = NULL;
-        return;
-    }
-    
-    Cell_Definition* pCD = find_cell_definition( pC->type );
-
-    // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
-    set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
-
-    // update phenotype based on PD dynamics
-    pd_function(pC, p, dt);
-
-    return;
-}
+void phenotype_function( Cell* pCell, Phenotype& phenotype, double dt );
+void custom_function( Cell* pCell, Phenotype& phenotype , double dt );
+void contact_function( Cell* pMe, Phenotype& phenoMe , Cell* pOther, Phenotype& phenoOther , double dt );
+void cell_phenotype( Cell* pC, Phenotype& p, double dt );
+void motility_rule( Cell* pC, Phenotype& p, double dt );

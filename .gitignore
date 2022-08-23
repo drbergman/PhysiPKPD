@@ -4,7 +4,11 @@
 output*.xml
 *.o
 .DS_Store
-project
+/project
+/heterogeneity
+/ode_energy
+/pkpd_sample
+/pkpd_project
 README_branch.md
 CITATION.txt
 /ALL_CITATIONS.txt
@@ -15,8 +19,12 @@ CITATION.txt
 changes.md
 Makefile-backup
 VERSION.txt
+<<<<<<< HEAD
 /ode_energy
 /pkpd_sample
+=======
+/PhysiBoSS_Cell_Lines
+>>>>>>> development
 
 # PhysiCell folders to ignore
 addons/PhysiBoSS

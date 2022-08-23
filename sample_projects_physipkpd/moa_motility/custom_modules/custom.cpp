@@ -121,6 +121,19 @@ void create_cell_types(void)
     */
 
     build_cell_definitions_maps();
+
+	/*
+	   This intializes cell signal and response dictionaries 
+	*/
+
+	setup_signal_behavior_dictionaries(); 
+
+    /* 
+	   Put any modifications to individual cell definitions here. 
+	   
+	   This is a good place to set custom functions. 
+	*/ 
+
     display_cell_definitions(std::cout);
 
     return;
@@ -183,12 +196,6 @@ void setup_tissue(void)
     double max_distance = parameters.doubles("max_initial_distance");
     Cell_Definition *pCD = find_cell_definition("tumor");
 
-    static int nNec = pCD->phenotype.death.find_death_model_index("Necrosis");
-    if (pCD->custom_data["PKPD_D1_moa_is_necrosis"] > 0.5 && pCD->phenotype.death.rates[nNec] <= 0)
-    {
-        pCD->phenotype.death.rates[nNec] = 1e-16;
-    }
-
     std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
     for (int n = 0; n < parameters.ints("number_of_tumor_cells"); n++)
     {
@@ -246,14 +253,10 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
     Cell_Definition *pCD = find_cell_definition(pC->type);
 
     // find index of drug 1 in the microenvironment
-    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
-    // find index of drug 2 in the microenvironment
-    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
+    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
 
     // find index of damage variable for drug 1
     int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
-    // find index of damage variable for drug 2
-    int nPKPD_D2_damage = pC->custom_data.find_variable_index("PKPD_D2_damage");
 
     // find index of O2 in the microenvironment
     static int nO2 = microenvironment.find_density_index("oxygen");
@@ -283,28 +286,15 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
     p.motility.migration_bias = hill;
 
     // motility effect
-    double factor_change = 1.0; // set factor
-    if (pC->custom_data["PKPD_D1_moa_is_motility"] > 0.5)
+    double factor_change = 1.0;                                                                                                   // set factor
+    static double fs_motility_D1 = pC->custom_data["PKPD_D1_motility_saturation_rate"] / pCD->phenotype.motility.migration_speed; // saturation factor of motility for drug 1
+    // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate
+    if (pC->custom_data[nPKPD_D1_damage] > 0)
     {
-        static double fs_motility_D1 = pC->custom_data["PKPD_D1_motility_saturation_rate"] / pCD->phenotype.motility.migration_speed; // saturation factor of motility for drug 1
-        // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate
-        if (pC->custom_data[nPKPD_D1_damage] > 0)
-        {
-            temp = Hill_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_motility_EC50"], pC->custom_data["PKPD_D1_motility_hill_power"]);
-            factor_change *= 1 + (fs_motility_D1 - 1) * temp;
-        }
+        temp = Hill_response_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_motility_EC50"], pC->custom_data["PKPD_D1_motility_hill_power"]);
+        factor_change *= 1 + (fs_motility_D1 - 1) * temp;
     }
 
-    if (pC->custom_data["PKPD_D2_moa_is_motility"] > 0.5)
-    {
-        static double fs_motility_D2 = pC->custom_data["PKPD_D2_motility_saturation_rate"] / pCD->phenotype.motility.migration_speed; // saturation factor of motility for drug 2
-        // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate (this is unecesary when D1 also affects motility, but this is necessary when only D2 affects motility)
-        if (pC->custom_data[nPKPD_D2_damage] > 0)
-        {
-            temp = Hill_function(pC->custom_data[nPKPD_D2_damage], pC->custom_data["PKPD_D2_motility_EC50"], pC->custom_data["PKPD_D2_motility_hill_power"]);
-            factor_change *= 1 + (fs_motility_D2 - 1) * temp;
-        }
-    }
     p.motility.migration_speed *= factor_change;
 
     // trick: if dead, overwrite with NULL function pointer.
@@ -316,13 +306,18 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
 
 void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
 {
+    if (p.death.dead == true)
+    {
+        p.secretion.set_all_secretion_to_zero();
+        p.secretion.set_all_uptake_to_zero();
+        pC->functions.update_phenotype = NULL;
+        return;
+    }
     // find my cell definition
     Cell_Definition *pCD = find_cell_definition(pC->type);
 
     // find index of drug 1 in the microenvironment
-    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_drug_number_1");
-    // find index of drug 2 in the microenvironment
-    static int nPKPD_D2 = microenvironment.find_density_index("PKPD_drug_number_2");
+    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
 
     // find index of apoptosis death model
     static int nApop = p.death.find_death_model_index("apoptosis");
@@ -331,8 +326,6 @@ void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
 
     // find index of damage variable for drug 1
     int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
-    // find index of damage variable for drug 2
-    int nPKPD_D2_damage = pC->custom_data.find_variable_index("PKPD_D2_damage");
 
     // grab oxygen details
     static int nO2 = microenvironment.find_density_index("oxygen");
@@ -379,13 +372,5 @@ void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
         p.death.rates[nNec] = 9e99;
     }
 
-    pd_function(pC, p, dt);
-
-    if (p.death.dead == true)
-    {
-        p.secretion.set_all_secretion_to_zero();
-        p.secretion.set_all_uptake_to_zero();
-        pC->functions.update_phenotype = NULL;
-    }
     return;
 }
