@@ -63,6 +63,7 @@ public:
     void advance(Pharmacokinetics_Model *pPK, double current_time);
 
     rrc::RRHandle rrHandle;
+    std::map<std::string, int> species_result_column_index;
 
     SBML_PK_Solver();
 };

@@ -104,7 +104,7 @@ If you can run the `sample_projects_intracellular/ode` projects, you are ready t
 | :-- | :-- | :-: |
 | 1-compartment | Circulation compartment with linear elimination | `1C` |
 | 2-compartment | `1C` plus a periphery compartment with linear intercompartmental clearance rates | `2C` |
-| SBML-defined | Any SBML-defined model. Place the file in the `./config/` folder. PhysiPKPD will treat the first Species as the circulation concentration and update Dirichlet nodes accordingly | `SBML` |
+| SBML-defined | Any SBML-defined model. Place the file in the `./config/` folder. PhysiPKPD will look for a species named `circulation_concentration` to use for updating Dirichlet nodes | `SBML` |
 <p align="center">
     <b>Table:</b> PK model specifications
 </p>
