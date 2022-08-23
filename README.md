@@ -179,6 +179,7 @@ You must supply a user parameter with the name of the SBML file:
 | :-- | :-: | :-- | :-- |
 | `S_sbml_filename` | `string` | Filename of SBML file, e.g. `PK_default.xml` | Set to `PK_default.xml` |
 
+Place this file in the `./config/` folder.
 Currently, you must specify dosing events yourself in SBML files.
 We will soon allow you to specify a CSV file with the dosing events.
 
