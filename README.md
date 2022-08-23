@@ -63,7 +63,7 @@ PK dynamics must be set for each PK substrate.
 PD dynamics must be set for each pairing `(S,C)` where substrate `S` acts on cell type `C`.
 PhysiPKPD will attempt to use defaults if none are supplied and issue warnings/errors until you have fully specified everything.
 
-In what follows, `S` stands for the name of a substrate.
+In what follows, `S` stands for the name of a substrate, `C` stands for the name of a cell type, and `X` stands for a MOA.
 
 ### PK and PD substrates
 You can specify which substrates you want to include PK dynamics.
@@ -139,6 +139,7 @@ For example, a substrate called `myDrug` with 10 doses administered would have t
 
 | Parameter | Type | Description | If Missing |
 | :-- | :-: | :-- | :-- |
+| `S_read_dose_schedule_from_csv` | `bool` | If true, ignore the following parameters and read in a dosing schedule from `./config/S_dose_schedule.csv` | Set to `False` |
 | `S_max_number_doses` | `int` | Total number of doses to give including loading doses | Set to `0` |
 | `S_number_loading_doses` | `int` | Number of loading doses to give before switching to regular doses | Set to `0` |
 | `S_dose_interval` | `double` | Time between successive doses, loading or regular (in minutes) | If `S_max_number_doses`>1, throws an error |
@@ -147,6 +148,14 @@ For example, a substrate called `myDrug` with 10 doses administered would have t
 | `S_set_first_dose_time` | `bool` | Boolean determining if the first dose time is fixed or if a confluence condition will be used to determine the first dose time | Set to `False` |
 | `S_first_dose_time` | `double` | Time of first dose if given at fixed time (in minutes) | Set to `current_time` |
 | `S_confluence_condition` | `double` | Proportion of microenvironment filled with cells at which to give first dose; confluence calculated by sum of cross-sectional area of all cells divided by area of microenvironment | Never check confluence condition |
+<p align="center">
+    <b>Table:</b> Dosing parameters
+</p>
+
+The CSV file for a dosing schedule must have the dosing times (in minutes) in the first column and the dose amounts in the second column.
+No header row should be included.
+
+| Parameter | Type | Description | If Missing |
 | `S_central_elimination_rate` $(\lambda)$ | `double` | Linear elimination rate in central compartment (in mintues<sup>-1</sup>) | Set to `0` |
 | `S_central_to_periphery_volume_ratio` $(R = V_1/V_2 = V_C/V_P)$ | `double` | Ratio of central compartment to periphery compartment | Set to `central_to_periphery_volume_ratio` |
 | `S_central_to_periphery_clearance_rate` $(k_{12})$ | `double` | Rate of change in concentration in central compartment due to distribution (in minutes<sup>-1</sup>) | Set to `S_flux_across_capillaries`, if present. Otherwise, set to `0` |
@@ -198,12 +207,10 @@ To specify this model, create a string parameter called `S_on_C_pd_model` with v
     <b>Table:</b> PD model specifications
 </p>
 
-[^auc]: Area under the curve (AUC) is a common metric in pharmaceutical sciences measuring the extent of exposure to a substance
+[^auc]: Area under the curve (AUC) is a common metric in pharmaceutical sciences measuring the extent of exposure to a substance.
 
 Let us know if you would like to see a different one included.
 Unlike PK dynamics, integration with SBML solvers is not implemented.
-
-For each cell type, all of the PD parameters are in `custom_data`.
 
 #### Damage Accumulation Parameters <a name="dam_pars"></a>
 For both of the above models, the cell type, `C`, affected by substrate `S` accumulates damage, $D$, based on the internalized substrate, $A$.
@@ -220,6 +227,7 @@ $$
 Note that since damage is an abstract quantity, we do not include a rate parameter as a coefficient for $A$ in the equation for $D'$.
 Each of these parameters **must** be set[^old_repair].
 If they are not set, PhysiPKPD will throw an error.
+These parameters go in the `custom_data` of `C`.
 
 [^old_repair]: Old versions of PhysiPKPD only had a constant repair rate. For backwards compatibility, `S_repair_rate` can be set instead.
 If the repair rates in the [table](#dam_pars_table) are not set, then PhysiPKPD will use this value to set a constant repair rate.
