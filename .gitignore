@@ -6,6 +6,8 @@ output*.xml
 .DS_Store
 /project
 /ode_energy
+/pkpd_sample
+/pkpd_project
 README_branch.md
 CITATION.txt
 /ALL_CITATIONS.txt
