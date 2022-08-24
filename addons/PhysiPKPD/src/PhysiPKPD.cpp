@@ -22,7 +22,8 @@ void SBML_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
 	vptr = rrc::getFloatingSpeciesConcentrations(rrHandle);
 
 	// Getting "Concentrations"
-	compartment_concentrations[0] = vptr->Data[0]; // @Supriya: Please confirm that vptr->Data[0] will always be the value of the first Species at end_time
+    int offset = species_result_column_index["circulation_concentration"];
+	compartment_concentrations[0] = vptr->Data[offset]; // @Supriya: Please confirm that vptr->Data[0] will always be the value of the first Species at end_time
 
 	rrc::freeVector(vptr);
     return;
@@ -112,17 +113,6 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
         pSolver->rrHandle = createRRInstance(); // creating rrHandle to save SBML in it
         rrc::RRCDataPtr result;
 
-        // add dosing events?
-        if (parameters.bools.find_variable_index(substrate_name + "_read_dose_from_csv")!=-1 && parameters.bools(substrate_name + "_read_dose_from_csv"))
-        {
-            // read in csv into events for the xml file
-            std::cout << "PhysiPKPD WARNING: Reading in a dosing schedule from a CSV is not yet supported." << std::endl
-                      << "  Will use ./config/PK_default.xml as is for the PK dynamics of " << substrate_name << std::endl
-                      << std::endl;
-
-        }
-        pNew->dosing_schedule_setup_done = true;
-
         // reading given SBML
         std::string sbml_filename = "PK_default.xml";
         if (parameters.strings.find_variable_index(substrate_name + "_sbml_filename")==-1)
@@ -150,6 +140,32 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
 
             exit(-1);
         }
+
+        // get species names for dosing purposes and for connecting to PhysiCell
+        std::string species_names_str = stringArrayToString(rrc::getFloatingSpeciesIds(pSolver->rrHandle));
+        std::cerr << species_names_str << "\n"
+                  << std::endl;
+        std::stringstream iss(species_names_str);
+        std::string species_name;
+        int idx = 0;
+        while (iss >> species_name)
+        {
+            pSolver->species_result_column_index[species_name] = idx;
+            std::cout << species_name << " -> " << idx << std::endl;
+            idx++;
+        }
+
+        // add dosing events?
+        if (parameters.bools.find_variable_index(substrate_name + "_read_dose_from_csv")!=-1 && parameters.bools(substrate_name + "_read_dose_from_csv"))
+        {
+            // read in csv into events for the xml file
+            std::cout << "PhysiPKPD WARNING: Reading in a dosing schedule from a CSV is not yet supported." << std::endl
+                      << "  Will use ./config/PK_default.xml as is for the PK dynamics of " << substrate_name << std::endl
+                      << std::endl;
+
+        }
+        pNew->dosing_schedule_setup_done = true;
+
 
         pSolver->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
         pNew->pk_solver = pSolver;
