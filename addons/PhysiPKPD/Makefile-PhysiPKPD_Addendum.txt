@@ -1,5 +1,5 @@
 # PhysiPKPD examples
-moa_proliferation:
+pkpd-proliferation-sample:
 	cp ./sample_projects_physipkpd/moa_proliferation/custom_modules/* ./custom_modules/
 	touch main.cpp && cp main.cpp main-backup.cpp
 	cp ./sample_projects_physipkpd/moa_proliferation/main.cpp ./main.cpp
@@ -8,7 +8,7 @@ moa_proliferation:
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_physipkpd/moa_proliferation/config/* ./config/
 
-moa_apoptosis:
+pkpd-apoptosis-sample:
 	cp ./sample_projects_physipkpd/moa_apoptosis/custom_modules/* ./custom_modules/
 	touch main.cpp && cp main.cpp main-backup.cpp
 	cp ./sample_projects_physipkpd/moa_apoptosis/main.cpp ./main.cpp
@@ -17,7 +17,7 @@ moa_apoptosis:
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_physipkpd/moa_apoptosis/config/* ./config/
 
-moa_necrosis:
+pkpd-necrosis-sample:
 	cp ./sample_projects_physipkpd/moa_necrosis/custom_modules/* ./custom_modules/
 	touch main.cpp && cp main.cpp main-backup.cpp
 	cp ./sample_projects_physipkpd/moa_necrosis/main.cpp ./main.cpp
@@ -26,7 +26,7 @@ moa_necrosis:
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_physipkpd/moa_necrosis/config/* ./config/
 
-moa_motility:
+pkpd-motility-sample:
 	cp ./sample_projects_physipkpd/moa_motility/custom_modules/* ./custom_modules/
 	touch main.cpp && cp main.cpp main-backup.cpp
 	cp ./sample_projects_physipkpd/moa_motility/main.cpp ./main.cpp
@@ -35,7 +35,7 @@ moa_motility:
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_physipkpd/moa_motility/config/* ./config/
 
-combo:
+pkpd-combo-sample:
 	cp ./sample_projects_physipkpd/combo/custom_modules/* ./custom_modules/
 	touch main.cpp && cp main.cpp main-backup.cpp
 	cp ./sample_projects_physipkpd/combo/main.cpp ./main.cpp
@@ -44,7 +44,16 @@ combo:
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_physipkpd/combo/config/* ./config/
 
-template_pkpd:
+pkpd-confluence-start-sample:
+	cp ./sample_projects_physipkpd/confluence_start/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/confluence_start/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/confluence_start/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/confluence_start/config/* ./config/
+	
+pkpd-template:
 	cp ./sample_projects_physipkpd/template_pkpd/custom_modules/* ./custom_modules/
 	touch main.cpp && cp main.cpp main-backup.cpp
 	cp ./sample_projects_physipkpd/template_pkpd/main.cpp ./main.cpp
@@ -52,3 +61,12 @@ template_pkpd:
 	cp ./sample_projects_physipkpd/template_pkpd/Makefile .
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
 	cp ./sample_projects_physipkpd/template_pkpd/config/* ./config/
+	
+pkpd-template-sbml:
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/* ./config/
