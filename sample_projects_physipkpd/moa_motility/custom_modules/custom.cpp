@@ -112,7 +112,7 @@ void create_cell_types(void)
 
     for (int k = 0; k < cell_definitions_by_index.size(); k++)
     {
-        cell_definitions_by_index[k]->functions.update_phenotype = tumor_phenotype;
+        cell_definitions_by_index[k]->functions.update_phenotype = PKPD_cell_phenotype;
         cell_definitions_by_index[k]->functions.update_migration_bias = motility_rule;
     }
 
@@ -192,12 +192,12 @@ void setup_tissue(void)
     //            pC->assign_position( position );
     //        }
     //    }
-    // place tumor cells
+    // place PKPD_cells
     double max_distance = parameters.doubles("max_initial_distance");
-    Cell_Definition *pCD = find_cell_definition("tumor");
+    Cell_Definition *pCD = find_cell_definition("PKPD_cell");
 
     std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
-    for (int n = 0; n < parameters.ints("number_of_tumor_cells"); n++)
+    for (int n = 0; n < parameters.ints("number_of_cells"); n++)
     {
         std::vector<double> position = {0, 0, 0};
         double r = sqrt(UniformRandom()) * max_distance;
@@ -304,7 +304,7 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
     }
 }
 
-void tumor_phenotype(Cell *pC, Phenotype &p, double dt)
+void PKPD_cell_phenotype(Cell *pC, Phenotype &p, double dt)
 {
     if (p.death.dead == true)
     {

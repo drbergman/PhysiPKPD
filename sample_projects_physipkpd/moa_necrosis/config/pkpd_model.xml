@@ -82,7 +82,7 @@
     </microenvironment_setup>
 
     <cell_definitions>
-        <cell_definition name="tumor" ID="0">
+        <cell_definition name="PKPD_cell" ID="0">
             <phenotype>
                 <cycle code="5" name="live">
                     <phase_transition_rates units="1/min">
@@ -203,7 +203,7 @@
 <!-- <div type="divider" description="-Initialization settings-"/> -->
 
         <random_seed type="int" units="dimensionless" description="">0</random_seed>
-        <number_of_tumor_cells type="int" units="none" description="initial number of tumor cells">1500</number_of_tumor_cells>
+        <number_of_cells type="int" units="none" description="initial number of cells">1500</number_of_cells>
         <max_initial_distance type="double" units="micron" description="max initial cell distance from origin">250.0</max_initial_distance>
 
 
@@ -241,8 +241,8 @@
 
 <!-- <div type="divider" description="-Drug 1 General PD Settings-"/> -->
 
-        <PKPD_D1_on_tumor_pd_model type="string">AUC_amount</PKPD_D1_on_tumor_pd_model>
-        <PKPD_D1_dt_tumor type="double">0.1</PKPD_D1_dt_tumor>
+        <PKPD_D1_on_PKPD_cell_pd_model type="string">AUC_amount</PKPD_D1_on_PKPD_cell_pd_model>
+        <PKPD_D1_dt_PKPD_cell type="double">0.1</PKPD_D1_dt_PKPD_cell>
         
     </user_parameters>
     
