@@ -747,11 +747,12 @@ void PD_model(double current_time)
                 {
                     all_pd.push_back(create_pd_model(PD_ind[n], PD_names[n], k, pCD->name));
                     // all_pd[n]->dt = parameters.doubles.find_variable_index(PD_names[n] + "_dt_" + pCD->name)==-1 ? mechanics_dt : parameters.doubles(PD_names[n] + "_dt_" + pCD->name); // default to mechanics_dt
-                    setup_pd_advancer(all_pd[n]);
-                    all_pd[n]->previous_pd_time = current_time;
-                    all_pd[n]->next_pd_time = current_time;
-                    all_pd[n]->damage_index = pCD->custom_data.find_variable_index(PD_names[n] + "_damage");
-                    all_pd[n]->advance = &single_pd_model;
+                    int new_ind = all_pd.size()-1;
+                    setup_pd_advancer(all_pd[new_ind]);
+                    all_pd[new_ind]->previous_pd_time = current_time;
+                    all_pd[new_ind]->next_pd_time = current_time;
+                    all_pd[new_ind]->damage_index = pCD->custom_data.find_variable_index(PD_names[n] + "_damage");
+                    all_pd[new_ind]->advance = &single_pd_model;
                 }
             } // finished looping over all cell types for this substrate
 
@@ -774,7 +775,6 @@ void PD_model(double current_time)
         } // finish looping over all identified PD substrates
         need_to_setup = false;
     } // finished setup
-
     for (int n = 0; n < all_pd.size(); n++)
     {
         all_pd[n]->advance(all_pd[n], current_time);
