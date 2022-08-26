@@ -290,16 +290,6 @@
 
 <!-- <div type="divider" description="-Drug 1 Specific PK model Settings-"/> -->
 
-        <PKPD_D1_max_number_doses type="int" units="none" description="max doses, including loading doses">0</PKPD_D1_max_number_doses>
-        <PKPD_D1_number_loading_doses type="int" units="none" description="number of loading doses">0</PKPD_D1_number_loading_doses>
-        <PKPD_D1_dose_interval type="double" units="min" description="time between dosings">360.0</PKPD_D1_dose_interval>
-        <PKPD_D1_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose">5e2</PKPD_D1_central_increase_on_dose>
-        <PKPD_D1_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose">400.0</PKPD_D1_central_increase_on_loading_dose>
-        
-        <PKPD_D1_set_first_dose_time type="bool" units="none" description="user sets first dose time to start therapy for drug 1; false=user gives confluence condition">True</PKPD_D1_set_first_dose_time>
-        <PKPD_D1_first_dose_time type="double" units="min" description="time of first dose for drug 1">0.0</PKPD_D1_first_dose_time>
-        <PKPD_D1_confluence_condition type="double" units="none" description="confluence as proportion at which to start therapy for drug 1">0.6</PKPD_D1_confluence_condition>
-
         <PKPD_D1_central_elimination_rate type="double" units="1/min" description="decay rate in systemic circulation">0.0027</PKPD_D1_central_elimination_rate>
         <PKPD_D1_central_to_periphery_clearance_rate type="double" units="1/min" description="rate of central concentration change due to distribution">0.0048</PKPD_D1_central_to_periphery_clearance_rate>
         <PKPD_D1_periphery_to_central_clearance_rate type="double" units="1/min" description="rate of periphery concentration change due to redistribution">0.0048</PKPD_D1_periphery_to_central_clearance_rate>
