@@ -150,7 +150,6 @@ int main( int argc, char* argv[] )
 	// for simplicity, set a pathology coloring function 
 	
 	std::vector<std::string> (*cell_coloring_function)(Cell*) = my_coloring_function; 
-	// std::vector<std::string> (*cell_coloring_function)(Cell*) = damage_coloring;
 
 	sprintf( filename , "%s/initial.svg" , PhysiCell_settings.folder.c_str() ); 
 	SVG_plot( filename , microenvironment, 0.0 , PhysiCell_globals.current_time, cell_coloring_function );
@@ -171,12 +170,6 @@ int main( int argc, char* argv[] )
 		report_file<<"simulated time\tnum cells\tnum division\tnum death\twall time"<<std::endl;
 	}
 	
-    // 
-    double intracellular_dt = 0.01;
-    double last_intracellular_time  = 0.0; 
-    double intracellular_dt_tolerance = 0.001 * intracellular_dt; 
-    double next_intracellular_update = intracellular_dt; 
-
 	// main loop 
 	
 	try 

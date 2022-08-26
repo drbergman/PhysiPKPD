@@ -99,7 +99,7 @@
 	</microenvironment_setup>	
 	
 	<cell_definitions>
-		<cell_definition ID="0" name="cell">
+		<cell_definition ID="0" name="PKPD_cell">
         <phenotype>
           <cycle code="5" name="live">
             <phase_transition_rates units="1/min">
@@ -156,7 +156,7 @@
             <cell_cell_repulsion_strength units="micron/min">10.0</cell_cell_repulsion_strength>
             <relative_maximum_adhesion_distance units="dimensionless">1.25</relative_maximum_adhesion_distance>
             <cell_adhesion_affinities>
-                <cell_adhesion_affinity name="cell">1.0</cell_adhesion_affinity>
+                <cell_adhesion_affinity name="PKPD_cell">1.0</cell_adhesion_affinity>
                 </cell_adhesion_affinities>
             <options>
               <set_relative_equilibrium_distance enabled="false" units="dimensionless">1.8</set_relative_equilibrium_distance>
@@ -210,23 +210,23 @@
           <cell_interactions>
             <dead_phagocytosis_rate units="1/min">0.0</dead_phagocytosis_rate>
             <live_phagocytosis_rates>
-                <phagocytosis_rate name="cell" units="1/min">0.0</phagocytosis_rate>
+                <phagocytosis_rate name="PKPD_cell" units="1/min">0.0</phagocytosis_rate>
                 </live_phagocytosis_rates>
 
             <attack_rates>
-                  <attack_rate name="cell" units="1/min">0.0</attack_rate>
+                  <attack_rate name="PKPD_cell" units="1/min">0.0</attack_rate>
                   </attack_rates>
 
             <damage_rate units="1/min">1.0</damage_rate>
             <fusion_rates>
-                  <fusion_rate name="cell" units="1/min">0.0</fusion_rate>
+                  <fusion_rate name="PKPD_cell" units="1/min">0.0</fusion_rate>
                   </fusion_rates>
 
           </cell_interactions>
 
           <cell_transformations>
             <transformation_rates>
-                <transformation_rate name="cell" units="1/min">0.0</transformation_rate>
+                <transformation_rate name="PKPD_cell" units="1/min">0.0</transformation_rate>
                 </transformation_rates>
             </cell_transformations>
 
@@ -328,8 +328,8 @@
 
 <!-- <div type="divider" description="-Drug 1 General PD Settings-"/> -->
 
-    <PKPD_D1_on_cell_pd_model type="string">AUC</PKPD_D1_on_cell_pd_model>
-    <PKPD_D1_dt_cell type="double">0.1</PKPD_D1_dt_cell>
+    <PKPD_D1_on_PKPD_cell_pd_model type="string">AUC</PKPD_D1_on_PKPD_cell_pd_model>
+    <PKPD_D1_dt_PKPD_cell type="double">0.1</PKPD_D1_dt_PKPD_cell>
 
 
 <!-- <div type="divider" description="-Drug 2 General PK Settings-"/> -->
@@ -352,8 +352,8 @@
 
 <!-- <div type="divider" description="-Drug 2 General PD Settings-"/> -->
 
-    <PKPD_D2_on_cell_pd_model type="string">AUC</PKPD_D2_on_cell_pd_model>
-    <PKPD_D2_dt_cell type="double">0.1</PKPD_D2_dt_cell>
+    <PKPD_D2_on_PKPD_cell_pd_model type="string">AUC</PKPD_D2_on_PKPD_cell_pd_model>
+    <PKPD_D2_dt_PKPD_cell type="double">0.1</PKPD_D2_dt_PKPD_cell>
 
     </user_parameters>
 	
