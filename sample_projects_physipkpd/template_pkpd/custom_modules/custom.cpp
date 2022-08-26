@@ -244,13 +244,13 @@ void cell_phenotype(Cell *pC, Phenotype &p, double dt)
     // first reset the rate of the affected process to its base values. Otherwise drug effects will stack, which is (probably) not what you want.
     
     // if this phenotype has a prolif moa
-    // set_single_behavior( pC, "cycle entry", get_single_base_behavior( pC, "cycle entry") );
+    set_single_behavior( pC, "cycle entry", get_single_base_behavior( pC, "cycle entry") );
     
     // if this phenotype has a apop moa
-    // set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
+    set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
     
     // if this phenotype has a necrosis moa
-    // set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
+    set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
         
 
     // update phenotype based on PD dynamics
