@@ -189,6 +189,7 @@ reset:
 	cp ./config/PhysiCell_settings-backup.xml ./config/PhysiCell_settings.xml
 	touch ./config/empty.csv
 	rm -f ./config/*.csv
+	rm pkpd_sample
 
 clean:
 	rm -f *.o
