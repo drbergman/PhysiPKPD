@@ -323,5 +323,4 @@ redo:
 	make
 
 rc: # reconfig
-	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/pkpd_model.xml ./config/
-	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/PK_default.xml ./config/
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/* ./config/
