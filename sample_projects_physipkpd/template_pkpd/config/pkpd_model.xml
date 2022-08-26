@@ -320,7 +320,7 @@
 
 <!-- <div type="divider" description="-Drug 2 Specific PK model Settings-"/> -->
 
-        <PKPD_D2_max_number_doses type="int" units="none" description="max doses, including loading doses">0</PKPD_D2_max_number_doses>
+        <PKPD_D2_max_number_doses type="int" units="none" description="max doses, including loading doses">3</PKPD_D2_max_number_doses>
         <PKPD_D2_number_loading_doses type="int" units="none" description="number of loading doses">0</PKPD_D2_number_loading_doses>
         <PKPD_D2_dose_interval type="double" units="min" description="time between dosings">360.0</PKPD_D2_dose_interval>
         <PKPD_D2_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose">5e2</PKPD_D2_central_increase_on_dose>
