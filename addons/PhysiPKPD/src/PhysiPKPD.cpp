@@ -155,6 +155,20 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
             idx++;
         }
 
+        // make sure circulation_concentration is one of the species
+        auto out = name_to_index_map.find("circulation_concentration");
+        if (out == name_to_index_map.end())
+        {
+            std::cout << "PhysiPKPD ERROR: No species named circulation_concentration in the SBML for PK dynamics of " << substrate_name << std::endl
+                      << "  Either change " << std::endl
+                      << "    " << substrate_name + "_pk_model"
+                      << " to not be SBML," << std::endl
+                      << "    point to the correct SBML file with " << substrate_name + "_sbml_filename" << std::endl
+                      << "    or fix the SBML file here: " << sbml_filename << std::endl
+                      << std::endl;
+            exit(-1);
+        }
+
         // add dosing events?
         if (parameters.bools.find_variable_index(substrate_name + "_read_dose_from_csv")!=-1 && parameters.bools(substrate_name + "_read_dose_from_csv"))
         {
