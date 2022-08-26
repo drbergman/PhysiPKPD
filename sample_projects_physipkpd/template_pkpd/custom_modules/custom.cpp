@@ -180,18 +180,22 @@ void setup_tissue(void)
 
     // place cells
     double max_distance = parameters.doubles("max_initial_distance");
-    Cell_Definition *pCD = find_cell_definition("cell");
-
-    std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
-    for (int n = 0; n < parameters.ints("number_of_cells"); n++)
+    for (int k = 0; k < cell_definitions_by_index.size(); k++)
     {
-        std::vector<double> position = {0, 0, 0};
-        double r = sqrt(UniformRandom()) * max_distance;
-        double theta = UniformRandom() * 6.2831853;
-        position[0] = r * cos(theta);
-        position[1] = r * sin(theta);
-        pC = create_cell(*pCD);
-        pC->assign_position(position);
+
+        Cell_Definition *pCD = find_cell_definition(k);
+
+        std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
+        for (int n = 0; n < parameters.ints("number_of_cells"); n++)
+        {
+            std::vector<double> position = {0, 0, 0};
+            double r = sqrt(UniformRandom()) * max_distance;
+            double theta = UniformRandom() * 6.2831853;
+            position[0] = r * cos(theta);
+            position[1] = r * sin(theta);
+            pC = create_cell(*pCD);
+            pC->assign_position(position);
+        }
     }
 
     // load cells from your CSV file (if enabled)
