@@ -655,6 +655,32 @@ Pharmacodynamics_Model *create_pd_model(int substrate_index, std::string substra
         pNew->dt = parameters.doubles(substrate_name + "_dt_" + cell_type);
     }
 
+    setup_pd_advancer(pNew);
+    pNew->previous_pd_time = PhysiCell_globals.current_time;
+    pNew->next_pd_time = PhysiCell_globals.current_time;
+    Cell_Definition* pCD = cell_definitions_by_index[cell_index];
+    if (pCD->custom_data.find_variable_index(substrate_name + "_damage")==-1) // make sure a damage variable for this cell was initialized for this substrate
+    {
+        std::cout << "PhysiPKPD WARNING: No damage variable for " << substrate_name << " acting on " << cell_type << " given." << std::endl
+                  << "  Set this with " << substrate_name + "_damage"
+                  << " as a custom variable for " << cell_type << std::endl
+                  << "  Otherwise, you risk changing variable indices and I can't guarantee that won't cause issues." << std::endl
+                  << std::endl;
+        pCD->custom_data.add_variable(substrate_name + "_damage", 0.0);
+
+#pragma omp parallel for
+        for (int i = 0; i < (*all_cells).size(); i++) // loop over all cells to see if they have a type that got moas added to their custom_data
+        {
+            if ((*all_cells)[i]->type==cell_index) // check if this cell is of the current type
+            {
+                (*all_cells)[i]->custom_data.add_variable(substrate_name + "_damage", 0.0);
+            }
+        } // finish looping over each cell
+    }
+    
+    pNew->damage_index = cell_definitions_by_index[cell_index]->custom_data.find_variable_index(substrate_name + "_damage");
+    pNew->advance = &single_pd_model;
+
     return pNew;
 }
 
@@ -761,12 +787,14 @@ void PD_model(double current_time)
                 {
                     all_pd.push_back(create_pd_model(PD_ind[n], PD_names[n], k, pCD->name));
                     // all_pd[n]->dt = parameters.doubles.find_variable_index(PD_names[n] + "_dt_" + pCD->name)==-1 ? mechanics_dt : parameters.doubles(PD_names[n] + "_dt_" + pCD->name); // default to mechanics_dt
+                    /*
                     int new_ind = all_pd.size()-1;
                     setup_pd_advancer(all_pd[new_ind]);
                     all_pd[new_ind]->previous_pd_time = current_time;
                     all_pd[new_ind]->next_pd_time = current_time;
                     all_pd[new_ind]->damage_index = pCD->custom_data.find_variable_index(PD_names[n] + "_damage");
                     all_pd[new_ind]->advance = &single_pd_model;
+                    */
                 }
             } // finished looping over all cell types for this substrate
 
@@ -871,12 +899,12 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD)
     necessary_custom_fields.push_back(pPD->substrate_name + "_metabolism_rate");
     necessary_custom_fields.push_back(pPD->substrate_name + "_repair_rate_constant");
     necessary_custom_fields.push_back(pPD->substrate_name + "_repair_rate_linear");
-    necessary_custom_fields.push_back(pPD->substrate_name + "_damage");
+    // necessary_custom_fields.push_back(pPD->substrate_name + "_damage");
     for (int i = 0; i < necessary_custom_fields.size(); i++)
     {
         if(pCD->custom_data.find_variable_index(necessary_custom_fields[i])==-1)
         {
-            std::cout << pCD->name << " does not have " << necessary_custom_fields[i] << std::endl;
+            std::cout << pCD->name << " does not have " << necessary_custom_fields[i] << std::endl << std::endl;
             exit(-1);
         }
     }
