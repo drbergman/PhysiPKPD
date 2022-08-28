@@ -156,8 +156,8 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
         }
 
         // make sure circulation_concentration is one of the species
-        auto out = name_to_index_map.find("circulation_concentration");
-        if (out == name_to_index_map.end())
+        auto out = pSolver->species_result_column_index.find("circulation_concentration");
+        if (out == pSolver->species_result_column_index.end())
         {
             std::cout << "PhysiPKPD ERROR: No species named circulation_concentration in the SBML for PK dynamics of " << substrate_name << std::endl
                       << "  Either change " << std::endl
@@ -174,7 +174,7 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
         {
             // read in csv into events for the xml file
             std::cout << "PhysiPKPD WARNING: Reading in a dosing schedule from a CSV is not yet supported." << std::endl
-                      << "  Will use ./config/PK_default.xml as is for the PK dynamics of " << substrate_name << std::endl
+                      << "  Will use " << sbml_filename << " as is for the PK dynamics of " << substrate_name << std::endl
                       << std::endl;
 
         }
