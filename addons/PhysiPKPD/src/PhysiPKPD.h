@@ -32,7 +32,6 @@ public:
     int max_doses = 0;
 
     double confluence_check_time = 0.0;
-    std::vector<double> compartment_concentrations;
 
     virtual double get_circulation_concentration(void) = 0;
 
@@ -45,6 +44,7 @@ class Analytic2C_PK_Solver : public Pharmacokinetics_Solver // this is like Road
 public:
     std::vector<std::vector<double>> M = {{0, 0}, {0, 0}};
     void advance(Pharmacokinetics_Model *pPK, double current_time);
+    std::vector<double> compartment_concentrations = {0,0};
 
     double get_circulation_concentration(void) {
         return compartment_concentrations[0];
@@ -58,9 +58,10 @@ class Analytic1C_PK_Solver : public Pharmacokinetics_Solver // this is like Road
 public:
     double M = 0;
     void advance(Pharmacokinetics_Model *pPK, double current_time);
+    double circulation_concentration = 0;
 
     double get_circulation_concentration(void) {
-        return compartment_concentrations[0];
+        return circulation_concentration;
     }
 
     Analytic1C_PK_Solver();

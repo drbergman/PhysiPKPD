@@ -172,7 +172,6 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
         pNew->dosing_schedule_setup_done = true;
 
 
-        pSolver->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
         pNew->pk_solver = pSolver;
         return pNew;
     }
@@ -388,7 +387,7 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
 
         pSolver_1C->M = exp(-(l+k12) * diffusion_dt); // M is defined as a vector of vectors, hence this expression
 
-        pSolver_1C->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
+        pSolver_1C->circulation_concentration = 0.0;
         pPK->pk_solver = pSolver_1C;
 
         return;
@@ -449,7 +448,7 @@ void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
     pSolver->M = exp(-l * diffusion_dt);
     // std::cout << "M = " << pSolver->M << std::endl;
 
-    pSolver->compartment_concentrations = {0}; // compartment_concentrations is a vector so that the first entry is the central concentration
+    pSolver->circulation_concentration = 0;
     pPK->pk_solver = pSolver;
     return;
 }
@@ -616,11 +615,11 @@ void Analytic1C_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_t
     // add dose if time for that
 if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
     {
-        compartment_concentrations[0] += dose_amounts[dose_count];
+        circulation_concentration += dose_amounts[dose_count];
         dose_count++;
     }
 
-    compartment_concentrations[0] = M * compartment_concentrations[0];
+    circulation_concentration = M * circulation_concentration;
     return;
 }
 
