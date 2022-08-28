@@ -9,23 +9,14 @@ SBML_PK_Solver::SBML_PK_Solver()
 
 void SBML_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
 {
-	//create Data Pointer
-	rrc::RRCDataPtr result;
-	//freeing memory
-	rrc::freeRRCData(result);
+	// //create Data Pointer
+	// rrc::RRCDataPtr result;
+	// //freeing memory
+	// rrc::freeRRCData(result);
 
 	// simulate SBML
-	result = rrc::simulateEx(rrHandle, current_time, current_time+diffusion_dt, 2);
+	rrc::simulateEx(rrHandle, current_time, current_time+diffusion_dt, 2);
 
-	// parsing results
-	rrc::RRVectorPtr vptr;
-	vptr = rrc::getFloatingSpeciesConcentrations(rrHandle);
-
-	// Getting "Concentrations"
-    int offset = species_result_column_index["circulation_concentration"];
-	compartment_concentrations[0] = vptr->Data[offset]; // @Supriya: Please confirm that vptr->Data[0] will always be the value of the first Species at end_time
-
-	rrc::freeVector(vptr);
     return;
 }
 
