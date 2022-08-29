@@ -120,8 +120,7 @@ void create_cell_types(void)
     for (int k = 0; k < cell_definitions_by_index.size(); k++)
     {
         cell_definitions_by_index[k]->functions.update_phenotype = cell_phenotype;
-        // uncomment the following line if motility is a mechanism of action for one of your drugs. WARNING: I think this will overwrite any migration biases set by chemotaxis.
-        // cell_definitions_by_index[k]->functions.update_migration_bias = motility_rule;
+        cell_definitions_by_index[k]->functions.custom_cell_rule = custom_function;
     }
 
     /*
@@ -221,8 +220,20 @@ void phenotype_function(Cell *pC, Phenotype &phenotype, double dt)
     return;
 }
 
-void custom_function(Cell *pC, Phenotype &phenotype, double dt)
+void custom_function(Cell *pC, Phenotype &p, double dt)
 {
+    if (p.death.dead == true)
+    {
+        pC->functions.custom_cell_rule = NULL;
+        return;
+    }
+
+    Cell_Definition *pCD = find_cell_definition(pC->type);
+
+    // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
+    set_single_behavior(pC, "migration speed", get_single_base_behavior(pC, "migration speed"));
+
+    pd_custom_function(pC, p, dt);
     return;
 }
 
@@ -260,7 +271,7 @@ void cell_phenotype(Cell *pC, Phenotype &p, double dt)
     set_single_behavior(pC, "necrosis", get_single_base_behavior(pC, "necrosis"));
 
     // update phenotype based on PD dynamics
-    pd_function(pC, p, dt);
+    pd_phenotype_function(pC, p, dt);
 
     return;
 }

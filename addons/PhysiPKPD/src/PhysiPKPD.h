@@ -168,7 +168,8 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD);
 void setup_pd_model_auc(Pharmacodynamics_Model *pPD);
 void setup_pd_model_sbml(Pharmacodynamics_Model *pPD);
 void single_pd_model(Pharmacodynamics_Model *pPD, double current_time);
-void pd_function( Cell* pC, Phenotype& p, double dt );
+void pd_phenotype_function( Cell* pC, Phenotype& p, double dt );
+void pd_custom_function( Cell* pC, Phenotype& p, double dt );
 
 // Coloring and miscellaneous functions
 double confluence_computation( void );

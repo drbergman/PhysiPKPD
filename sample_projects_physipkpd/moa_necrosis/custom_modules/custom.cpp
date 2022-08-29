@@ -234,7 +234,7 @@ void PKPD_cell_phenotype(Cell *pC, Phenotype &p, double dt)
     set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
 
     // update phenotype based on PD dynamics
-    pd_function(pC, p, dt);
+    pd_phenotype_function(pC, p, dt);
 
     return;
 }

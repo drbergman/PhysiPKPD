@@ -1011,7 +1011,39 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
     }
 }
 
-void pd_function(Cell *pC, Phenotype &p, double dt)
+void pd_custom_function(Cell *pC, Phenotype &p, double dt)
+{
+    // find my cell definition
+    Cell_Definition *pCD = find_cell_definition(pC->type);
+
+    if (get_single_signal(pC,"dead")==true)
+    {
+        std::cout << " a dead cell is getting motility pd effects?" << std::endl;
+    }
+
+    // set the Hill multiplier
+    double temp;
+
+    // motility effect
+    double factor_change = 1.0; // set factor
+
+    for (int n = 0; n < PD_names.size(); n++)
+    {
+        if (pC->custom_data[PD_names[n] + "_moa_is_motility"] > 0.5)
+        {
+            double saturation_factor = get_single_behavior(pC, "custom:" + PD_names[n] + "_motility_saturation_rate") / get_single_base_behavior(pC, "migration speed"); // saturation factor of motility
+            if (pC->custom_data[PD_names[n] + "_damage"] > 0)
+            {
+                temp = Hill_response_function(pC->custom_data[PD_names[n] + "_damage"], get_single_behavior(pC, "custom:" + PD_names[n] + "_motility_EC50"), get_single_behavior(pC, "custom:" + PD_names[n] + "_motility_hill_power"));
+                factor_change *= 1 + (saturation_factor - 1) * temp;
+            }
+        }
+    }
+    p.motility.migration_speed *= factor_change;
+    return;
+}
+
+void pd_phenotype_function(Cell *pC, Phenotype &p, double dt)
 {
     Cell_Definition *pCD = find_cell_definition(pC->type);
 
