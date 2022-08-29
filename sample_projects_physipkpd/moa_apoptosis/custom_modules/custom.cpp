@@ -230,14 +230,11 @@ void PKPD_cell_phenotype(Cell *pC, Phenotype &p, double dt)
 
     Cell_Definition* pCD = find_cell_definition( pC->type );
 
-
     // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
     set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
     
-    
-
     // update phenotype based on PD dynamics
-    pd_function(pC, p, dt);
+    pd_phenotype_function(pC, p, dt);
 
     return;
 }

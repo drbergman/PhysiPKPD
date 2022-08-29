@@ -273,7 +273,7 @@ For each MOA, the damage is input into a Hill-type function so that the effect e
 These parameters also go in `custom_data`, but if any are omitted for an active MOA, PhysiCell will relentlessly spam the standard output.
 The effect is applied to whatever the *current* relevant rate for the cell is.
 This way, you can easily add these PD effects on top of other effects already present in your model.
-Just take care that before calling `pd_function` within `update_phenotype` that the affected rate is reset to the base value lest PhysiPKPD compound these effects each time.
+Just take care that before calling `pd_phenotype_function` within `update_phenotype` that the affected rate is reset to the base value lest PhysiPKPD compound these effects each time.
 See the sample projects targeting `proliferation`, `apop`, and `necrosis`.
 If you target `motility`, do the same but within `update_migration_bias`.
 

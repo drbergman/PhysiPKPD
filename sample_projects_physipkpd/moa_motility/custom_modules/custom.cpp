@@ -177,22 +177,6 @@ void setup_tissue(void)
 
     Cell *pC;
 
-    //    for( int k=0; k < cell_definitions_by_index.size() ; k++ )
-    //    {
-    //        Cell_Definition* pCD = cell_definitions_by_index[k];
-    //        std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
-    //        for( int n = 0 ; n < parameters.ints("number_of_cells") ; n++ )
-    //        {
-    //            std::vector<double> position = {0,0,0};
-    //            position[0] = Xmin + UniformRandom()*Xrange;
-    //            position[1] = Ymin + UniformRandom()*Yrange;
-    //            position[2] = Zmin + UniformRandom()*Zrange;
-    //
-    //            pC = create_cell( *pCD );
-    //            pC->assign_position( position );
-    //        }
-    //    }
-    // place PKPD_cells
     double max_distance = parameters.doubles("max_initial_distance");
     Cell_Definition *pCD = find_cell_definition("PKPD_cell");
 
@@ -208,37 +192,36 @@ void setup_tissue(void)
         pC->assign_position(position);
     }
 
-    // for( int k=0; k < cell_definitions_by_index.size() ; k++ )
-    // {
-    //     Cell_Definition* pCD = cell_definitions_by_index[k];
-    //     std::cout << "Placing cells of type " << pCD->name << " ... " << std::endl;
-    //     for( int n=0 ; n < parameters.ints( "number_of_cells" ); n++ )
-    //     {
-    //         std::vector<double> position = {0,0,0};
-    //         double r = sqrt(UniformRandom())* max_distance; double theta = UniformRandom() * 6.2831853; position[0] = r*cos(theta);
-    //         position[1] = r*sin(theta);
-    //         pC = create_cell( *pCD );
-    //         pC->assign_position( position );
-    //     }
-    // }
     // load cells from your CSV file (if enabled)
     load_cells_from_pugixml();
 
     return;
 }
 
-std::vector<std::string> my_coloring_function(Cell *pCell)
+std::vector<std::string> my_coloring_function(Cell *pC)
 {
-    return damage_coloring(pCell);
+    return damage_coloring(pC);
 }
 
-void phenotype_function(Cell *pCell, Phenotype &phenotype, double dt)
+void phenotype_function(Cell *pC, Phenotype &p, double dt)
 {
     return;
 }
 
-void custom_function(Cell *pCell, Phenotype &phenotype, double dt)
+void custom_function(Cell *pC, Phenotype &p, double dt)
 {
+    if (p.death.dead == true)
+    {
+        pC->functions.custom_cell_rule = NULL;
+        return;
+    }
+
+    Cell_Definition *pCD = find_cell_definition(pC->type);
+
+    // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
+    set_single_behavior(pC, "migration speed", get_single_base_behavior(pC, "migration speed"));
+
+    pd_custom_function(pC, p, dt);
     return;
 }
 
@@ -249,14 +232,15 @@ void contact_function(Cell *pMe, Phenotype &phenoMe, Cell *pOther, Phenotype &ph
 
 void motility_rule(Cell *pC, Phenotype &p, double dt)
 {
+    // trick: if dead, overwrite with NULL function pointer.
+    if (p.death.dead == true)
+    {
+        pC->functions.update_migration_bias = NULL;
+        return;
+    }
+
     // find my cell definition
     Cell_Definition *pCD = find_cell_definition(pC->type);
-
-    // find index of drug 1 in the microenvironment
-    static int nPKPD_D1 = microenvironment.find_density_index("PKPD_D1");
-
-    // find index of damage variable for drug 1
-    int nPKPD_D1_damage = pC->custom_data.find_variable_index("PKPD_D1_damage");
 
     // find index of O2 in the microenvironment
     static int nO2 = microenvironment.find_density_index("oxygen");
@@ -279,29 +263,13 @@ void motility_rule(Cell *pC, Phenotype &p, double dt)
 
     // set speed
     // speed = base_speed * hill
-    p.motility.migration_speed = pCD->phenotype.motility.migration_speed * (1 - hill);
+    p.motility.migration_speed *= 1 - hill;
 
     // migration bias
     // bias = multiplier
     p.motility.migration_bias = hill;
 
-    // motility effect
-    double factor_change = 1.0;                                                                                                   // set factor
-    static double fs_motility_D1 = pC->custom_data["PKPD_D1_motility_saturation_rate"] / pCD->phenotype.motility.migration_speed; // saturation factor of motility for drug 1
-    // p.motility.migration_speed = pCD->phenotype.motility.migration_speed; // always reset to base motility rate
-    if (pC->custom_data[nPKPD_D1_damage] > 0)
-    {
-        temp = Hill_response_function(pC->custom_data[nPKPD_D1_damage], pC->custom_data["PKPD_D1_motility_EC50"], pC->custom_data["PKPD_D1_motility_hill_power"]);
-        factor_change *= 1 + (fs_motility_D1 - 1) * temp;
-    }
-
-    p.motility.migration_speed *= factor_change;
-
-    // trick: if dead, overwrite with NULL function pointer.
-    if (p.death.dead == true)
-    {
-        pC->functions.update_migration_bias = NULL;
-    }
+    return;
 }
 
 void PKPD_cell_phenotype(Cell *pC, Phenotype &p, double dt)
