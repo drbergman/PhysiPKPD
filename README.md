@@ -71,9 +71,10 @@ In what follows, `S` stands for the name of a substrate, `C` stands for the name
 You can specify which substrates you want to include PK dynamics.
 You can do the same for PD dynamics.
 These lists need not have *any* relationships.
-The parameters in the following table are those PhysiPKPD will use to look through all the other `user_parameters` and `custom_data` to implement the PKPD dynamics.
+The parameters in the following table are those PhysiPKPD will use to define which substrates follow PK and PD dynamics.
 Add them to `user_parameters`.
 Omitting `PKPD_pk_substrate_names` will result in no PK dynamics and similarly for the PD dynamics.
+PhysiPKPD will use the comma-separated values in these parameters to search for the relevant PK/PD parameter names.
 
 | Parameter | Description |
 |:--|---|
@@ -93,7 +94,7 @@ Example:
 In the above example, `myDrug` and `myDrug_no_PD` will follow PK dynamics.
 In addition, `myDrug` and `myDrug_no_PK` will lead to PD effects for any cell type with `S_moa_is_X` set to `1.0` (see [below](#pd_pars)).
 
-**Note:** Any spaces in these lists will cause PhysiPKPD to look for substrate names with those spaces.
+**Note:** Avoid spaces!
 
 ### PK parameters <a name="pk_pars"></a>
 There are three PK models to choose from.
@@ -213,7 +214,7 @@ To specify this model, create a string parameter called `S_on_C_pd_model` with v
 
 [^auc]: Area under the curve (AUC) is a common metric in pharmaceutical sciences measuring the extent of exposure to a substance.
 
-Let us know if you would like to see a different one included.
+Let us know if you would like to see a different PD model included.
 Unlike PK dynamics, integration with SBML solvers is not implemented.
 
 #### Damage Accumulation Parameters <a name="dam_pars"></a>
@@ -275,7 +276,7 @@ The effect is applied to whatever the *current* relevant rate for the cell is.
 This way, you can easily add these PD effects on top of other effects already present in your model.
 Just take care that before calling `pd_phenotype_function` within `update_phenotype` that the affected rate is reset to the base value lest PhysiPKPD compound these effects each time.
 See the sample projects targeting `proliferation`, `apop`, and `necrosis`.
-If you target `motility`, do the same but within `update_migration_bias`.
+If you target `motility`, do the same but within `custom_cell_rule` before calling `pd_custom_function`.
 
 |Parameter|Description|
 |:--|:--|
@@ -315,7 +316,7 @@ If, for example the current apoptosis rate of `C` is not `1E-5` but instead `1E-
 
 ### Miscellaneous parameters
 The following are user parameters that provide some control over how the dynamics are solved.
-Currently, the only (non-SBML) PK and PD models implemented in PhysiPKPD are readily solved using analytic techniques.
+Currently, all (non-SBML) PK and PD models implemented in PhysiPKPD are readily solved using analytic techniques.
 By informal observation, the analytic methods are not slower than numerical methods.
 If anything the analtyic methods are faster.
 Therefore, all simulations use analytic solutions.
@@ -345,12 +346,13 @@ If you wish to make your own project that uses PhysiPKPD (and not just one of th
 4. Add additional cell types as normal (using the Model Builder for this is untested).
 5. By default, each cell type is assigned the same `update_phenotype` function, which is `cell_phenotype` found in the `custom.cpp` file.
 Add new phenotype functions as desired for each cell type.
-6. For each phenotype function, make sure to uncomment the line resetting the mechanism of action to its base value.
-7. If the mechanism of action is motility, then uncomment the line setting the `update_migration_bias` or add that line for each cell type that undergoes a motility effect[^mot].
+6. Notice that the `update_phenotype` function resets the three MOA-targeted rates before calling `pd_phenotype_function`.
+7. By default, each cell type is assigned the same `custom_cell_rule` function, which is `custom_function` found in the `custom.cpp` file.
+8. Notice that the `custom_cell_rule` function resets the migration speed before calling `pd_custom_function`.
 
-**Note:** The `custom.cpp` file that is loaded with the `pkpd-template` project has two substrates hardcoded to use for the motility MOA.
-If you wish to add additional substrates that have a motility MOA (or change the names of the default substrates), you will need to change the `motility_rule` to reflect this for these substrates to affect cell migration speed.
-
-[^mot]: You must manually put any any chemotactic signals in the `update_migration_bias` function if you use a motility effect.
-See `PhysiCell/core/PhysiCell_standard_models.cpp` for the `chemotaxis_function`, `advanced_chemotaxis_function`, and `advanced_chemotaxis_function_normalized`.
-Hopefully, this will not be necessary in the future.
+**Note:** The order in which PhysiCell updates the various aspects of a cell matters!
+For example, intracellular updates happen first.
+So, if those intracellular updates affect proliferation, apoptosis, or necrosis rates, then resetting those rates in your `update_phenotype` function will erase those changes.
+Similarly, `custom_cell_rule` is called after `update_phenotype` and prior to `update_velocity`, and `update_velocity` in turn calls `update_migration_bias`.
+Thus, changes to migration speed in `update_phenotype` or from an intracellular model would be erased if `custom_cell_rule` resets migration speed.
+Resetting the migration speed in `update_migration_bias` erases the PD effects calculated in `custom_cell_rule`.
