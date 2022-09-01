@@ -128,8 +128,8 @@ class Pharmacodynamics_Model
 
     double metabolism_reduction_factor;
     double damage_constant;
-    double damage_initial_drug_term;
-    double damage_initial_damage_term;
+    double initial_substrate_coefficient;
+    double initial_damage_coefficient;
 
     bool use_precomputed_quantities = true; // will default to this; TURN OFF IF PD parameters VARY (OR YOU HAVE A dt NOT A MULTIPLE OF diffusion_dt)
 
