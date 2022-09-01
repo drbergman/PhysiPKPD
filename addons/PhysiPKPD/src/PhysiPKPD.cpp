@@ -9,17 +9,11 @@ SBML_PK_Solver::SBML_PK_Solver()
 
 void SBML_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
 {
-	// //create Data Pointer
-	// rrc::RRCDataPtr result;
-	// //freeing memory
-	// rrc::freeRRCData(result);
-
 	// simulate SBML
 	rrc::simulateEx(rrHandle, current_time, current_time+diffusion_dt, 2);
 
     return;
 }
-
 #endif
 
 static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots for determining when to do these
@@ -233,14 +227,17 @@ void PK_model(double current_time)
             }
             s.erase(0, pos + 1);
         }
-        if (s.size()>0 && microenvironment.find_density_index(s) != -1)
+        if (s.size() > 0)
         {
-            PK_names.push_back(s);
-            PK_ind.push_back(microenvironment.find_density_index(s));
-        }
-        else if (s.size() > 0)
-        {
-            std::cout << "PhysiPKPD WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
+            if (microenvironment.find_density_index(s) != -1)
+            {
+                PK_names.push_back(s);
+                PK_ind.push_back(microenvironment.find_density_index(s));
+            }
+            else
+            {
+                std::cout << "PhysiPKPD WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
+            }
         }
         need_to_parse_pk_names = false;
     }
@@ -257,6 +254,7 @@ void PK_model(double current_time)
         need_to_setup = false;
     }
 
+    std::vector<double> dc_temp;
     for (int n = 0; n < all_pk.size(); n++)
     {
         if (!all_pk[n]->dosing_schedule_setup_done)
@@ -264,23 +262,19 @@ void PK_model(double current_time)
             setup_pk_single_dosing_schedule(all_pk[n], current_time);
         }
         all_pk[n]->pk_solver->advance(all_pk[n], current_time);
+        dc_temp.push_back(all_pk[n]->get_circulation_concentration() * all_pk[n]->biot_number);
     }
 
-    std::vector<double> dc_temp;
-    for (int j = 0; j < all_pk.size(); j++ )
-    {
-        dc_temp.push_back(all_pk[j]->get_circulation_concentration() * all_pk[j]->biot_number);
-    }
 #pragma omp parallel for
     for (unsigned int i = 0; i < microenvironment.mesh.voxels.size(); i++)
     {
         if (microenvironment.mesh.voxels[i].is_Dirichlet == true)
         {
-            for (unsigned int j = 0; j < all_pk.size(); j++)
+            for (unsigned int n = 0; n < all_pk.size(); n++)
             {
-                if (microenvironment.get_substrate_dirichlet_activation(all_pk[j]->substrate_index, i)) // no guarantee that the ordering in the user parameters matches the indexing order
+                if (microenvironment.get_substrate_dirichlet_activation(all_pk[n]->substrate_index, i)) // no guarantee that the ordering in the user parameters matches the indexing order
                 {
-                    microenvironment.update_dirichlet_node(i, all_pk[j]->substrate_index, dc_temp[j]);
+                    microenvironment.update_dirichlet_node(i, all_pk[n]->substrate_index, dc_temp[n]);
                 }
             }
         }
@@ -382,6 +376,8 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
         std::cout << "PhysiPKPD WARNING: Because at least one of the following PK parameters for " << pPK->substrate_name << " is 0: k12=" << k12 << ", k21=" << k21 << ", R=" << R << std::endl
                   << "  This model will be treated as a 1-compartment model by updating the current central elimination rate to lambda = lambda + k12." << std::endl;
 
+        delete pSolver;
+
         Analytic1C_PK_Solver *pSolver_1C;
         pSolver_1C = new Analytic1C_PK_Solver;
 
@@ -401,7 +397,7 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
         std::cout << "  This is because k12=0 and k21=elimination rate." << std::endl;
         std::cout << "  Since k12=0 means the periphery never fills up, k21 is meaningless." << std::endl;
         std::cout << "  Will change k21 to make this work." << std::endl;
-        std::cout << "  This is a simple solution for now. Eventually, this may trigger a switch to a 1-compartment model." << std::endl;
+        std::cout << "  By the way, this should have triggered a switch to a 1-compartment model. Why did you end up here?" << std::endl;
         k21 += 1.0;
         beta = sqrt((k12 + k21) * (k12 + k21) + 2 * l * (k12 - k21) + l * l);
     }
