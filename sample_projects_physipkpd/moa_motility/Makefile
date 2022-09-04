@@ -57,7 +57,7 @@ PhysiCell_pugixml.o PhysiCell_settings.o PhysiCell_geometry.o
 # put your custom objects here (they should be in the custom_modules directory)
 
 # PhysiPKPD objects
-PhysiPKPD_OBJECTS := PhysiPKPD.o
+PhysiPKPD_OBJECTS := PhysiPKPD_PK.o PhysiPKPD_PD.o
 
 PhysiCell_custom_module_OBJECTS := custom.o
 
@@ -167,8 +167,11 @@ PhysiCell_geometry.o: ./modules/PhysiCell_geometry.cpp
 
 # PhysiPKPD modules
 
-PhysiPKPD.o: ./addons/PhysiPKPD/src/PhysiPKPD.cpp
-	$(COMPILE_COMMAND) -c ./addons/PhysiPKPD/src/PhysiPKPD.cpp
+PhysiPKPD_PK.o: ./addons/PhysiPKPD/src/PhysiPKPD_PK.cpp
+	$(COMPILE_COMMAND) -c ./addons/PhysiPKPD/src/PhysiPKPD_PK.cpp
+
+PhysiPKPD_PD.o: ./addons/PhysiPKPD/src/PhysiPKPD_PD.cpp
+	$(COMPILE_COMMAND) -c ./addons/PhysiPKPD/src/PhysiPKPD_PD.cpp
 
 # user-defined PhysiCell modules
 
@@ -184,7 +187,7 @@ reset:
 	touch ./custom_modules/empty.txt
 	touch ALL_CITATIONS.txt
 	touch ./core/PhysiCell_cell.cpp
-	touch ./addons/PhysiPKPD/src/PhysiPKPD.cpp
+	touch ./addons/PhysiPKPD/src/PhysiPKPD_PK.cpp
 	rm ALL_CITATIONS.txt
 	cp ./config/PhysiCell_settings-backup.xml ./config/PhysiCell_settings.xml
 	touch ./config/empty.csv
