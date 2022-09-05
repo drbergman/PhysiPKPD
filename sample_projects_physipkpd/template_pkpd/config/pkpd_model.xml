@@ -13,7 +13,7 @@
     </domain>
 
     <overall>
-        <max_time units="min">120</max_time>
+        <max_time units="min">1440</max_time>
         <time_units>min</time_units>
         <space_units>micron</space_units>
 
@@ -201,7 +201,7 @@
 
                 <!-- <div_drugs type="divider" description="-Starting Drug 1 PD parameters-"/> -->
 
-                <PKPD_D1_moa_is_prolif units="bool">0.0</PKPD_D1_moa_is_prolif>
+                <PKPD_D1_moa_is_prolif units="bool">1.0</PKPD_D1_moa_is_prolif>
                 <PKPD_D1_prolif_saturation_rate units="1/min">1e-6</PKPD_D1_prolif_saturation_rate>
                 <PKPD_D1_prolif_EC50 units="damage">1e5</PKPD_D1_prolif_EC50>
                 <PKPD_D1_prolif_hill_power units="dimensionless">2</PKPD_D1_prolif_hill_power>
@@ -223,7 +223,7 @@
 
                 <PKPD_D1_damage units="damage">0</PKPD_D1_damage>
                 <PKPD_D1_repair_rate_constant units="damage/min">5e3</PKPD_D1_repair_rate_constant>
-                <PKPD_D1_repair_rate_linear units="damage/min">1e-2</PKPD_D1_repair_rate_linear>
+                <PKPD_D1_repair_rate_linear units="damage/min">2e-2</PKPD_D1_repair_rate_linear>
                 <PKPD_D1_metabolism_rate units="1/min">0.05</PKPD_D1_metabolism_rate>
 
                 <!-- <div_drugs type="divider" description="-Starting Drug 2 PD parameters-"/> -->
@@ -238,7 +238,7 @@
                 <PKPD_D2_apop_EC50 units="damage">1e5</PKPD_D2_apop_EC50>
                 <PKPD_D2_apop_hill_power units="dimensionless">2</PKPD_D2_apop_hill_power>
 
-                <PKPD_D2_moa_is_necrosis units="bool">0.0</PKPD_D2_moa_is_necrosis>
+                <PKPD_D2_moa_is_necrosis units="bool">1.0</PKPD_D2_moa_is_necrosis>
                 <PKPD_D2_necrosis_saturation_rate units="1/min">1E-4</PKPD_D2_necrosis_saturation_rate>
                 <PKPD_D2_necrosis_EC50 units="damage">1e5</PKPD_D2_necrosis_EC50>
                 <PKPD_D2_necrosis_hill_power units="dimensionless">2</PKPD_D2_necrosis_hill_power>
@@ -250,7 +250,7 @@
 
                 <PKPD_D2_damage>0</PKPD_D2_damage>
                 <PKPD_D2_repair_rate_constant units="damage/min">5e3</PKPD_D2_repair_rate_constant>
-                <PKPD_D2_repair_rate_linear units="damage/min">1e-2</PKPD_D2_repair_rate_linear>
+                <PKPD_D2_repair_rate_linear units="damage/min">2e-2</PKPD_D2_repair_rate_linear>
                 <PKPD_D2_metabolism_rate units="1/min">0.05</PKPD_D2_metabolism_rate>
 
             </custom_data>
@@ -310,14 +310,14 @@
 
 <!-- <div type="divider" description="-Drug 2 Specific PK model Settings-"/> -->
 
-        <PKPD_D2_max_number_doses type="int" units="none" description="max doses, including loading doses">3</PKPD_D2_max_number_doses>
+        <PKPD_D2_max_number_doses type="int" units="none" description="max doses, including loading doses">4</PKPD_D2_max_number_doses>
         <PKPD_D2_number_loading_doses type="int" units="none" description="number of loading doses">0</PKPD_D2_number_loading_doses>
         <PKPD_D2_dose_interval type="double" units="min" description="time between dosings">360.0</PKPD_D2_dose_interval>
         <PKPD_D2_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose">5e2</PKPD_D2_central_increase_on_dose>
         <PKPD_D2_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose">400.0</PKPD_D2_central_increase_on_loading_dose>
         
         <PKPD_D2_set_first_dose_time type="bool" units="none" description="user sets first dose time to start therapy for drug 1; false=user gives confluence condition">True</PKPD_D2_set_first_dose_time>
-        <PKPD_D2_first_dose_time type="double" units="min" description="time of first dose for drug 1">0.0</PKPD_D2_first_dose_time>
+        <PKPD_D2_first_dose_time type="double" units="min" description="time of first dose for drug 1">180.0</PKPD_D2_first_dose_time>
         <PKPD_D2_confluence_condition type="double" units="none" description="confluence as proportion at which to start therapy for drug 1">0.6</PKPD_D2_confluence_condition>
 
         <PKPD_D2_central_elimination_rate type="double" units="1/min" description="decay rate in systemic circulation">0.0027</PKPD_D2_central_elimination_rate>
