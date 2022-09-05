@@ -163,6 +163,7 @@ void pk_explicit_euler_two_compartment( double dt, double &periphery_concentrati
 */
 
 // PD functions
+void setup_pharmacodynamics(void);
 void PD_model( double dt );
 void setup_pd_advancer(Pharmacodynamics_Model *pPD);
 void setup_pd_model_auc(Pharmacodynamics_Model *pPD);

@@ -127,6 +127,8 @@ int main( int argc, char* argv[] )
 
 	setup_tissue();
 
+	setup_pharmacodynamics();
+
 	/* Users typically stop modifying here. END USERMODS */ 
 	
 	// set MultiCellDS save options 
@@ -143,24 +145,27 @@ int main( int argc, char* argv[] )
 	save_PhysiCell_to_MultiCellDS_xml_pugi( filename , microenvironment , PhysiCell_globals.current_time ); 
 	
 	// save a quick SVG cross section through z = 0, after setting its 
-	// length bar to 200 microns 
+	// length bar to 200 microns
 
-	PhysiCell_SVG_options.length_bar = 200; 
+	PhysiCell_SVG_options.length_bar = 200;
 
-	// for simplicity, set a pathology coloring function 
-	
-	std::vector<std::string> (*cell_coloring_function)(Cell*) = my_coloring_function; 
+	// for simplicity, set a pathology coloring function
 
-	sprintf( filename , "%s/initial.svg" , PhysiCell_settings.folder.c_str() ); 
-	SVG_plot( filename , microenvironment, 0.0 , PhysiCell_globals.current_time, cell_coloring_function );
-	
-	display_citations(); 
-	
-	// set the performance timers 
+	std::vector<std::string> (*cell_coloring_function)(Cell *) = my_coloring_function;
+
+	sprintf(filename, "%s/initial.svg", PhysiCell_settings.folder.c_str());
+	SVG_plot(filename, microenvironment, 0.0, PhysiCell_globals.current_time, cell_coloring_function);
+
+	sprintf(filename, "%s/legend.svg",PhysiCell_settings.folder.c_str());
+	create_plot_legend(filename, cell_coloring_function);
+
+	display_citations();
+
+	// set the performance timers
 
 	BioFVM::RUNTIME_TIC();
 	BioFVM::TIC();
-	
+
 	std::ofstream report_file;
 	if( PhysiCell_settings.enable_legacy_saves == true )
 	{	
