@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- generated with COPASI 4.36 (Build 260) (http://www.copasi.org) at 2022-08-19T00:29:57Z -->
+<!-- generated with COPASI 4.36 (Build 260) (http://www.copasi.org) at 2022-09-04T23:49:34Z -->
 <?oxygen RNGSchema="http://www.copasi.org/static/schema/CopasiML.rng" type="xml"?>
 <COPASI xmlns="http://www.copasi.org/static/schema" versionMajor="4" versionMinor="36" versionDevel="260" copasiSourcesModified="0">
   <ListOfFunctions>
@@ -191,7 +191,7 @@ Reaction scheme where the products are created from the reactants and the change
         <ListOfAssignments>
           <Assignment target="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" targetKey="Metabolite_0">
             <Expression>
-              &lt;CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration],Reference=Concentration>+5000
+              &lt;CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration],Reference=Concentration>+500
             </Expression>
           </Assignment>
         </ListOfAssignments>
@@ -202,12 +202,60 @@ Reaction scheme where the products are created from the reactants and the change
 
         </MiriamAnnotation>
         <TriggerExpression>
-          &lt;CN=Root,Model=PK_default,Reference=Time> > 90
+          &lt;CN=Root,Model=PK_default,Reference=Time> > 240
         </TriggerExpression>
         <ListOfAssignments>
           <Assignment target="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" targetKey="Metabolite_0">
             <Expression>
-              &lt;CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration],Reference=Concentration>+50000
+              &lt;CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration],Reference=Concentration>+500
+            </Expression>
+          </Assignment>
+        </ListOfAssignments>
+      </Event>
+      <Event key="Event_2" name="Dose 3" fireAtInitialTime="0" persistentTrigger="0">
+        <MiriamAnnotation>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+
+        </MiriamAnnotation>
+        <TriggerExpression>
+          &lt;CN=Root,Model=PK_default,Reference=Time> > 360
+        </TriggerExpression>
+        <ListOfAssignments>
+          <Assignment target="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" targetKey="Metabolite_0">
+            <Expression>
+              &lt;CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration],Reference=Concentration>+500
+            </Expression>
+          </Assignment>
+        </ListOfAssignments>
+      </Event>
+      <Event key="Event_3" name="Dose 4" fireAtInitialTime="0" persistentTrigger="0">
+        <MiriamAnnotation>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+
+        </MiriamAnnotation>
+        <TriggerExpression>
+          &lt;CN=Root,Model=PK_default,Reference=Time> > 720
+        </TriggerExpression>
+        <ListOfAssignments>
+          <Assignment target="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" targetKey="Metabolite_0">
+            <Expression>
+              &lt;CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration],Reference=Concentration>+500
+            </Expression>
+          </Assignment>
+        </ListOfAssignments>
+      </Event>
+      <Event key="Event_4" name="Dose 5" fireAtInitialTime="0" persistentTrigger="0">
+        <MiriamAnnotation>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+
+        </MiriamAnnotation>
+        <TriggerExpression>
+          &lt;CN=Root,Model=PK_default,Reference=Time> > 1080
+        </TriggerExpression>
+        <ListOfAssignments>
+          <Assignment target="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" targetKey="Metabolite_0">
+            <Expression>
+              &lt;CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration],Reference=Concentration>+500
             </Expression>
           </Assignment>
         </ListOfAssignments>
@@ -230,7 +278,7 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
           <ModelParameter cn="CN=Root,Model=PK_default,Vector=Compartments[Patient]" value="1" type="Compartment" simulationType="fixed"/>
         </ModelParameterGroup>
         <ModelParameterGroup cn="String=Initial Species Values" type="Group">
-          <ModelParameter cn="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" value="3.0110703799999977e+26" type="Species" simulationType="reactions"/>
+          <ModelParameter cn="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[circulation_concentration]" value="0" type="Species" simulationType="reactions"/>
           <ModelParameter cn="CN=Root,Model=PK_default,Vector=Compartments[Patient],Vector=Metabolites[periphery_concentration]" value="0" type="Species" simulationType="reactions"/>
         </ModelParameterGroup>
         <ModelParameterGroup cn="String=Initial Global Quantities" type="Group">
@@ -271,7 +319,7 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
       <StateTemplateVariable objectReference="ModelValue_2"/>
     </StateTemplate>
     <InitialState type="initialState">
-      0 3.0110703799999977e+26 0 1 0.0027000000000000001 0.0047999999999999996 0.0047999999999999996 
+      0 0 0 1 0.0027000000000000001 0.0047999999999999996 0.0047999999999999996 
     </InitialState>
   </Model>
   <ListOfTasks>
@@ -680,7 +728,6 @@ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   <GUI>
   </GUI>
   <SBMLReference file="PK_default.xml">
-    <SBMLMap SBMLid="Dose_1" COPASIkey="Event_0"/>
     <SBMLMap SBMLid="Patient" COPASIkey="Compartment_0"/>
     <SBMLMap SBMLid="Q12" COPASIkey="Reaction_1"/>
     <SBMLMap SBMLid="circulation_concentration" COPASIkey="Metabolite_0"/>

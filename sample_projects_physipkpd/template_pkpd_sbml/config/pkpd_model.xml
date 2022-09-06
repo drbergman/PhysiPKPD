@@ -13,7 +13,7 @@
 	</domain>
 	
 	<overall>
-		<max_time units="min">120</max_time> 
+		<max_time units="min">1440</max_time> 
 		<time_units>min</time_units>
 		<space_units>micron</space_units>
 	
@@ -241,7 +241,7 @@
           <PKPD_D1_prolif_hill_power units="dimensionless">2</PKPD_D1_prolif_hill_power>
 
           <PKPD_D1_moa_is_apop units="bool">1.0</PKPD_D1_moa_is_apop>
-          <PKPD_D1_apop_saturation_rate units="1/min">1e-2</PKPD_D1_apop_saturation_rate>
+          <PKPD_D1_apop_saturation_rate units="1/min">1e-3</PKPD_D1_apop_saturation_rate>
           <PKPD_D1_apop_EC50 units="damage">1e5</PKPD_D1_apop_EC50>
           <PKPD_D1_apop_hill_power units="dimensionless">2</PKPD_D1_apop_hill_power>
 
@@ -257,13 +257,13 @@
 
           <PKPD_D1_damage units="damage">0</PKPD_D1_damage>
           <PKPD_D1_repair_rate_constant units="damage/min">5e3</PKPD_D1_repair_rate_constant>
-          <PKPD_D1_repair_rate_linear units="damage/min">1e-2</PKPD_D1_repair_rate_linear>
+          <PKPD_D1_repair_rate_linear units="damage/min">2e-2</PKPD_D1_repair_rate_linear>
           <PKPD_D1_metabolism_rate units="1/min">0.05</PKPD_D1_metabolism_rate>
 
           <!-- <div_drugs type="divider" description="-Starting Drug 2 PD parameters-"/> -->
 
           <PKPD_D2_moa_is_prolif units="bool">1.0</PKPD_D2_moa_is_prolif>
-          <PKPD_D2_prolif_saturation_rate units="1/min">1e-2</PKPD_D2_prolif_saturation_rate>
+          <PKPD_D2_prolif_saturation_rate units="1/min">1e-6</PKPD_D2_prolif_saturation_rate>
           <PKPD_D2_prolif_EC50 units="damage">1e5</PKPD_D2_prolif_EC50>
           <PKPD_D2_prolif_hill_power units="dimensionless">2</PKPD_D2_prolif_hill_power>
 
@@ -284,7 +284,7 @@
 
           <PKPD_D2_damage>0</PKPD_D2_damage>
           <PKPD_D2_repair_rate_constant units="damage/min">5e3</PKPD_D2_repair_rate_constant>
-          <PKPD_D2_repair_rate_linear units="damage/min">1e-2</PKPD_D2_repair_rate_linear>
+          <PKPD_D2_repair_rate_linear units="damage/min">2e-2</PKPD_D2_repair_rate_linear>
           <PKPD_D2_metabolism_rate units="1/min">0.05</PKPD_D2_metabolism_rate>
 
         </custom_data>
@@ -340,11 +340,13 @@
 
 <!-- <div type="divider" description="-Drug 2 Specific PK model Settings-"/> -->
 
-    <PKPD_D2_max_number_doses type="int">1</PKPD_D2_max_number_doses>
+    <PKPD_D2_max_number_doses type="int">4</PKPD_D2_max_number_doses>
     <PKPD_D2_dose_interval type="double" units="min" description="time between dosings">360.0</PKPD_D2_dose_interval>
     <PKPD_D2_central_increase_on_dose type="double">5e2</PKPD_D2_central_increase_on_dose>
+    
     <PKPD_D2_set_first_dose_time type="bool">true</PKPD_D2_set_first_dose_time>
-    <PKPD_D2_first_dose_time type="double">0.0</PKPD_D2_first_dose_time>
+    <PKPD_D2_first_dose_time type="double">180.0</PKPD_D2_first_dose_time>
+    
     <PKPD_D2_central_elimination_rate type="double">0.0027</PKPD_D2_central_elimination_rate>
     <PKPD_D2_flux_across_capillaries type="double">0.0048</PKPD_D2_flux_across_capillaries>
     <PKPD_D2_central_to_periphery_volume_ratio type="double">1.0</PKPD_D2_central_to_periphery_volume_ratio>
