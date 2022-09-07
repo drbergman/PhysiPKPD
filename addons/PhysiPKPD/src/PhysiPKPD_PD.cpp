@@ -149,15 +149,6 @@ void setup_pharmacodynamics()
             if (is_type_affected_by_drug) // then set up PD model for this (substrate, cell type) pairing
             {
                 all_pd.push_back(create_pd_model(PD_ind[n], PD_names[n], k, pCD->name));
-                // all_pd[n]->dt = parameters.doubles.find_variable_index(PD_names[n] + "_dt_" + pCD->name)==-1 ? mechanics_dt : parameters.doubles(PD_names[n] + "_dt_" + pCD->name); // default to mechanics_dt
-                /*
-                int new_ind = all_pd.size()-1;
-                setup_pd_advancer(all_pd[new_ind]);
-                all_pd[new_ind]->previous_pd_time = current_time;
-                all_pd[new_ind]->next_pd_time = current_time;
-                all_pd[new_ind]->damage_index = pCD->custom_data.find_variable_index(PD_names[n] + "_damage");
-                all_pd[new_ind]->advance = &single_pd_model;
-                */
             }
         } // finished looping over all cell types for this substrate
 
@@ -258,7 +249,7 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD)
     {
         if (pCD->custom_data.find_variable_index(pPD->substrate_name + "_repair_rate_constant") == -1)
         {
-            pCD->custom_data.add_variable(pPD->substrate_name + "_repair_rate_constant", "damage/min", pCD->custom_data[pPD->substrate_name + "_repair_rate"]); // use the repair rate 
+            pCD->custom_data.add_variable(pPD->substrate_name + "_repair_rate_constant", "damage/min", pCD->custom_data[pPD->substrate_name + "_repair_rate"]); // use the repair rate
         }
         if (pCD->custom_data.find_variable_index(pPD->substrate_name + "_repair_rate_linear") == -1)
         {
@@ -275,8 +266,16 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD)
     {
         if(pCD->custom_data.find_variable_index(necessary_custom_fields[i])==-1)
         {
-            std::cout << "PhysiPKPD ERROR: " << pCD->name << " does not have " << necessary_custom_fields[i] << std::endl << std::endl;
-            exit(-1);
+            std::cout << "PhysiPKPD WARNING: " << pCD->name << " does not have " << necessary_custom_fields[i] << " in custom_data" << std::endl
+                      << "  Setting to 0 by default." << std::endl << std::endl;
+            pCD->custom_data.add_variable(necessary_custom_fields[i],0.0);
+#pragma omp parallel for
+        for (int i = 0; i < (*all_cells).size(); i++) // loop over all cells to see if they have a type that got moas added to their custom_data
+        {
+            if ((*all_cells)[i]->type==pPD->cell_index)
+            {
+                (*all_cells)[i]->custom_data.add_variable(necessary_custom_fields[i],0.0);
+            }
         }
     }
 

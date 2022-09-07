@@ -170,7 +170,7 @@ No header row should be included.
     <b>Table:</b> PK parameters
 </p>
 
-[^1]: To use these new parameters, you will want to set $k_{12}$ as your original flux rate and $k_{21}$ as `S_flux_across_capillaries * S_central_to_periphery_volume_ratio`.
+[^1]: To use these two parameters, you will want to set $k_{12}$ as your original flux rate and $k_{21}$ as `S_flux_across_capillaries * S_central_to_periphery_volume_ratio`.
 
 #### SBML-defined models
 
@@ -230,12 +230,11 @@ D' & = A - r_1D - r_0
 $$
 
 Note that since damage is an abstract quantity, we do not include a rate parameter as a coefficient for $A$ in the equation for $D'$.
-Each of these parameters **must** be set[^old_repair].
-If they are not set, PhysiPKPD will throw an error.
+Each of these parameters **should** be set[^old_repair].
+If they are not set, PhysiPKPD will issue a warning and set them to 0.
 These parameters go in the `custom_data` of `C`.
 
-[^old_repair]: Old versions of PhysiPKPD only had a constant repair rate. For backwards compatibility, `S_repair_rate` can be set instead.
-If the repair rates in the [table](#dam_pars_table) are not set, then PhysiPKPD will use this value to set a constant repair rate.
+[^old_repair]: For backwards compatibility, `S_repair_rate` can be set instead of `S_repair_rate_constant`.
 
 |Parameter|Description|
 |:--|---|
