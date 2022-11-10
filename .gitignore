@@ -19,12 +19,9 @@ CITATION.txt
 changes.md
 Makefile-backup
 VERSION.txt
-<<<<<<< HEAD
 /ode_energy
 /pkpd_sample
-=======
 /PhysiBoSS_Cell_Lines
->>>>>>> development
 
 # PhysiCell folders to ignore
 addons/PhysiBoSS
