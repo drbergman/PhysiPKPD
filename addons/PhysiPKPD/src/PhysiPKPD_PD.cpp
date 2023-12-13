@@ -13,7 +13,7 @@ Pharmacodynamics_Model *create_pd_model(int substrate_index, std::string substra
     pNew->substrate_name = substrate_name;
     pNew->cell_type = cell_type;
 
-    if (parameters.doubles.find_variable_index(substrate_name + "_dt_" + cell_type)==-1)
+    if (parameters.doubles.find_index(substrate_name + "_dt_" + cell_type)==-1)
     {
         std::cout << "PhysiPKPD WARNING: No PD time step supplied for " << substrate_name << " effects on " << cell_type << std::endl
                   << "  Will use the mechanics_dt by default." << std::endl
@@ -82,7 +82,7 @@ void setup_pharmacodynamics()
     size_t pos = 0;
     std::string token;
 
-    if (parameters.strings.find_variable_index("PKPD_pd_substrate_names") == -1)
+    if (parameters.strings.find_index("PKPD_pd_substrate_names") == -1)
     {
         std::cout << "PhysiPKPD WARNING: PKPD_pd_substrate_names was not found in User Parameters." << std::endl
                   << "  Will assume no PD substrates." << std::endl;
@@ -185,7 +185,7 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
     void(*setup_function)(Pharmacodynamics_Model *pPD);
     std::vector<std::string> current_options = {"AUC","AUC_amount","SBML"};
     std::string method;
-    if (parameters.strings.find_variable_index(pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model")==-1)
+    if (parameters.strings.find_index(pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model")==-1)
     {
         std::cout << "PhysiPKPD WARNING: No PD model specified for " << pPD->substrate_name << " affecting " << pPD->cell_type << std::endl
                   << "  Specify with user parameter " << pPD->substrate_name + "_on_" + pPD->cell_type + "_pd_model"
@@ -227,11 +227,11 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD)
 
 void setup_pd_model_auc(Pharmacodynamics_Model *pPD)
 {
-    if (parameters.bools.find_variable_index(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type) != -1) // then use this value
+    if (parameters.bools.find_index(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type) != -1) // then use this value
     {
         pPD->use_precomputed_quantities = parameters.bools(pPD->substrate_name + "_precompute_pd_for_" + pPD->cell_type);
     }
-    else if (parameters.bools.find_variable_index("PKPD_precompute_all_pd_quantities") != -1) // use the value that sets the default for all PD dynamics in this simulation
+    else if (parameters.bools.find_index("PKPD_precompute_all_pd_quantities") != -1) // use the value that sets the default for all PD dynamics in this simulation
     {
         pPD->use_precomputed_quantities = parameters.bools("PKPD_precompute_all_pd_quantities");
     }

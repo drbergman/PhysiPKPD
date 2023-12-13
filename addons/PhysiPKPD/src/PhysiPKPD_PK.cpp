@@ -35,7 +35,7 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
     Pharmacokinetics_Model *pNew = create_pk_model(substrate_index);
     pNew->substrate_name = substrate_name;
 
-    if (parameters.doubles.find_variable_index(pNew->substrate_name + "_biot_number") == -1)
+    if (parameters.doubles.find_index(pNew->substrate_name + "_biot_number") == -1)
     {
         std::cout << "PhysiPKPD WARNING: " << pNew->substrate_name << "_biot_number not set." << std::endl
                   << "  Using a default value of 1.0." << std::endl;
@@ -48,7 +48,7 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
 
     void(*setup_function)(Pharmacokinetics_Model *pNew);
     std::string model;
-    if (parameters.strings.find_variable_index(substrate_name + "_pk_model")==-1)
+    if (parameters.strings.find_index(substrate_name + "_pk_model")==-1)
     {
         std::cout << "PhysiPKPD WARNING: No PK model specified for " << substrate_name << std::endl
                   << "  Will attempt to set up a 2-compartment model." << std::endl
@@ -100,7 +100,7 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
 
         // reading given SBML
         std::string sbml_filename = "PK_default.xml";
-        if (parameters.strings.find_variable_index(substrate_name + "_sbml_filename")==-1)
+        if (parameters.strings.find_index(substrate_name + "_sbml_filename")==-1)
         {
             std::cout << "PhysiPKPD WARNING: No SBML filename provided for " << substrate_name << "." << std::endl
                       << "  You may include a filename as a string in " << substrate_name + "_sbml_filename" << std::endl
@@ -155,7 +155,7 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
         }
 
         // add dosing events?
-        if (parameters.bools.find_variable_index(substrate_name + "_read_dose_from_csv")!=-1 && parameters.bools(substrate_name + "_read_dose_from_csv"))
+        if (parameters.bools.find_index(substrate_name + "_read_dose_from_csv")!=-1 && parameters.bools(substrate_name + "_read_dose_from_csv"))
         {
             // read in csv into events for the xml file
             std::cout << "PhysiPKPD WARNING: Reading in a dosing schedule from a CSV is not yet supported." << std::endl
@@ -202,7 +202,7 @@ void PK_model(double current_time)
         size_t pos = 0;
         std::string token;
         
-        if (parameters.strings.find_variable_index("PKPD_pk_substrate_names") == -1)
+        if (parameters.strings.find_index("PKPD_pk_substrate_names") == -1)
         {
             std::cout << "PhysiPKPD WARNING: PKPD_pk_substrate_names was not found in User Parameters." << std::endl
                       << "  Will assume no PK substrates." << std::endl;
@@ -294,10 +294,10 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
 
     /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
-    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_to_periphery_volume_ratio") == -1)
+    if (parameters.doubles.find_index(pPK->substrate_name + "_central_to_periphery_volume_ratio") == -1)
     {
         std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_to_periphery_volume_ratio not set." << std::endl;
-        if (parameters.doubles.find_variable_index("central_to_periphery_volume_ratio") != -1)
+        if (parameters.doubles.find_index("central_to_periphery_volume_ratio") != -1)
         {
             std::cout << "  Using central_to_periphery_volume_ratio instead." << std::endl
                       << std::endl;
@@ -315,10 +315,10 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
         R = parameters.doubles(pPK->substrate_name + "_central_to_periphery_volume_ratio");
     }
 
-    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_to_periphery_clearance_rate") == -1)
+    if (parameters.doubles.find_index(pPK->substrate_name + "_central_to_periphery_clearance_rate") == -1)
     {
         std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_to_periphery_clearance_rate not set." << std::endl;
-        if (parameters.doubles.find_variable_index(pPK->substrate_name + "_flux_across_capillaries") != -1)
+        if (parameters.doubles.find_index(pPK->substrate_name + "_flux_across_capillaries") != -1)
         {
             std::cout << "  " << pPK->substrate_name << "_flux_across_capillaries is set. Using that instead." << std::endl
                       << "  You can achieve the same thing using " << pPK->substrate_name << "_periphery_to_central_clearance_rate = " << pPK->substrate_name << "_flux_across_capillaries" << std::endl
@@ -336,10 +336,10 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
     {
         k12 = parameters.doubles(pPK->substrate_name + "_central_to_periphery_clearance_rate");
     }
-    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_periphery_to_central_clearance_rate") == -1)
+    if (parameters.doubles.find_index(pPK->substrate_name + "_periphery_to_central_clearance_rate") == -1)
     {
         std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_periphery_to_central_clearance_rate not set." << std::endl;
-        if (parameters.doubles.find_variable_index(pPK->substrate_name + "_flux_across_capillaries") != -1)
+        if (parameters.doubles.find_index(pPK->substrate_name + "_flux_across_capillaries") != -1)
         {
             std::cout << "  " << pPK->substrate_name << "_flux_across_capillaries is set. Using that instead with the understanding that you are using the simplified 2-compartment PK model." << std::endl
                       << "  You can achieve the same thing using " << pPK->substrate_name << "_periphery_to_central_clearance_rate = " << pPK->substrate_name << "_flux_across_capillaries * " << pPK->substrate_name << "_central_to_periphery_volume_ratio" << std::endl
@@ -358,7 +358,7 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
         k21 = parameters.doubles(pPK->substrate_name + "_periphery_to_central_clearance_rate");
     }
 
-    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_elimination_rate") == -1)
+    if (parameters.doubles.find_index(pPK->substrate_name + "_central_elimination_rate") == -1)
     {
         std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
                   << "  Using a default value of 0.0." << std::endl;
@@ -427,7 +427,7 @@ void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
 
     /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
-    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_elimination_rate") == -1)
+    if (parameters.doubles.find_index(pPK->substrate_name + "_central_elimination_rate") == -1)
     {
         std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
                   << "  Using a default value of 0.0." << std::endl;
@@ -455,11 +455,11 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
     {
         bool setup_dosing_now;
         bool read_csv;
-        read_csv = parameters.bools.find_variable_index(pPK->substrate_name + "_read_dose_schedule_from_csv") != -1 && parameters.bools(pPK->substrate_name + "_read_dose_schedule_from_csv");
+        read_csv = parameters.bools.find_index(pPK->substrate_name + "_read_dose_schedule_from_csv") != -1 && parameters.bools(pPK->substrate_name + "_read_dose_schedule_from_csv");
         setup_dosing_now = read_csv // read dose schedule from csv
-                           || (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") == -1) // start if user did not specify any of the parameters to determine when to start
-                           || (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1) && parameters.bools(pPK->substrate_name + "_set_first_dose_time")                                                                                                                                   // start if user parameter says to set first dose time
-                           || (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") != -1 && (current_time > pPK->pk_solver->confluence_check_time - tolerance) && (confluence_computation() > parameters.doubles(pPK->substrate_name + "_confluence_condition")));                         // start if confluence check is given, its time for it, and if the confluence condition is met
+                           || (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") == -1) // start if user did not specify any of the parameters to determine when to start
+                           || (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") != -1) && parameters.bools(pPK->substrate_name + "_set_first_dose_time")                                                                                                                                   // start if user parameter says to set first dose time
+                           || (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") != -1 && (current_time > pPK->pk_solver->confluence_check_time - tolerance) && (confluence_computation() > parameters.doubles(pPK->substrate_name + "_confluence_condition")));                         // start if confluence check is given, its time for it, and if the confluence condition is met
         if (setup_dosing_now)
         {
             if (read_csv)
@@ -494,7 +494,7 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
             else
             {
                 // get max dose number
-                if (parameters.ints.find_variable_index(pPK->substrate_name + "_max_number_doses") == -1)
+                if (parameters.ints.find_index(pPK->substrate_name + "_max_number_doses") == -1)
                 {
                     std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_max_number_doses not set." << std::endl
                               << "  Using a default value of 0." << std::endl;
@@ -511,7 +511,7 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                     return;
                 }
 
-                if ((parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") == -1))
+                if ((parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") == -1))
                 {
                     std::cout << "PhysiPKPD WARNING: No specification of how to set first dose time." << std::endl
                               << "  Defaulting to current_time." << std::endl
@@ -521,15 +521,15 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
 
                 pPK->pk_solver->dose_times.resize(pPK->pk_solver->max_doses, 0);
                 pPK->pk_solver->dose_amounts.resize(pPK->pk_solver->max_doses, 0);
-                if (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time") && parameters.doubles.find_variable_index(pPK->substrate_name + "_first_dose_time") == -1)
+                if (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time") && parameters.doubles.find_index(pPK->substrate_name + "_first_dose_time") == -1)
                 {
                     std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << " has a set time for the first dose, but the first time is not supplied. Assuming to begin now = " << current_time << std::endl
                               << "  This can be set by using " << pPK->substrate_name << "_first_dose_time" << std::endl;
                 }
-                pPK->pk_solver->dose_times[0] = (parameters.bools.find_variable_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time")) ? (parameters.doubles.find_variable_index(pPK->substrate_name + "_first_dose_time") != -1 ? parameters.doubles(pPK->substrate_name + "_first_dose_time") : current_time) : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now; also if the defining parameters are not set, then set it to be the current time
+                pPK->pk_solver->dose_times[0] = (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time")) ? (parameters.doubles.find_index(pPK->substrate_name + "_first_dose_time") != -1 ? parameters.doubles(pPK->substrate_name + "_first_dose_time") : current_time) : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now; also if the defining parameters are not set, then set it to be the current time
                 for (unsigned int i = 1; i < pPK->pk_solver->max_doses; i++)
                 {
-                    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_dose_interval") == -1)
+                    if (parameters.doubles.find_index(pPK->substrate_name + "_dose_interval") == -1)
                     {
                         std::cout << "PhysiPKPD ERROR: " << pPK->substrate_name << " has multiple doses but no dose interval is given." << std::endl
                                   << "  Set " << pPK->substrate_name << "_dose_interval" << std::endl;
@@ -537,11 +537,11 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                     }
                     pPK->pk_solver->dose_times[i] = pPK->pk_solver->dose_times[i - 1] + parameters.doubles(pPK->substrate_name + "_dose_interval");
                 }
-                int num_loading = parameters.ints.find_variable_index(pPK->substrate_name + "_number_loading_doses") != -1 ? parameters.ints(pPK->substrate_name + "_number_loading_doses") : 0;
+                int num_loading = parameters.ints.find_index(pPK->substrate_name + "_number_loading_doses") != -1 ? parameters.ints(pPK->substrate_name + "_number_loading_doses") : 0;
                 double loading_dose;
                 if (num_loading != 0)
                 {
-                    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_increase_on_loading_dose") != -1)
+                    if (parameters.doubles.find_index(pPK->substrate_name + "_central_increase_on_loading_dose") != -1)
                     {
                         loading_dose = parameters.doubles(pPK->substrate_name + "_central_increase_on_loading_dose");
                     }
@@ -555,7 +555,7 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                 double dose;
                 if (pPK->pk_solver->max_doses > num_loading)
                 {
-                    if (parameters.doubles.find_variable_index(pPK->substrate_name + "_central_increase_on_dose") != -1)
+                    if (parameters.doubles.find_index(pPK->substrate_name + "_central_increase_on_dose") != -1)
                     {
                         dose = parameters.doubles(pPK->substrate_name + "_central_increase_on_dose");
                     }
@@ -575,7 +575,7 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
         }
         else if (current_time > pPK->pk_solver->confluence_check_time - tolerance)
         {
-            if (parameters.doubles.find_variable_index(pPK->substrate_name + "_confluence_condition") == -1)
+            if (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") == -1)
             {
                 std::cout << "PhysiPKPD ERROR: Not setting first dose time of " << pPK->substrate_name << " means to use a confluence check to start dosing." << std::endl
                           << "  However, no confluence condition is supplied. Set " << pPK->substrate_name + "_confluence_condition to a value between 0 and 1." << std::endl
@@ -655,7 +655,7 @@ void write_cell_data_for_plots(double current_time, char delim = ',')
     // Can add different classes of tumor cells - apoptotic, necrotic, hypoxic, etc to this
 
     static double next_write_time = 0;
-    static double csv_data_interval = parameters.doubles.find_variable_index("csv_data_interval") == -1 ? 9e9 : parameters.doubles("csv_data_interval");
+    static double csv_data_interval = parameters.doubles.find_index("csv_data_interval") == -1 ? 9e9 : parameters.doubles("csv_data_interval");
     if (current_time > next_write_time - tolerance)
     {
         // std::cout << "TIMEEEE" << current_time << std::endl;
