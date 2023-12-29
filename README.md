@@ -1,31 +1,17 @@
 # PhysiPKPD
 ## Getting Started...
-### ...by downloading PhysiPKPD add adding to a working PhysiCell directory <a name="DL"></a>
+### ...by downloading PhysiPKPD add adding to a working PhysiCell directory
 1. Download the repository and unzip the file.
 2. Move the folder `PhysiPKPD/addons/PhysiPKPD` into `PhysiCell/addons/`
 3. Move the folder `PhysiPKPD/sample_projects_phsyipkpd` into `PhysiCell`
 4. Open `PhysiCell/sample_projects/Makefile-default` (the one that `make reset` will will put in the main PhysiCell directory)
 5. Add the text from `PhysiCell/addons/PhysiPKPD/Makefile-PhysiPKPD_Addendum` to `PhysiCell/sample_projects/Makefile-default` (anywhere should work, perhaps best around line 195 at the end of the other sample projects)
-6. Replace `PhysiCell/BioFVM/BioFVM_microenvironment.cpp` with `PhysiCell/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp`[^bfvmcpp] (and similarly with the `.h`[^bfvmh] file). Make sure the new files are both named `BioFVM_microenvironment` with the proper extension.
-7. Delete `PhysiCell/BioFVM_microenvironment.o` so the next `make` call will compile the new `BioFVM_microenvironment` code.
-8. Perform the same for `PhysiCell/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.cpp`[^pscpp] replacing `PhysiCell/modules/PhysiCell_settings.cpp` (and similarly with the `.h`[^psh] file).
-Rename. Check the extension. Delete `PhysiCell/PhysiCell_settings.o`.
-
-[^bfvmcpp]: Allows for looping over all voxels to accurately identify which substrates have a Dirichlet condition there. The only changes from PhysiCell v1.10.4 are at [Lines 241-246](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp#L241-L246) and [Line 1536](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.cpp#L1536).
-
-[^bfvmh]: The only changes from PhysiCell v1.10.4 are at [Line 255](https://github.com/drbergman/PhysiPKPD/blob/fff033bb5f07537237ccfa2d1f1d62259c09bc89/addons/PhysiPKPD/BioFVM_microenvironment_robust_dcs.h#L255).
-
-[^pscpp]: Adding a template member function to `Parameters` that allows for a search for a non-existent `user_parameter` to return `-1`.
-The only changes from PhysiCell v1.10.4 are at [Lines 379-387](https://github.com/drbergman/PhysiPKPD/blob/8a4267a0a2f6a9847e882af282d20b2cd72e121f/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.cpp#L379-L387).
-
-[^psh]: The only changes from PhysiCell v1.10.4 are at [Lines 182](https://github.com/drbergman/PhysiPKPD/blob/8a4267a0a2f6a9847e882af282d20b2cd72e121f/addons/PhysiPKPD/PhysiCell_settings_find_variable_index.h#L182).
 
 ### ...by cloning the repository
 1. Fork this repository to your own GitHub account.
 2. Clone the resulting forked repository onto your machine.
 3. Copy all the PhysiCell files in your PhysiCell directory **except addons**
 4. Copy the subfolders in `PhysiCell/addons` into your cloned directory's `addons` folder
-5. Continue from #4 [above](#DL).
 
 Congratulations! You're ready to try out PhysiPKPD!
 
@@ -48,7 +34,7 @@ To run one of these samples, do the following:
    * On Windows: `pkpd_sample.exe ./config/pkpd_model.xml`
 5. Look at the snapshots in `output/` and the living cell counts in `output/cell_counts.csv`
 
-## Reconfiguring, editing, and re-running
+<!-- ## Reconfiguring, editing, and re-running
 **Note:** *While the below functionality is present, it is discouraged because it is likely to inadvertently affect the work of others.
 Instead, it is recommended to instead save any changes to these files in a non-tracked directory and manually copy them into their proper places after `make`-ing the sample project.*
 
@@ -56,7 +42,7 @@ Instead of editing the configuration file copied into `PhysiCell/config/pkpd_mod
 The command `make rc` will reconfigure from the original `pkpd_model.xml` to facilitate editing in the latter fashion.
 
 Similarly, you can edit the custom modules in `PhysiCell/sample_projects_physipkpd/[project_name]/custom_modules/` to save changes for future runs.
-After making these changes, you can run `make redo` and this will automatically move those changes to their proper places and recompile the project.
+After making these changes, you can run `make redo` and this will automatically move those changes to their proper places and recompile the project. -->
 
 ## Setting parameters
 PhysiPKPD parameters are found in two areas in `pkpd_model.xml`: PK parameters are at the bottom in `user_parameters` and PD parameters are in `cell_definitions` in the `custom_data` for each cell type.
@@ -70,7 +56,7 @@ In what follows, `S` stands for the name of a substrate, `C` stands for the name
 ### PK and PD substrates
 You can specify which substrates you want to include PK dynamics.
 You can do the same for PD dynamics.
-These lists need not have *any* relationships.
+These lists can be set independently of one another so that every PhysiCell substrate can have PK, PD, both, or neither.
 The parameters in the following table are those PhysiPKPD will use to define which substrates follow PK and PD dynamics.
 Add them to `user_parameters`.
 Omitting `PKPD_pk_substrate_names` will result in no PK dynamics and similarly for the PD dynamics.
@@ -165,7 +151,7 @@ No header row should be included.
 | `S_central_to_periphery_clearance_rate` $(k_{12})$ | `double` | Rate of change in concentration in central compartment due to distribution (in minutes<sup>-1</sup>) | Set to `S_flux_across_capillaries`, if present. Otherwise, set to `0` |
 | `S_periphery_to_central_clearance_rate` $(k_{21})$ | `double` | Rate of change in concentration in periphery compartment due to redistribution (in minutes<sup>-1</sup>) | Set to `S_flux_across_capillaries` $\times$ `S_central_to_periphery_volume_ratio`, if present. Otherwise, set to `0` |
 | `central_to_periphery_volume_ratio` $(R = V_1/V_2 = V_C/V_P)$ | `double` | Ratio of central compartment to periphery compartment *for any substrates without a specific volume ratio as above* | Set to `1` |
-| `S_flux_across_capillaries`<a name="old_flux_par"></a> | `double` | **While this is still allowed, consider using the above two parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) | See above |
+| `S_flux_across_capillaries`<a name="old_flux_par"></a> | `double` | **Consider using the above parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) | See above |
 <p align="center">
     <b>Table:</b> PK parameters
 </p>
@@ -181,8 +167,7 @@ You must supply a user parameter with the name of the SBML file:
 | `S_sbml_filename` | `string` | Filename of SBML file, e.g. `PK_default.xml` | Set to `PK_default.xml` |
 
 Place this file in the `./config/` folder.
-Currently, you must specify dosing events yourself in SBML files.
-We will soon allow you to specify a CSV file with the dosing events.
+You must specify dosing events yourself in SBML files.
 
 #### PhysiCell PK parameters
 
@@ -199,7 +184,7 @@ You can also set the following parameters in `microenvironment_setup` for each s
 ### PD parameters <a name="pd_pars"></a>
 The PD dynamics in PhysiPKPD work by the target cell type accumulating damage over time due to internalized substrate.
 Thus, for each (substrate, cell type)-pairing, a PD model must be specified.
-There are two models for this currently implemented in PhysiPKPD: damage accumulates based on concentration/amount of the internalized substrate.
+There are two models for this currently implemented in PhysiPKPD: damage accumulates based on either concentration or amount of the internalized substrate.
 By default, PhysiPKPD will assume concentration is being used.
 To specify this model, create a string parameter called `S_on_C_pd_model` with value selected from the following table:
 
