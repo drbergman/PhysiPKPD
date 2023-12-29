@@ -93,6 +93,7 @@ void setup_pharmacodynamics()
         s = parameters.strings("PKPD_pd_substrate_names");
     }
 
+    // Get density index for all listed PD substrates
     while ((pos = s.find(delimiter)) != std::string::npos)
     {
         token = s.substr(0, pos);
@@ -116,6 +117,8 @@ void setup_pharmacodynamics()
     {
         std::cout << "PhysiPKPD WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
     }
+
+    // add the necessary custom variables to all cells
     for (int n = 0; n < PD_ind.size(); n++) // loop over all identified PD substrates
     {
         std::vector<std::string> moa_strings; // name the moas in custom_data I need to see in each cell type
