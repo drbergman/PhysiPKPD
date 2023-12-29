@@ -264,17 +264,19 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD)
     necessary_custom_fields.push_back(pPD->substrate_name + "_repair_rate_linear");
     for (int i = 0; i < necessary_custom_fields.size(); i++)
     {
-        if(pCD->custom_data.find_variable_index(necessary_custom_fields[i])==-1)
+        if (pCD->custom_data.find_variable_index(necessary_custom_fields[i]) == -1)
         {
             std::cout << "PhysiPKPD WARNING: " << pCD->name << " does not have " << necessary_custom_fields[i] << " in custom_data" << std::endl
-                      << "  Setting to 0 by default." << std::endl << std::endl;
-            pCD->custom_data.add_variable(necessary_custom_fields[i],0.0);
+                      << "  Setting to 0 by default." << std::endl
+                      << std::endl;
+            pCD->custom_data.add_variable(necessary_custom_fields[i], 0.0);
 #pragma omp parallel for
-        for (int i = 0; i < (*all_cells).size(); i++) // loop over all cells to see if they have a type that got moas added to their custom_data
-        {
-            if ((*all_cells)[i]->type==pPD->cell_index)
+            for (int j = 0; j < (*all_cells).size(); j++) // loop over all cells to see if they have a type that got moas added to their custom_data
             {
-                (*all_cells)[i]->custom_data.add_variable(necessary_custom_fields[i],0.0);
+                if ((*all_cells)[j]->type == pPD->cell_index)
+                {
+                    (*all_cells)[j]->custom_data.add_variable(necessary_custom_fields[i], 0.0);
+                }
             }
         }
     }
