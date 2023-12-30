@@ -1,1 +1,1 @@
-PKPD_cell,custom:PKPD_D1_damage,decreases,migration speed,1e-3,1e8,2,0
+PKPD_cell,custom:PKPD_D1_damage,decreases,migration speed,0,1e8,2,0
