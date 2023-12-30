@@ -216,7 +216,7 @@
 
         <PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pk_substrate_names>
         <PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pd_substrate_names>
-        <PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True></PKPD_precompute_all_pd_quantities>
+        <PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True</PKPD_precompute_all_pd_quantities>
         <csv_data_interval type="double" units="min" description="time between writing data to CSV">30</csv_data_interval>
 
 
