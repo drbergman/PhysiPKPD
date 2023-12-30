@@ -240,7 +240,9 @@ For example, if you wish to use a timestep of `0.01` for updating the damage of 
 <myDrug_dt_tumor type="double">0.01</myDrug_dt_tumor>
 ```
 
-#### Cell Effect Parameters
+#### Mechanisms of action
+
+<!-- #### Cell Effect Parameters
 The accumulated damage then affects the cell through one or more mechanisms of action (MOA).
 These MOAs are specified by setting `S_moa_is_X` to `1.0` in `custom_data`.
 Currently, PhysiPKPD supports the following MOAs: `prolif`, `apop`, `necrosis`, or `motility`.
@@ -296,7 +298,7 @@ Thus, the factor change from `S1` is $f_{\text{sat},1} \cdot h_1 = 25$; from `S2
 The total factor change applied to the apoptosis rate for `C` is then $25\cdot 500 = 12,500$.
 Finally, this is multplied to the *current* apoptosis rate for `C`.
 If other aspects of the model cause `C` to deviate from the base apoptosis rate of `CD`, then PhysiPKPD honors these.
-If, for example the current apoptosis rate of `C` is not `1E-5` but instead `1E-6` perhaps because it is in a quiescent niche, then PhysiPKPD will update its apoptosis rate to $12,500 \cdot 10^{-6} = 0.0125\ \text{min}^{-1}$.
+If, for example the current apoptosis rate of `C` is not `1E-5` but instead `1E-6` perhaps because it is in a quiescent niche, then PhysiPKPD will update its apoptosis rate to $12,500 \cdot 10^{-6} = 0.0125\ \text{min}^{-1}$. -->
 
 ### Miscellaneous parameters
 The following are user parameters that provide some control over how the dynamics are solved.
