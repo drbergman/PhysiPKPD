@@ -204,18 +204,6 @@ void phenotype_function(Cell *pC, Phenotype &p, double dt)
 
 void custom_function(Cell *pC, Phenotype &p, double dt)
 {
-    if (p.death.dead == true)
-    {
-        pC->functions.custom_cell_rule = NULL;
-        return;
-    }
-
-    Cell_Definition *pCD = find_cell_definition(pC->type);
-
-    // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
-    set_single_behavior(pC, "migration speed", get_single_base_behavior(pC, "migration speed"));
-
-    pd_custom_function(pC, p, dt);
     return;
 }
 

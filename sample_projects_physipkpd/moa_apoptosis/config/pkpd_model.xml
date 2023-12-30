@@ -176,12 +176,6 @@
             <custom_data>
 
                 <!-- <div_drugs type="divider" description="-Starting Drug 1 PD parameters-"/> -->
-
-                <PKPD_D1_moa_is_apop units="bool">1.0</PKPD_D1_moa_is_apop>
-                <PKPD_D1_apop_saturation_rate units="1/min">1e-3</PKPD_D1_apop_saturation_rate>
-                <PKPD_D1_apop_EC50 units="damage">1e5</PKPD_D1_apop_EC50>
-                <PKPD_D1_apop_hill_power units="dimensionless">2</PKPD_D1_apop_hill_power>
-
                 <PKPD_D1_damage units="damage">0</PKPD_D1_damage>
                 <PKPD_D1_repair_rate_constant units="damage/min">2e3</PKPD_D1_repair_rate_constant>
                 <PKPD_D1_repair_rate_linear units="damage/min">2e-2</PKPD_D1_repair_rate_linear>
@@ -198,6 +192,16 @@
         </cell_positions>
     </initial_conditions>
 
+    <cell_rules>
+        <rulesets>
+            <ruleset protocol="CBHG" version="2.0" format="csv" enabled="true">
+                <folder>./config</folder>
+                <filename>cell_rules.csv</filename>
+            </ruleset>
+        </rulesets>
+        <settings />
+    </cell_rules>
+    
     <user_parameters>
 
 <!-- <div type="divider" description="-Initialization settings-"/> -->
