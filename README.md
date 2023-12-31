@@ -34,6 +34,43 @@ To run one of these samples, do the following:
    * On Windows: `pkpd_sample.exe ./config/pkpd_model.xml`
 5. Look at the snapshots in `output/` and the living cell counts in `output/cell_counts.csv`
 
+## Making your own project
+There are two template projects available.
+Load one with `make pkpd-template` or `make pkpd-template-sbml`.
+The former sets up a model with two PKPD substrates, one with a dosing schedule defined by a CSV file.
+The latter sets up a model with two PKPD substrates, one defined by an SBML model.
+
+## Adding PhysiPKPD to existing project
+To add PhysiPKPD to an existing project, take the following steps:
+1. In `main.cpp`...
+   * add `setup_pharmacodynamics();` as a new line after `setup_tissue();`
+   * add `PK_model( PhysiCell_globals.current_time );` immediately *before* `microenvironment.simulate_diffusion_decay( diffusion_dt );`
+   * add `PD_model( PhysiCell_globals.current_time );` immediately *after* `microenvironment.simulate_diffusion_decay( diffusion_dt );`
+2. In `custom_modules/custom.h`...
+   * add `#include "../addons/PhysiPKPD/src/PhysiPKPD.h"` to the top
+3. In the configuration file, e.g., `config/PhysiCell_settings.xml`...
+   * add to `user_parameters` the parameters described below (see [template](#up_template))
+   * add to the `custom_data` for each `cell_definition` the PD parameters described below and looks like this
+```
+<S_damage>0</S_damage>
+<S_repair_rate_constant units="damage/min">0</S_repair_rate_constant>
+<S_repair_rate_linear units="damage/min">2e-2</S_repair_rate_linear>
+<S_metabolism_rate units="1/min">0.05</S_metabolism_rate>
+```
+1. In `Makefile`...
+   * add a line `PhysiPKPD_OBJECTS := PhysiPKPD_PK.o PhysiPKPD_PD.o`
+   * add `$(PhysiPKPD_OBJECTS)` to the list of `PhysiCell_OBJECTS`
+   * define `PhysiPKPD_PK.o` and `PhysiPKPD_PD.o` with the following lines
+```
+PhysiPKPD_PK.o: ./addons/PhysiPKPD/src/PhysiPKPD_PK.cpp
+	$(COMPILE_COMMAND) -c ./addons/PhysiPKPD/src/PhysiPKPD_PK.cpp
+
+PhysiPKPD_PD.o: ./addons/PhysiPKPD/src/PhysiPKPD_PD.cpp
+	$(COMPILE_COMMAND) -c ./addons/PhysiPKPD/src/PhysiPKPD_PD.cpp
+```
+5. Ensure Dirichlet conditions are enabled for any PK substrates.
+6. Ensure cell types that are affected by a PD substrate have a nonzero uptake rate for that substrate.
+7. Ensure rules are enabled and set in the rules CSV file for any PD substrates.
 <!-- ## Reconfiguring, editing, and re-running
 **Note:** *While the below functionality is present, it is discouraged because it is likely to inadvertently affect the work of others.
 Instead, it is recommended to instead save any changes to these files in a non-tracked directory and manually copy them into their proper places after `make`-ing the sample project.*
@@ -98,9 +135,9 @@ If you can run the `sample_projects_intracellular/ode` projects, you are ready t
     <b>Table:</b> PK model specifications
 </p>
 
-If `S_pk_model` is not set, PhysiPKPD will default to a 2-compartment model[^oldpk]:
+If `S_pk_model` is not set, PhysiPKPD will default to a 2-compartment model<!--[^oldpk]-->:
 
-[^oldpk]: For those using the simplified 2-compartment model that PhysiPKPD used to use, see the [`S_flux_across_capillaries`](#old_flux_par) entry in the table.
+<!-- [^oldpk]: For those using the simplified 2-compartment model that PhysiPKPD used to use, see the [`S_flux_across_capillaries`](#old_flux_par) entry in the table. -->
 
 $$
 \begin{aligned}
@@ -151,7 +188,7 @@ No header row should be included.
 | `S_central_to_periphery_clearance_rate` $(k_{12})$ | `double` | Rate of change in concentration in central compartment due to distribution (in minutes<sup>-1</sup>) | Set to `S_flux_across_capillaries`, if present. Otherwise, set to `0` |
 | `S_periphery_to_central_clearance_rate` $(k_{21})$ | `double` | Rate of change in concentration in periphery compartment due to redistribution (in minutes<sup>-1</sup>) | Set to `S_flux_across_capillaries` $\times$ `S_central_to_periphery_volume_ratio`, if present. Otherwise, set to `0` |
 | `central_to_periphery_volume_ratio` $(R = V_1/V_2 = V_C/V_P)$ | `double` | Ratio of central compartment to periphery compartment *for any substrates without a specific volume ratio as above* | Set to `1` |
-| `S_flux_across_capillaries`<a name="old_flux_par"></a> | `double` | **Consider using the above parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) | See above |
+<!-- | `S_flux_across_capillaries`<a name="old_flux_par"></a> | `double` | **Consider using the above parameters to quantify intercompartmental clearance rates.**[^1] Rate of change in concentration in central compartment due to distribution and redistribution (in minutes<sup>-1</sup>) | See above | -->
 <p align="center">
     <b>Table:</b> PK parameters
 </p>
@@ -215,11 +252,11 @@ D' & = A - r_1D - r_0
 $$
 
 Note that since damage is an abstract quantity, we do not include a rate parameter as a coefficient for $A$ in the equation for $D'$.
-Each of these parameters **should** be set[^old_repair].
+Each of these parameters **should** be set.<!--[^old_repair]. -->
 If they are not set, PhysiPKPD will issue a warning and set them to 0.
 These parameters go in the `custom_data` of `C`.
 
-[^old_repair]: For backwards compatibility, `S_repair_rate` can be set instead of `S_repair_rate_constant`.
+<!-- [^old_repair]: For backwards compatibility, `S_repair_rate` can be set instead of `S_repair_rate_constant`. -->
 
 |Parameter|Description|
 |:--|---|
@@ -241,6 +278,13 @@ For example, if you wish to use a timestep of `0.01` for updating the damage of 
 ```
 
 #### Mechanisms of action
+The accumulated damage then affects the cell through one or more mechanisms of action (MOA) using the rules grammar.
+Each PD substrate will have an associated damage variable called `custom:S_damage` that is designed to be used as the signal for the rule.
+As an example, if a PD substrate called `myDrug` affects cell type `tumor` by increasing its apoptosis, add the following row to the rules CSV:
+```
+tumor,custom:myDrug_damage,increases,apoptosis,1,1e5,2,0
+```
+The `1,1e5,2,0` are the saturation apoptosis rate, damage EC50, hill coefficient, and Boolean for applying the rule to dead cells, respectively.
 
 <!-- #### Cell Effect Parameters
 The accumulated damage then affects the cell through one or more mechanisms of action (MOA).
@@ -300,11 +344,10 @@ Finally, this is multplied to the *current* apoptosis rate for `C`.
 If other aspects of the model cause `C` to deviate from the base apoptosis rate of `CD`, then PhysiPKPD honors these.
 If, for example the current apoptosis rate of `C` is not `1E-5` but instead `1E-6` perhaps because it is in a quiescent niche, then PhysiPKPD will update its apoptosis rate to $12,500 \cdot 10^{-6} = 0.0125\ \text{min}^{-1}$. -->
 
-### Miscellaneous parameters
-The following are user parameters that provide some control over how the dynamics are solved.
+### Precomputation
 Currently, all (non-SBML) PK and PD models implemented in PhysiPKPD are readily solved using analytic techniques.
 By informal observation, the analytic methods are not slower than numerical methods.
-If anything the analtyic methods are faster.
+If anything, the analtyic methods are faster.
 Therefore, all simulations use analytic solutions.
 
 To maximize the efficiency of these analytic solutions, many terms are pre-computed ahead of time.
@@ -324,21 +367,52 @@ For example, if a substrate `myDrug` affects cell type `tumor` and you want to p
     <b>Table:</b> Miscellaneous parameters
 </p>
 
-## Making your own project using PhysiPKPD
+# `user_parameters` template <a name="up_template"></a>
+Below, `S` should be replaced with the name of the substrate and `C` should be replaced with the name of the cell definition.
+```
+<PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">S</PKPD_pk_substrate_names>
+<PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">S</PKPD_pd_substrate_names>
+<PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True</PKPD_precompute_all_pd_quantities>
+<csv_data_interval type="double" units="min" description="time between writing data to CSV">30</csv_data_interval>
+
+<S_pk_model type="string" description="What PK model to use. Some options: 2C">1C</S_pk_model>
+<S_read_dose_schedule_from_csv type="bool" units="none" description="if true, reads in a dosing schedule from a csv">False</S_read_dose_schedule_from_csv>
+<S_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation)">1.0</S_biot_number>
+
+<S_max_number_doses type="int" units="none" description="max doses, including loading doses">4</S_max_number_doses>
+<S_number_loading_doses type="int" units="none" description="number of loading doses">0</S_number_loading_doses>
+<S_dose_interval type="double" units="min" description="time between dosings">360.0</S_dose_interval>
+<S_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose">5e2</S_central_increase_on_dose>
+<S_central_increase_on_loading_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose">400.0</S_central_increase_on_loading_dose>
+
+<S_set_first_dose_time type="bool" units="none" description="user sets first dose time to start therapy for drug 1; false=user gives confluence condition">True</S_set_first_dose_time>
+<S_first_dose_time type="double" units="min" description="time of first dose for drug 1">0.0</S_first_dose_time>
+<S_confluence_condition type="double" units="none" description="confluence as proportion at which to start therapy for drug 1">0.6</S_confluence_condition>
+
+<S_central_elimination_rate type="double" units="1/min" description="decay rate in systemic circulation">0.0027</S_central_elimination_rate>
+<S_central_to_periphery_clearance_rate type="double" units="1/min" description="rate of central concentration change due to distribution">0.0048</S_central_to_periphery_clearance_rate>
+<S_periphery_to_central_clearance_rate type="double" units="1/min" description="rate of periphery concentration change due to redistribution">0.0048</S_periphery_to_central_clearance_rate>
+<S_central_to_periphery_volume_ratio type="double" units="dimensionless" description="ratio of volume in systemic circulation to the volume of the periphery">1.0</S_central_to_periphery_volume_ratio>
+
+<S_on_PKPD_C_pd_model type="string">AUC</S_on_PKPD_C_pd_model>
+<S_dt_PKPD_C type="double">0.1</S_dt_PKPD_C>
+```
+
+<!-- ## Making your own project using PhysiPKPD
 If you wish to make your own project that uses PhysiPKPD (and not just one of the pre-built sample projects), this is how you can proceed.
 1. Make one of the PKPD template projects: `make pkpd-template` or `make pkpd-template-sbml`
 2. Edit the configuration file to set the Dirichlet conditions, [PK Parameters](#pk_pars), and [PD Parameters](#pd_pars) for the two PKPD substrates and the default cell type `cell`.
 3. Add additional substrates as normal (using the Model Builder for this is untested)
-4. Add additional cell types as normal (using the Model Builder for this is untested).
-5. By default, each cell type is assigned the same `update_phenotype` function, which is `cell_phenotype` found in the `custom.cpp` file.
-Add new phenotype functions as desired for each cell type.
-6. Notice that the `update_phenotype` function resets the three MOA-targeted rates before calling `pd_phenotype_function`.
-7. By default, each cell type is assigned the same `custom_cell_rule` function, which is `custom_function` found in the `custom.cpp` file.
-8. Notice that the `custom_cell_rule` function resets the migration speed before calling `pd_custom_function`.
+4. Add additional cell types as normal (using the Model Builder for this is untested). -->
+<!-- 5. By default, each cell type is assigned the same `update_phenotype` function, which is `cell_phenotype` found in the `custom.cpp` file. -->
+<!-- Add new phenotype functions as desired for each cell type. -->
+<!-- 5. Notice that the `update_phenotype` function resets the three MOA-targeted rates before calling `pd_phenotype_function`. -->
+<!-- 7. By default, each cell type is assigned the same `custom_cell_rule` function, which is `custom_function` found in the `custom.cpp` file. -->
+<!-- 8. Notice that the `custom_cell_rule` function resets the migration speed before calling `pd_custom_function`. -->
 
-**Note:** The order in which PhysiCell updates the various aspects of a cell matters!
+<!-- **Note:** The order in which PhysiCell updates the various aspects of a cell matters!
 For example, intracellular updates happen first.
 So, if those intracellular updates affect proliferation, apoptosis, or necrosis rates, then resetting those rates in your `update_phenotype` function will erase those changes.
 Similarly, `custom_cell_rule` is called after `update_phenotype` and prior to `update_velocity`, and `update_velocity` in turn calls `update_migration_bias`.
 Thus, changes to migration speed in `update_phenotype` or from an intracellular model would be erased if `custom_cell_rule` resets migration speed.
-Resetting the migration speed in `update_migration_bias` erases the PD effects calculated in `custom_cell_rule`.
+Resetting the migration speed in `update_migration_bias` erases the PD effects calculated in `custom_cell_rule`. -->
