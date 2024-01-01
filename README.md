@@ -1,5 +1,5 @@
 # PhysiPKPD
-## Getting Started...
+## Getting started...
 ### ...by downloading PhysiPKPD add adding to a working PhysiCell directory <a name="DL"></a>
 1. Download the repository and unzip the file.
 2. Move the folder `PhysiPKPD/addons/PhysiPKPD` into `PhysiCell/addons/`
