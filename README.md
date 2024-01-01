@@ -403,6 +403,7 @@ If `S` is a PD substrate affecting cell type `C`, add the following to `user_par
 ```
 <S_on_PKPD_C_pd_model type="string">AUC</S_on_PKPD_C_pd_model>
 <S_dt_PKPD_C type="double">0.1</S_dt_PKPD_C>
+<S_precompute_pd_for_C type="bool">True</S_precompute_pd_for_C>
 ```
 
 <!-- ## Making your own project using PhysiPKPD
