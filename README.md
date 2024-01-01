@@ -1,5 +1,5 @@
 # PhysiPKPD
-## Getting Started...
+## Getting started...
 ### ...by downloading PhysiPKPD add adding to a working PhysiCell directory <a name="DL"></a>
 1. Download the repository and unzip the file.
 2. Move the folder `PhysiPKPD/addons/PhysiPKPD` into `PhysiCell/addons/`
@@ -41,7 +41,7 @@ Load one with `make pkpd-template` or `make pkpd-template-sbml`.
 The former sets up a model with two PKPD substrates, one with a dosing schedule defined by a CSV file.
 The latter sets up a model with two PKPD substrates, one defined by an SBML model.
 
-## Adding PhysiPKPD to existing project
+## Adding PhysiPKPD to an existing project
 To add PhysiPKPD to an existing project, take the following steps:
 1. In `main.cpp`...
    * add `setup_pharmacodynamics();` as a new line after `setup_tissue();`
