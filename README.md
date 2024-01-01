@@ -368,13 +368,18 @@ For example, if a substrate `myDrug` affects cell type `tumor` and you want to p
 </p>
 
 ## `user_parameters` template <a name="up_template"></a>
-Below, `S` should be replaced with the name of the substrate and `C` should be replaced with the name of the cell definition.
+Add the following block to `user_parameters` one time to include PK and PD substrates.
+Fill in the names of PK and PD substrates in the corresponding parameter lists.
+
 ```
-<PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">S</PKPD_pk_substrate_names>
-<PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">S</PKPD_pd_substrate_names>
+<PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">S1,S2</PKPD_pk_substrate_names>
+<PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">S1,S3</PKPD_pd_substrate_names>
 <PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True</PKPD_precompute_all_pd_quantities>
 <csv_data_interval type="double" units="min" description="time between writing data to CSV">30</csv_data_interval>
-
+```
+For each PK substrate `S`, add the following parameters.
+Replace `S` with the name of the substrate. and `C` should be replaced with the name of the cell definition.
+```
 <S_pk_model type="string" description="What PK model to use. Some options: 2C">1C</S_pk_model>
 <S_read_dose_schedule_from_csv type="bool" units="none" description="if true, reads in a dosing schedule from a csv">False</S_read_dose_schedule_from_csv>
 <S_biot_number type="double" units="dimensionless" description="ratio of drug concentration outside capillary to inside capillary (or just all systemic circulation)">1.0</S_biot_number>
@@ -393,7 +398,9 @@ Below, `S` should be replaced with the name of the substrate and `C` should be r
 <S_central_to_periphery_clearance_rate type="double" units="1/min" description="rate of central concentration change due to distribution">0.0048</S_central_to_periphery_clearance_rate>
 <S_periphery_to_central_clearance_rate type="double" units="1/min" description="rate of periphery concentration change due to redistribution">0.0048</S_periphery_to_central_clearance_rate>
 <S_central_to_periphery_volume_ratio type="double" units="dimensionless" description="ratio of volume in systemic circulation to the volume of the periphery">1.0</S_central_to_periphery_volume_ratio>
-
+```
+If `S` is a PD substrate affecting cell type `C`, add the following to `user_parameters`, replacing `S` with the name of the substrate and `C` with the name of the cell type.
+```
 <S_on_PKPD_C_pd_model type="string">AUC</S_on_PKPD_C_pd_model>
 <S_dt_PKPD_C type="double">0.1</S_dt_PKPD_C>
 ```
