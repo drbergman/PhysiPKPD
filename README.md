@@ -367,7 +367,7 @@ For example, if a substrate `myDrug` affects cell type `tumor` and you want to p
     <b>Table:</b> Miscellaneous parameters
 </p>
 
-# `user_parameters` template <a name="up_template"></a>
+## `user_parameters` template <a name="up_template"></a>
 Below, `S` should be replaced with the name of the substrate and `C` should be replaced with the name of the cell definition.
 ```
 <PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">S</PKPD_pk_substrate_names>
