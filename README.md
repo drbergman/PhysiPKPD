@@ -1,6 +1,6 @@
 # PhysiPKPD
 ## Getting Started...
-### ...by downloading PhysiPKPD add adding to a working PhysiCell directory
+### ...by downloading PhysiPKPD add adding to a working PhysiCell directory <a name="DL"></a>
 1. Download the repository and unzip the file.
 2. Move the folder `PhysiPKPD/addons/PhysiPKPD` into `PhysiCell/addons/`
 3. Move the folder `PhysiPKPD/sample_projects_phsyipkpd` into `PhysiCell`
@@ -12,6 +12,7 @@
 2. Clone the resulting forked repository onto your machine.
 3. Copy all the PhysiCell files in your PhysiCell directory **except addons**
 4. Copy the subfolders in `PhysiCell/addons` into your cloned directory's `addons` folder
+5. Continue from #4 [above](#DL).
 
 Congratulations! You're ready to try out PhysiPKPD!
 
