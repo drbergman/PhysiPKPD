@@ -118,6 +118,7 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
 
 void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node);
 void parse_config_for_pk(std::vector<Pharmacokinetics_Model *> &all_pk);
+void read_time_parameter(double &time, const pugi::char_t* par_name, pugi::xml_node node);
 
 // PK functions
 void PK_model( double current_time );

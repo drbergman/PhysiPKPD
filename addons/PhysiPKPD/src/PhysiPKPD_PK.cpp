@@ -120,7 +120,8 @@ void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node)
 
         // reading given SBML
         std::string sbml_filename = "PK_default.xml";
-        if (parameters.strings.find_index(substrate_name + "_sbml_filename")==-1)
+        // if (parameters.strings.find_index(substrate_name + "_sbml_filename")==-1)
+        if (!(pk_node.child("sbml_filename")))
         {
             std::cout << "PhysiPKPD WARNING: No SBML filename provided for " << substrate_name << "." << std::endl
                       << "  You may include a filename as a string in " << substrate_name + "_sbml_filename" << std::endl
@@ -131,7 +132,7 @@ void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node)
         }
         else
         {
-            sbml_filename = parameters.strings(substrate_name + "_sbml_filename");
+            sbml_filename = pk_node.child("sbml_filename").text().as_string();
         }
         sbml_filename = "./config/" + sbml_filename;
         char sbml[sbml_filename.length()+1];
@@ -519,7 +520,12 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                     std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << " has a set time for the first dose, but the first time is not supplied. Assuming to begin now = " << current_time << std::endl
                               << "  This can be set by using " << pPK->substrate_name << "_first_dose_time" << std::endl;
                 }
-                pPK->pk_solver->dose_times[0] = ((schedule_node.child("confluence_start")) && !(schedule_node.child("confluence_start").text().as_bool())   ) ? ((schedule_node.child("first_dose_time")) ? schedule_node.child("first_dose_time").text().as_double() : current_time) : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now; also if the defining parameters are not set, then set it to be the current time
+                double first_dose_time = current_time;
+                read_time_parameter(first_dose_time, "first_dose_time", schedule_node);
+                double dose_interval = 1440;
+                read_time_parameter(dose_interval, "dose_interval", schedule_node);
+
+                pPK->pk_solver->dose_times[0] = ((schedule_node.child("confluence_start")) && !(schedule_node.child("confluence_start").text().as_bool())) ? ((schedule_node.child("first_dose_time")) ? schedule_node.child("first_dose_time").text().as_double() : current_time) : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now; also if the defining parameters are not set, then set it to be the current time
                 for (unsigned int i = 1; i < pPK->pk_solver->max_doses; i++)
                 {
                     if (!(schedule_node.child("dose_interval"))) // put this in here so that if only one dose is given, then this won't be checked
@@ -528,7 +534,7 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                                   << "  Set " << pPK->substrate_name << "_dose_interval" << std::endl;
                         exit(-1);
                     }
-                    pPK->pk_solver->dose_times[i] = pPK->pk_solver->dose_times[i - 1] + schedule_node.child("dose_interval").text().as_double();
+                    pPK->pk_solver->dose_times[i] = pPK->pk_solver->dose_times[i - 1] + dose_interval;
                 }
                 int num_loading = (schedule_node.child("loding_doses")) ? schedule_node.child("loading_doses").text().as_int(): 0;
                 double loading_dose;
@@ -576,6 +582,38 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                 exit(-1);
             }
             pPK->pk_solver->confluence_check_time += phenotype_dt;
+        }
+    }
+    return;
+}
+
+void read_time_parameter(double &time, const pugi::char_t* par_name, pugi::xml_node node)
+{
+    if (node.child(par_name))
+    {
+        pugi::xml_node time_node = node.child(par_name);
+        time = time_node.text().as_double();
+        std::string units = "min";
+        if (time_node.attribute("units"))
+        {
+            units = time_node.attribute("units").as_string();
+        }
+        if (units == "min" || units == "minutes" || units == "minute")
+        {
+        } // assume it is in units
+        else if (units == "hours" || units == "h" || units == "hour")
+        {
+            time *= 60.0;
+        }
+        else if (units == "days" || units == "d" || units == "day")
+        {
+            time *= 1440.0;
+        }
+        else
+        {
+            std::cout << "PhysiPKPD ERROR: Units specified for " << par_name << " is not recognized." << std::endl
+                      << "\tThe following are accepted: {min, minutes, minute, hours, h, hour, days, d, day}" << std::endl;
+            exit(-1);
         }
     }
     return;
