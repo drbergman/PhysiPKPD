@@ -116,15 +116,14 @@ Pharmacokinetics_Model *create_pk_model(void);
 Pharmacokinetics_Model *create_pk_model(int substrate_index);
 Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substrate_name);
 
+void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node);
+void parse_config_for_pk(std::vector<Pharmacokinetics_Model *> &all_pk);
+
 // PK functions
 void PK_model( double current_time );
-void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK);
-void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK);
+void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK, pugi::xml_node pk_node);
+void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK, pugi::xml_node pk_node);
 void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time);
-
-void single_pk_model_two_compartment(Pharmacokinetics_Model* pPK, double current_time);
-void single_pk_model_one_compartment(Pharmacokinetics_Model *pPK, double current_time);
-void single_pk_model_sbml(Pharmacokinetics_Model *pPK, double current_time);
 
 /* these could be used in the future if any one is ever desperate to get numerical errors in their 1- and 2-compartment models
 void pk_explicit_euler_one_compartment( double dt, double &central_concentration, double elimination_rate );

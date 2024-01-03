@@ -35,35 +35,54 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
     Pharmacokinetics_Model *pNew = create_pk_model(substrate_index);
     pNew->substrate_name = substrate_name;
 
-    if (parameters.doubles.find_index(pNew->substrate_name + "_biot_number") == -1)
-    {
-        std::cout << "PhysiPKPD WARNING: " << pNew->substrate_name << "_biot_number not set." << std::endl
-                  << "  Using a default value of 1.0." << std::endl;
-        pNew->biot_number = 1.0;
-    } // assume a default value of 1
-    else
-    {
-        pNew->biot_number = parameters.doubles(pNew->substrate_name + "_biot_number");
-    }
+    return pNew;
+}
 
-    void(*setup_function)(Pharmacokinetics_Model *pNew);
-    std::string model;
-    if (parameters.strings.find_index(substrate_name + "_pk_model")==-1)
-    {
-        std::cout << "PhysiPKPD WARNING: No PK model specified for " << substrate_name << std::endl
-                  << "  Will attempt to set up a 2-compartment model." << std::endl
-                  << std::endl;
-        setup_function = &setup_pk_model_two_compartment;
-    }
-    else 
-    {
+Pharmacokinetics_Model *create_pk_model(int substrate_index)
+{
+    Pharmacokinetics_Model *pNew = create_pk_model();
+    pNew->substrate_index = substrate_index;
+    return pNew;
+}
+
+Pharmacokinetics_Model *create_pk_model(void)
+{
+    Pharmacokinetics_Model *pNew;
+    pNew = new Pharmacokinetics_Model;
+    return pNew;
+}
+
+void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node)
+{
+    pNew->biot_number = pk_node.child("biot_number").text().as_double();
+    // if (parameters.doubles.find_index(pNew->substrate_name + "_biot_number") == -1)
+    // {
+    //     std::cout << "PhysiPKPD WARNING: " << pNew->substrate_name << "_biot_number not set." << std::endl
+    //               << "  Using a default value of 1.0." << std::endl;
+    //     pNew->biot_number = 1.0;
+    // } // assume a default value of 1
+    // else
+    // {
+    //     pNew->biot_number = parameters.doubles(pNew->substrate_name + "_biot_number");
+    // }
+
+    void(*setup_function)(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node);
+    std::string model = pk_node.child("model").text().as_string();
+    // if (parameters.strings.find_index(substrate_name + "_pk_model")==-1)
+    // {
+    //     std::cout << "PhysiPKPD WARNING: No PK model specified for " << substrate_name << std::endl
+    //               << "  Will attempt to set up a 2-compartment model." << std::endl
+    //               << std::endl;
+    //     setup_function = &setup_pk_model_two_compartment;
+    // }
+    // else 
+    // {
         std::vector<std::string> current_options = {"2C","1C","SBML"};
-        std::vector<void (*)(Pharmacokinetics_Model*)> fns;
+        std::vector<void (*)(Pharmacokinetics_Model*, pugi::xml_node pk_node)> fns;
         fns.push_back(&setup_pk_model_two_compartment);
         fns.push_back(&setup_pk_model_one_compartment);
         fns.push_back(NULL); // handle this case separately
 
-        model = parameters.strings(substrate_name + "_pk_model");
         bool model_found = false;
         for ( int i=0; i<current_options.size(); i++)
         {
@@ -76,16 +95,17 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
         }
         if (!model_found)
         {
-            std::cout << "PhysiPKPD ERROR: " << substrate_name + " is set to follow " + parameters.strings(substrate_name + "_pk_model") + " but this is not an allowable option." << std::endl
+            std::cout << "PhysiPKPD ERROR: " << pNew->substrate_name + " is set to follow " + pk_node.child("model").text().as_string() + " but this is not an allowable option." << std::endl
                       << "  Current options include: " << current_options << std::endl;
             exit(-1);
         }
-    }
+    // }
 
     if (setup_function)
     {
-        setup_function(pNew);
-        return pNew;
+        setup_function(pNew, pk_node);
+        // return pNew;
+        return;
     }
 
 #ifdef ADDON_ROADRUNNER
@@ -155,7 +175,7 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
         }
 
         // add dosing events?
-        if (parameters.bools.find_index(substrate_name + "_read_dose_from_csv")!=-1 && parameters.bools(substrate_name + "_read_dose_from_csv"))
+        if (pk_node.child("schedule").attribute("format").as_string()=="csv")
         {
             // read in csv into events for the xml file
             std::cout << "PhysiPKPD WARNING: Reading in a dosing schedule from a CSV is not yet supported." << std::endl
@@ -167,90 +187,23 @@ Pharmacokinetics_Model *create_pk_model(int substrate_index, std::string substra
 
 
         pNew->pk_solver = pSolver;
-        return pNew;
+        // return pNew;
+        return;
     }
 #endif
 
-    std::cout << "PhysiPKPD ERROR: No PK solver found for " << substrate_name << std::endl
+    std::cout << "PhysiPKPD ERROR: No PK solver found for " << pNew->substrate_name << std::endl
               << "  We tried looking for " + model + ", but somehow failed." << std::endl;
     exit(-1);
 }
 
-Pharmacokinetics_Model *create_pk_model(int substrate_index)
-{
-    Pharmacokinetics_Model *pNew = create_pk_model();
-    pNew->substrate_index = substrate_index;
-    return pNew;
-}
-
-Pharmacokinetics_Model *create_pk_model(void)
-{
-    Pharmacokinetics_Model *pNew;
-    pNew = new Pharmacokinetics_Model;
-    return pNew;
-}
-
 void PK_model(double current_time)
 {
-    static std::vector<std::string> PK_names;
-    static std::vector<int> PK_ind;
-    static bool need_to_parse_pk_names = true;
-    if (need_to_parse_pk_names)
-    {
-        std::string s;
-        std::string delimiter = ",";
-        size_t pos = 0;
-        std::string token;
-        
-        if (parameters.strings.find_index("PKPD_pk_substrate_names") == -1)
-        {
-            std::cout << "PhysiPKPD WARNING: PKPD_pk_substrate_names was not found in User Parameters." << std::endl
-                      << "  Will assume no PK substrates." << std::endl;
-            s = "";
-        }
-        else
-        {
-            s = parameters.strings("PKPD_pk_substrate_names");
-        }
-
-        while ((pos = s.find(delimiter)) != std::string::npos)
-        {
-            token = s.substr(0, pos);
-            if (microenvironment.find_density_index(token) != -1)
-            {
-                PK_names.push_back(token);
-                PK_ind.push_back(microenvironment.find_density_index(token));
-            }
-            else
-            {
-                std::cout << "PhysiPKPD WARNING: " << token << " is not a substrate in the microenvironment." << std::endl;
-            }
-            s.erase(0, pos + 1);
-        }
-        if (s.size() > 0)
-        {
-            if (microenvironment.find_density_index(s) != -1)
-            {
-                PK_names.push_back(s);
-                PK_ind.push_back(microenvironment.find_density_index(s));
-            }
-            else
-            {
-                std::cout << "PhysiPKPD WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
-            }
-        }
-        need_to_parse_pk_names = false;
-    }
-    static bool need_to_setup = true;
-
     static std::vector<Pharmacokinetics_Model *> all_pk;
-
+    static bool need_to_setup = true;
     if (need_to_setup)
     {
-        for (int n = 0; n < PK_ind.size(); n++)
-        {
-            all_pk.push_back(create_pk_model(PK_ind[n], PK_names[n]));
-        }
+        parse_config_for_pk(all_pk);
         need_to_setup = false;
     }
 
@@ -281,19 +234,41 @@ void PK_model(double current_time)
     }
 }
 
-void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
+void parse_config_for_pk(std::vector<Pharmacokinetics_Model *> &all_pk)
+{
+    std::vector<std::string> PK_names;
+    static std::vector<int> PK_ind;
+    pugi::xml_node me_setup_node = PhysiCell::physicell_config_root.child("microenvironment_setup");
+    pugi::xml_node variable_node = me_setup_node.child("variable");
+    while (variable_node)
+    {
+        pugi::xml_node pk_node = variable_node.child("PK");
+        std::string pk_enabled = pk_node.attribute("enabled").as_string();
+        if (pk_node && pk_enabled == "true")
+        {
+            std::string substrate_name = variable_node.attribute("name").as_string();
+            int substrate_index = variable_node.attribute("ID").as_int();
+            Pharmacokinetics_Model *pNew = create_pk_model(substrate_index, substrate_name);
+            setup_pk_model(pNew, pk_node);
+            all_pk.push_back(pNew);
+        }
+        variable_node = variable_node.next_sibling("variable");
+    }
+}
+
+void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK, pugi::xml_node pk_node)
 {
     Analytic2C_PK_Solver *pSolver;
     pSolver = new Analytic2C_PK_Solver;
 
     // pk parameters
-    double k12;
-    double k21;
-    double R;
-    double l;
+    double k12 = pk_node.child("k12").text().as_double();
+    double k21 = pk_node.child("k21").text().as_double();
+    double R = pk_node.child("volume_ratio").text().as_double();
+    double l = pk_node.child("elimination_rate").text().as_double();
 
     /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
-
+    /*
     if (parameters.doubles.find_index(pPK->substrate_name + "_central_to_periphery_volume_ratio") == -1)
     {
         std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_to_periphery_volume_ratio not set." << std::endl;
@@ -368,7 +343,7 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
     {
         l = parameters.doubles(pPK->substrate_name + "_central_elimination_rate");
     }
-
+    */
     /*    %%%%%%%%%%%% Made sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
     if (k12==0 || k21==0 || R==0)
@@ -417,16 +392,16 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK)
     return;
 }
 
-void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
+void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK, pugi::xml_node pk_node)
 {
     Analytic1C_PK_Solver *pSolver;
     pSolver = new Analytic1C_PK_Solver;
 
     // pk parameters
-    double l;
+    double l = pk_node.child("elimination_rate").text().as_double();
 
     /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
-
+    /*
     if (parameters.doubles.find_index(pPK->substrate_name + "_central_elimination_rate") == -1)
     {
         std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
@@ -437,7 +412,7 @@ void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
     {
         l = parameters.doubles(pPK->substrate_name + "_central_elimination_rate");
     }
-
+    */
     /*    %%%%%%%%%%%% Made sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
     // pre-computed quantities to express solution to matrix exponential
@@ -451,15 +426,33 @@ void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK)
 
 void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time)
 {
+    static pugi::xml_node me_setup_node = PhysiCell::physicell_config_root.child("microenvironment_setup");
     if (!pPK->dosing_schedule_setup_done)
     {
+        pugi::xml_node var_node = me_setup_node.child("variable");
+
+        while (var_node)
+        {
+            std::string name = var_node.attribute("name").as_string();
+            if (name == pPK->substrate_name)
+            {
+                break;
+            }
+            var_node = var_node.next_sibling("variable");
+        }
+        pugi::xml_node pk_node = var_node.child("PK");
+        pugi::xml_node schedule_node = pk_node.child("schedule");
         bool setup_dosing_now;
-        bool read_csv;
-        read_csv = parameters.bools.find_index(pPK->substrate_name + "_read_dose_schedule_from_csv") != -1 && parameters.bools(pPK->substrate_name + "_read_dose_schedule_from_csv");
+        bool read_csv = schedule_node.child("schedule").attribute("format").as_string() == "csv";
+        // read_csv = parameters.bools.find_index(pPK->substrate_name + "_read_dose_schedule_from_csv") != -1 && parameters.bools(pPK->substrate_name + "_read_dose_schedule_from_csv");
         setup_dosing_now = read_csv // read dose schedule from csv
-                           || (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") == -1) // start if user did not specify any of the parameters to determine when to start
-                           || (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") != -1) && parameters.bools(pPK->substrate_name + "_set_first_dose_time")                                                                                                                                   // start if user parameter says to set first dose time
-                           || (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") != -1 && (current_time > pPK->pk_solver->confluence_check_time - tolerance) && (confluence_computation() > parameters.doubles(pPK->substrate_name + "_confluence_condition")));                         // start if confluence check is given, its time for it, and if the confluence condition is met
+                           || (!(schedule_node.child("confluence_start"))) && (!(schedule_node.child("confluence_condition"))) // start if user did not specify any of the parameters to determine when to start
+                           || (schedule_node.child("confluence_start")) && !(schedule_node.child("confluence_start").text().as_bool())                                                                                                                                // start if user parameter says to set first dose time
+                           || ((schedule_node.child("confluence_condition")) && (current_time > pPK->pk_solver->confluence_check_time - tolerance) && (confluence_computation() > schedule_node.child("confluence_condition").text().as_double()));                         // start if confluence check is given, its time for it, and if the confluence condition is met
+        // setup_dosing_now = read_csv // read dose schedule from csv
+        //                    || (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") == -1) // start if user did not specify any of the parameters to determine when to start
+        //                    || (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") != -1) && parameters.bools(pPK->substrate_name + "_set_first_dose_time")                                                                                                                                   // start if user parameter says to set first dose time
+        //                    || (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") != -1 && (current_time > pPK->pk_solver->confluence_check_time - tolerance) && (confluence_computation() > parameters.doubles(pPK->substrate_name + "_confluence_condition")));                         // start if confluence check is given, its time for it, and if the confluence condition is met
         if (setup_dosing_now)
         {
             if (read_csv)
@@ -494,16 +487,16 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
             else
             {
                 // get max dose number
-                if (parameters.ints.find_index(pPK->substrate_name + "_max_number_doses") == -1)
-                {
-                    std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_max_number_doses not set." << std::endl
-                              << "  Using a default value of 0." << std::endl;
-                    pPK->pk_solver->max_doses = 0;
-                } // assume a default value of 0
-                else
-                {
-                    pPK->pk_solver->max_doses = parameters.ints(pPK->substrate_name + "_max_number_doses");
-                }
+                // if (parameters.ints.find_index(pPK->substrate_name + "_max_number_doses") == -1)
+                // {
+                //     std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_max_number_doses not set." << std::endl
+                //               << "  Using a default value of 0." << std::endl;
+                //     pPK->pk_solver->max_doses = 0;
+                // } // assume a default value of 0
+                // else
+                // {
+                    pPK->pk_solver->max_doses = schedule_node.child("total_doses").text().as_int();
+                // }
 
                 if (pPK->pk_solver->max_doses == 0)
                 {
@@ -511,39 +504,39 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                     return;
                 }
 
-                if ((parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") == -1) && (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") == -1))
-                {
-                    std::cout << "PhysiPKPD WARNING: No specification of how to set first dose time." << std::endl
-                              << "  Defaulting to current_time." << std::endl
-                              << "  Specify this by setting " << pPK->substrate_name + "_set_first_dose_time" + " = true" << std::endl
-                              << "  Or setting " << pPK->substrate_name + "_confluence_condition" << std::endl;
-                }
+                // if ((!(schedule_node.child("confluence_start"))) && (!(schedule_node.child("confluence_condition"))))
+                // {
+                //     std::cout << "PhysiPKPD WARNING: No specification of how to set first dose time." << std::endl
+                //               << "  Defaulting to current_time." << std::endl
+                //               << "  Specify this by setting " << pPK->substrate_name + "_set_first_dose_time" + " = true" << std::endl
+                //               << "  Or setting " << pPK->substrate_name + "_confluence_condition" << std::endl;
+                // }
 
                 pPK->pk_solver->dose_times.resize(pPK->pk_solver->max_doses, 0);
                 pPK->pk_solver->dose_amounts.resize(pPK->pk_solver->max_doses, 0);
-                if (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time") && parameters.doubles.find_index(pPK->substrate_name + "_first_dose_time") == -1)
+                if ((schedule_node.child("confluence_start")) && schedule_node.child("confluence_start").text().as_bool() && !(schedule_node.child("first_dose_time")))
                 {
                     std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << " has a set time for the first dose, but the first time is not supplied. Assuming to begin now = " << current_time << std::endl
                               << "  This can be set by using " << pPK->substrate_name << "_first_dose_time" << std::endl;
                 }
-                pPK->pk_solver->dose_times[0] = (parameters.bools.find_index(pPK->substrate_name + "_set_first_dose_time") != -1 && parameters.bools(pPK->substrate_name + "_set_first_dose_time")) ? (parameters.doubles.find_index(pPK->substrate_name + "_first_dose_time") != -1 ? parameters.doubles(pPK->substrate_name + "_first_dose_time") : current_time) : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now; also if the defining parameters are not set, then set it to be the current time
+                pPK->pk_solver->dose_times[0] = ((schedule_node.child("confluence_start")) && !(schedule_node.child("confluence_start").text().as_bool())   ) ? ((schedule_node.child("first_dose_time")) ? schedule_node.child("first_dose_time").text().as_double() : current_time) : current_time; // if not setting the first dose time, then the confluence condition is met and start dosing now; also if the defining parameters are not set, then set it to be the current time
                 for (unsigned int i = 1; i < pPK->pk_solver->max_doses; i++)
                 {
-                    if (parameters.doubles.find_index(pPK->substrate_name + "_dose_interval") == -1)
+                    if (!(schedule_node.child("dose_interval"))) // put this in here so that if only one dose is given, then this won't be checked
                     {
                         std::cout << "PhysiPKPD ERROR: " << pPK->substrate_name << " has multiple doses but no dose interval is given." << std::endl
                                   << "  Set " << pPK->substrate_name << "_dose_interval" << std::endl;
                         exit(-1);
                     }
-                    pPK->pk_solver->dose_times[i] = pPK->pk_solver->dose_times[i - 1] + parameters.doubles(pPK->substrate_name + "_dose_interval");
+                    pPK->pk_solver->dose_times[i] = pPK->pk_solver->dose_times[i - 1] + schedule_node.child("dose_interval").text().as_double();
                 }
-                int num_loading = parameters.ints.find_index(pPK->substrate_name + "_number_loading_doses") != -1 ? parameters.ints(pPK->substrate_name + "_number_loading_doses") : 0;
+                int num_loading = (schedule_node.child("loding_doses")) ? schedule_node.child("loading_doses").text().as_int(): 0;
                 double loading_dose;
                 if (num_loading != 0)
                 {
-                    if (parameters.doubles.find_index(pPK->substrate_name + "_central_increase_on_loading_dose") != -1)
+                    if (schedule_node.child("loading_dose"))
                     {
-                        loading_dose = parameters.doubles(pPK->substrate_name + "_central_increase_on_loading_dose");
+                        loading_dose = schedule_node.child("loading_dose").text().as_double();
                     }
                     else
                     {
@@ -555,9 +548,9 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                 double dose;
                 if (pPK->pk_solver->max_doses > num_loading)
                 {
-                    if (parameters.doubles.find_index(pPK->substrate_name + "_central_increase_on_dose") != -1)
+                    if (schedule_node.child("regular_dose"))
                     {
-                        dose = parameters.doubles(pPK->substrate_name + "_central_increase_on_dose");
+                        dose = schedule_node.child("regular_dose").text().as_double();
                     }
                     else
                     {
@@ -575,7 +568,7 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
         }
         else if (current_time > pPK->pk_solver->confluence_check_time - tolerance)
         {
-            if (parameters.doubles.find_index(pPK->substrate_name + "_confluence_condition") == -1)
+            if (!(schedule_node.child("confluence_condition")))
             {
                 std::cout << "PhysiPKPD ERROR: Not setting first dose time of " << pPK->substrate_name << " means to use a confluence check to start dosing." << std::endl
                           << "  However, no confluence condition is supplied. Set " << pPK->substrate_name + "_confluence_condition to a value between 0 and 1." << std::endl
