@@ -444,7 +444,8 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
         pugi::xml_node pk_node = var_node.child("PK");
         pugi::xml_node schedule_node = pk_node.child("schedule");
         bool setup_dosing_now;
-        bool read_csv = schedule_node.child("schedule").attribute("format").as_string() == "csv";
+        std::string format = schedule_node.attribute("format").as_string();
+        bool read_csv = format == "csv";
         // read_csv = parameters.bools.find_index(pPK->substrate_name + "_read_dose_schedule_from_csv") != -1 && parameters.bools(pPK->substrate_name + "_read_dose_schedule_from_csv");
         setup_dosing_now = read_csv // read dose schedule from csv
                            || (!(schedule_node.child("confluence_start"))) && (!(schedule_node.child("confluence_condition"))) // start if user did not specify any of the parameters to determine when to start
