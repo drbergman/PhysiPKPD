@@ -120,12 +120,12 @@ void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node)
 
         // reading given SBML
         std::string sbml_filename = "PK_default.xml";
-        // if (parameters.strings.find_index(substrate_name + "_sbml_filename")==-1)
+        // if (parameters.strings.find_index(pNew->substrate_name + "_sbml_filename")==-1)
         if (!(pk_node.child("sbml_filename")))
         {
-            std::cout << "PhysiPKPD WARNING: No SBML filename provided for " << substrate_name << "." << std::endl
-                      << "  You may include a filename as a string in " << substrate_name + "_sbml_filename" << std::endl
-                      << "  For example: <" << substrate_name << "_sbml_filename type=\"string\">PK_default.xml</" << substrate_name + "_sbml_filename>" << std::endl
+            std::cout << "PhysiPKPD WARNING: No SBML filename provided for " << pNew->substrate_name << "." << std::endl
+                      << "  You may include a filename as a string in " << pNew->substrate_name + "_sbml_filename" << std::endl
+                      << "  For example: <" << pNew->substrate_name << "_sbml_filename type=\"string\">PK_default.xml</" << pNew->substrate_name + "_sbml_filename>" << std::endl
                       << "  Place that file in ./config/ for PhysiPKPD to properly locate it." << std::endl
                       << "  For now, PhysiPKPD will use ./config/" + sbml_filename << std::endl
                       << std::endl;
@@ -140,7 +140,7 @@ void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node)
 
         if (!rrc::loadSBML(pSolver->rrHandle, sbml)) //------------- To PhysiPKPD Team : please provide PK model in here -------------
         {
-            std::cout << "PhysiPKPD ERROR: Could not load SBML file for " << substrate_name << ". " << std::endl
+            std::cout << "PhysiPKPD ERROR: Could not load SBML file for " << pNew->substrate_name << ". " << std::endl
                       << "  Make sure that " + sbml_filename << " is the correct filename for your SBML model." << std::endl
                       << std::endl;
 
@@ -165,11 +165,11 @@ void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node)
         auto out = pSolver->species_result_column_index.find("circulation_concentration");
         if (out == pSolver->species_result_column_index.end())
         {
-            std::cout << "PhysiPKPD ERROR: No species named circulation_concentration in the SBML for PK dynamics of " << substrate_name << std::endl
+            std::cout << "PhysiPKPD ERROR: No species named circulation_concentration in the SBML for PK dynamics of " << pNew->substrate_name << std::endl
                       << "  Either change " << std::endl
-                      << "    " << substrate_name + "_pk_model"
+                      << "    " << pNew->substrate_name + "_pk_model"
                       << " to not be SBML," << std::endl
-                      << "    point to the correct SBML file with " << substrate_name + "_sbml_filename" << std::endl
+                      << "    point to the correct SBML file with " << pNew->substrate_name + "_sbml_filename" << std::endl
                       << "    or fix the SBML file here: " << sbml_filename << std::endl
                       << std::endl;
             exit(-1);
@@ -180,7 +180,7 @@ void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node)
         {
             // read in csv into events for the xml file
             std::cout << "PhysiPKPD WARNING: Reading in a dosing schedule from a CSV is not yet supported." << std::endl
-                      << "  Will use " << sbml_filename << " as is for the PK dynamics of " << substrate_name << std::endl
+                      << "  Will use " << sbml_filename << " as is for the PK dynamics of " << pNew->substrate_name << std::endl
                       << std::endl;
 
         }
