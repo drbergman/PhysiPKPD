@@ -17,7 +17,7 @@ class Pharmacodynamics_Model
 {
  public:
     std::string substrate_name;
-    std::string cell_type;
+    std::string cell_definition_name;
 	int substrate_index; // index of the substrate following pd dynamics
 	int cell_definition_index; // index of the cell type following pd dynamics
 
@@ -42,14 +42,14 @@ class Pharmacodynamics_Model
 // Model creation functions
 Pharmacodynamics_Model* create_pd_model( void );
 Pharmacodynamics_Model* create_pd_model( int substrate_index, int cell_definition_index );
-Pharmacodynamics_Model* create_pd_model( int substrate_index, std::string substrate_name, int cell_definition_index, std::string cell_type );
+Pharmacodynamics_Model* create_pd_model( int substrate_index, std::string substrate_name, int cell_definition_index, std::string cell_definition_name );
 
 // PD functions
 void setup_pharmacodynamics(void);
 void PD_model( double dt );
-void setup_pd_advancer(Pharmacodynamics_Model *pPD);
-void setup_pd_model_auc(Pharmacodynamics_Model *pPD);
-void setup_pd_model_sbml(Pharmacodynamics_Model *pPD);
+void setup_pd_advancer(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_node);
+void setup_pd_model_auc(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_node);
+void setup_pd_model_sbml(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_node);
 void single_pd_model(Pharmacodynamics_Model *pPD, double current_time);
 // void pd_phenotype_function( Cell* pC, Phenotype& p, double dt );
 // void pd_custom_function( Cell* pC, Phenotype& p, double dt );
