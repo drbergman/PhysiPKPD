@@ -177,10 +177,10 @@ The dose given on a loading dose is set by `loading_dose` and on a regular dose 
 | :-- | :-- | :-- |
 | `total_doses`| Total number of doses to give including loading doses | Error |
 | `loading_doses` | Number of loading doses to give before switching to regular doses | Set to `0` |
-| `dose_interval` | Time between successive doses, loading or regular (in minutes) | If `total_doses`>1, throws an error |
 | `regular_dose` | Increase in concentration in central compartment after a regular dose | If `total_doses`>`loading_doses`, throws an error |
 | `loading_dose` | Increase in concentration in central compartment after a loading dose | If `loading_doses`>0, throws an error |
 | `first_dose_time` | Time of first dose if given at fixed time (in `units="units"`) | Set to `current_time` |
+| `dose_interval` | Time between successive doses, loading or regular (in `units="units"`) | If `total_doses`>1, throws an error |
 <p align="center">
     <b>Table:</b> Dosing parameters
 </p>
