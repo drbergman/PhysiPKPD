@@ -147,7 +147,7 @@ If `sbml_filename` is not set, PhysiPKPD will look for `./config/PK_default.xml`
 
 | Parameter | Description | If Missing |
 | :-- | :-- | :-- |
-| `S_sbml_filename` | Filename of SBML file, e.g. `PK_default.xml` | Set to `PK_default.xml` |
+| `sbml_filename` | Filename of SBML file, e.g. `PK_default.xml` | Set to `PK_default.xml` |
 <p align="center">
     <b>Table:</b> PK parameters for `SBML` models
 </p>
@@ -583,7 +583,7 @@ Place the following within the `cell_definition` element:
       ...
       </phenotype>
 
-      <--! Place PD model here -->
+      <--! Place PD model(s) here -->
 
       </cell_definition>
    ...
