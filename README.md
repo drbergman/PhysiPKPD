@@ -32,7 +32,7 @@ To run one of these samples, do the following:
 3. Compile your model: `make`
 4. Run your model
    * On Mac: `./pkpd_sample ./config/pkpd_model.xml`
-   * On Windows: `pkpd_sample.exe ./config/pkpd_model.xml`
+   * On Windows: `pkpd_sample.exe .\config\pkpd_model.xml`
 5. Look at the snapshots in `output/` and the living cell counts in `output/cell_counts.csv`
 
 ## Making your own project
