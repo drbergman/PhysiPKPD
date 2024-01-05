@@ -158,6 +158,7 @@ Every PK model requires a dosing schedule to achieve nonzero `circulation_concen
 For `SBML` models, these must be set as events in the SBML file.
 For `1C` and `2C` models, these can be set either with parameters of a CSV file.
 This is set with the `schedule` element and its attribute `format`, set to either `parameters` or `csv`.
+See the [`1C` template](#1c_template) for an example using `parameters`, and see the [`2C`` template](#2c_template) for an example using `csv`.
 
 #### Dosing parameters
 
@@ -532,7 +533,7 @@ Place any of the following within the `variable` element:
 </microenvironment_setup>
 ```
 
-#### `1C` template
+#### `1C` template <a name="1c_template"></a>
 
 
 ```
@@ -551,7 +552,7 @@ Place any of the following within the `variable` element:
 </PK>
 ```
 
-#### `2C` template
+#### `2C` template <a name="2c_template"></a>
 
 ```
 <PK enabled="true">
