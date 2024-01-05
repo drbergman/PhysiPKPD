@@ -6,6 +6,15 @@ import requests
 import os
 from zipfile import ZipFile 
 
+def append_suffix(f):
+    suffix = ""
+    while os.path.exists(f"{f}{suffix}"):
+        if suffix == "":
+            suffix = 1
+        else:
+            suffix += 1
+    return f"{f}{suffix}"
+
 parser = argparse.ArgumentParser()
 
 group = parser.add_mutually_exclusive_group()
@@ -52,23 +61,31 @@ data = requests.get(remote_url)
 with open(local_file, 'wb')as file:
   file.write(data.content)
 
+temp_dir = append_suffix(DIR_NAME + "-TEMP")
+# suffix_temp_dir = 1
+# while os.path.exists(temp_dir + str(suffix_temp_dir)):
+#     suffix_temp_dir+=1
+# temp_dir +=  str(suffix_temp_dir)
+
 with ZipFile(local_file, 'r') as zObject: 
-    zObject.extractall(path=DIR_NAME + "_temp")
+    zObject.extractall(path=temp_dir)
 
-suffix = ""
-while True:
-    try:
-        os.rename(DIR_NAME + "_temp/" + zip_folder_name, DIR_NAME + str(suffix))
-        break
-    except:
-        if suffix == "":
-            suffix = 1
-        else:
-            suffix += 1
-        print(f"Trying suffix {suffix} now...")
+DIR_NAME = append_suffix(DIR_NAME)
+os.rename(f"{temp_dir}/" + zip_folder_name, DIR_NAME)
+# suffix = ""
+# while True:
+#     try:
+#         os.rename(f"{temp_dir}/" + zip_folder_name, DIR_NAME + str(suffix))
+#         break
+#     except:
+#         if suffix == "":
+#             suffix = 1
+#         else:
+#             suffix += 1
+#         print(f"Trying suffix {suffix} now...")
 
-os.removedirs(DIR_NAME + "_temp")
-DIR_NAME += str(suffix)
+os.removedirs(temp_dir)
+# DIR_NAME += str(suffix)
 print("unzipped to ",DIR_NAME)
     
 # Get PhysiPKPD stuff
@@ -86,12 +103,6 @@ USE_TAG = (USE_LATEST is False) and (PKPD_USE_BRANCH is False)
 
 if USE_LATEST == True:
     response = requests.get(f"https://api.github.com/repos/drbergman/PhysiPKPD/releases/latest")
-    print(f"response = {response}")
-    release_name_str = response.json()["name"]
-    print(release_name_str)
-    print(release_name_str.split())
-    vnum = release_name_str.split()[1]
-    print("vnum =",vnum)  # e.g., vnum= 1.10.4
     tag_name = response.json()["tag_name"]
     local_file = 'PhysiPKPD-LATEST.zip'
     remote_url =  response.json()["zipball_url"]
@@ -104,39 +115,39 @@ else:
 
 print("remote_url=",remote_url)
 data = requests.get(remote_url)
+local_file = append_suffix(local_file)
 with open(local_file, 'wb')as file:
    file.write(data.content)
 
-
+temp_dir = append_suffix("PhysiPKPD-TEMP")
 with ZipFile(local_file, 'r') as zObject: 
-    zObject.extractall(path="PhysiPKPD-TEMP")
+    zObject.extractall(path=temp_dir)
 
-print(f"extracted PhysiPKPD to PhysiPKPD-TEMP")
+print(f"extracted PhysiPKPD to {temp_dir}")
 
-folder_name = os.listdir("./PhysiPKPD-TEMP")[0]
+folder_name = os.listdir(f"./{temp_dir}")[0]
 
 import shutil
 
-os.rename(f"PhysiPKPD-TEMP/{folder_name}/addons/PhysiPKPD",f"{DIR_NAME}/addons/PhysiPKPD")
-os.removedirs(f"PhysiPKPD-TEMP/{folder_name}/addons")
-os.rename(f"PhysiPKPD-TEMP/{folder_name}/sample_projects_physipkpd",f"{DIR_NAME}/sample_projects_physipkpd")
-os.rename(f"PhysiPKPD-TEMP/{folder_name}/LICENSE",f"{DIR_NAME}/addons/PhysiPKPD/LICENSE")
-os.rename(f"PhysiPKPD-TEMP/{folder_name}/README.md",f"{DIR_NAME}/addons/PhysiPKPD/README.md")
-shutil.rmtree("PhysiPKPD-TEMP")
-print(f"Moved PhysiPKPD files to {DIR_NAME}. Deleted PhysiPKPD-TEMP")
+os.rename(f"{temp_dir}/{folder_name}/addons/PhysiPKPD",f"{DIR_NAME}/addons/PhysiPKPD")
+os.removedirs(f"{temp_dir}/{folder_name}/addons")
+os.rename(f"{temp_dir}/{folder_name}/sample_projects_physipkpd",f"{DIR_NAME}/sample_projects_physipkpd")
+os.rename(f"{temp_dir}/{folder_name}/LICENSE",f"{DIR_NAME}/addons/PhysiPKPD/LICENSE")
+os.rename(f"{temp_dir}/{folder_name}/README.md",f"{DIR_NAME}/addons/PhysiPKPD/README.md")
+shutil.rmtree(temp_dir)
+print(f"Moved PhysiPKPD files to {DIR_NAME}. Deleted {temp_dir}")
 
 source_file = open(f'{DIR_NAME}/addons/PhysiPKPD/Makefile-PhysiPKPD_Addendum.txt', "r")
 with open(f'{DIR_NAME}/sample_projects/Makefile-default', 'a') as f:
     f.write("\n")
     shutil.copyfileobj(source_file, f)
 
-
 os.rename(f'{DIR_NAME}/Makefile',f'{DIR_NAME}/Makefile-backup')
 shutil.copyfile(f'{DIR_NAME}/sample_projects/Makefile-default', f'{DIR_NAME}/Makefile')
 
 print(f"Updated Makefile to be ready for PhysiPKPD samples")
 
-print(f"You are all set!\n  Move into your new project folder:\n\tcd {DIR_NAME}\n  make a sample project or a template project and make your PhysiPKPD model!\n\n")
-print(f"Examples:\n\tmake pkpd-proliferation-sample\n\tmake pkpd-apoptosis-sample\n\tmake pkpd-template\n\n")
-print(f"Run the samples with\n\t./pkpd_sample ./config/pkpd_model.xml (MacOS/Linux)\n\tpkpd_sample.exe .\config\pkpd_model.xml (Windows)")
-print(f"Run the template projects with\n\t./pkpd_project ./config/pkpd_model.xml (MacOS/Linux)\n\tpkpd_project.exe .\config\pkpd_model.xml (Windows)")
+print(f"You are all set!\n\tMove into your new project folder:\n\t\tcd {DIR_NAME}\n\tmake a sample project or a template project and make your PhysiPKPD model!\n\n")
+print(f"\tExamples:\n\t\tmake pkpd-proliferation-sample\n\t\tmake pkpd-apoptosis-sample\n\t\tmake pkpd-template\n\n")
+print(f"\tRun the samples with\n\t\t./pkpd_sample ./config/pkpd_model.xml (MacOS/Linux)\n\t\tpkpd_sample.exe .\config\pkpd_model.xml (Windows)")
+print(f"\tRun the template projects with\n\t\t./pkpd_project ./config/pkpd_model.xml (MacOS/Linux)\n\t\tpkpd_project.exe .\config\pkpd_model.xml (Windows)")
