@@ -224,3 +224,10 @@ if args.studio:
 else:
     print(f"\t3. Edit according to https://github.com/drbergman/PhysiPKPD/releases/latest")
     print(f"Consider passing in the --studio flag next time to get studio set up for easier editing")
+print(f"\t4. Make sure to do the following:")
+print(f"\t\t* Activate Dirichlet conditions for any PK substrate (that's how they enter the microenvironnent)")
+print(f"\t\t* Set nonzero uptake rates for every (cell type, substrate) pairing that has a PD model (that's how damage is accumulated)")
+print(f"\t\t* Add rules for how `custom:S_damage` (S = substrate name) affects target cell types; enable rules")
+print(f"\t5. Consider using `damage_coloring` to assess your PD model parameters as you build the model.")
+print(f"\t     In custom_modules/custom.cpp, replace my_coloring_function with\n")
+print("std::vector<std::string> my_coloring_function(Cell *pC)\n{ return damage_coloring(pC); }\n\n")
