@@ -1,5 +1,17 @@
 # PhysiPKPD
 ## Getting started...
+### ...with a new project
+1. Download (or copy contents of) `get_physipkpd.py` to a local file.
+2. Run `python get_physipkpd.py --dir path/to/project/dir --studio`
+   * The `--studio` flag downloads a PhysiPKPD-enabled version of PhysiCell-Studio to help build the model
+3. Follow output for next steps
+
+### ...adding PhysiPKPD to an existing project
+1. Download (or copy contents of) `add_physipkpd.py` to a local file.
+2. Run `python add_physipkpd.py path/to/project/dir --studio`
+   * The `--studio` flag downloads a PhysiPKPD-enabled version of PhysiCell-Studio to help build the model
+3. Follow output for next steps
+
 ### ...by downloading PhysiPKPD add adding to a working PhysiCell directory <a name="DL"></a>
 1. Download the repository and unzip the file.
 2. Move the folder `PhysiPKPD/addons/PhysiPKPD` into `PhysiCell/addons/`
