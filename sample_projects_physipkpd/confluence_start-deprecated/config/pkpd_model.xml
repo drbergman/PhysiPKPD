@@ -13,7 +13,7 @@
     </domain>
 
     <overall>
-        <max_time units="min">120</max_time>
+        <max_time units="min">1440</max_time>
         <time_units>min</time_units>
         <space_units>micron</space_units>
 
@@ -176,15 +176,9 @@
             <custom_data>
 
                 <!-- <div_drugs type="divider" description="-Starting Drug 1 PD parameters-"/> -->
-
-                <PKPD_D1_moa_is_prolif units="bool">1.0</PKPD_D1_moa_is_prolif>
-                <PKPD_D1_prolif_saturation_rate units="1/min">1e-6</PKPD_D1_prolif_saturation_rate>
-                <PKPD_D1_prolif_EC50 units="damage">1e8</PKPD_D1_prolif_EC50>
-                <PKPD_D1_prolif_hill_power units="dimensionless">2</PKPD_D1_prolif_hill_power>
-
                 <PKPD_D1_damage units="damage">0</PKPD_D1_damage>
                 <PKPD_D1_repair_rate_constant units="damage/min">5e6</PKPD_D1_repair_rate_constant>
-                <PKPD_D1_repair_rate_linear units="damage/min">1e-2</PKPD_D1_repair_rate_linear>
+                <PKPD_D1_repair_rate_linear units="damage/min">2e-2</PKPD_D1_repair_rate_linear>
                 <PKPD_D1_metabolism_rate units="1/min">0.05</PKPD_D1_metabolism_rate>
 
             </custom_data>
@@ -198,6 +192,16 @@
         </cell_positions>
     </initial_conditions>
 
+    <cell_rules>
+        <rulesets>
+            <ruleset protocol="CBHG" version="2.0" format="csv" enabled="true">
+                <folder>./config</folder>
+                <filename>cell_rules.csv</filename>
+            </ruleset>
+        </rulesets>
+        <settings />
+    </cell_rules>
+    
     <user_parameters>
 
 <!-- <div type="divider" description="-Initialization settings-"/> -->
@@ -209,8 +213,6 @@
 
 <!-- <div type="divider" description="-PKPD Substrates and miscellaneous-"/> -->
 
-        <PKPD_pk_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pk_substrate_names>
-        <PKPD_pd_substrate_names type="string" description="names of substrates following pk dynamics">PKPD_D1</PKPD_pd_substrate_names>
         <PKPD_precompute_all_pd_quantities type="bool" units="dimensionless" description="If using analytic solutions (see PKPD_use_analytic_pd_solutions), whether to precompute or not. precompute should not be done if pd parameters vary by agent/time">True</PKPD_precompute_all_pd_quantities>
         <csv_data_interval type="double" units="min" description="time between writing data to CSV">30</csv_data_interval>
 
@@ -223,7 +225,7 @@
 
 <!-- <div type="divider" description="-Drug 1 Specific PK model Settings-"/> -->
 
-        <PKPD_D1_max_number_doses type="int" units="none" description="max doses of drug 1, including loading doses">1</PKPD_D1_max_number_doses>
+        <PKPD_D1_max_number_doses type="int" units="none" description="max doses of drug 1, including loading doses">4</PKPD_D1_max_number_doses>
         <PKPD_D1_number_loading_doses type="int" units="none" description="number of loading doses of drug 1">0</PKPD_D1_number_loading_doses>
         <PKPD_D1_dose_interval type="double" units="min" description="time between dosings of drug 1">360.0</PKPD_D1_dose_interval>
         <PKPD_D1_central_increase_on_dose type="double" units="mmHg" description="concentration added to systemic circulation on dose of drug 1">5e2</PKPD_D1_central_increase_on_dose>
@@ -231,7 +233,7 @@
 
         <PKPD_D1_set_first_dose_time type="bool" units="none" description="user sets first dose time to start therapy for drug 1; false=user gives confluence condition">False</PKPD_D1_set_first_dose_time>
         <PKPD_D1_first_dose_time type="double" units="min" description="time of first dose for drug 1">0.0</PKPD_D1_first_dose_time>
-        <PKPD_D1_confluence_condition type="double" units="none" description="confluence as proportion at which to start therapy for drug 1">0.53</PKPD_D1_confluence_condition>
+        <PKPD_D1_confluence_condition type="double" units="none" description="confluence as proportion at which to start therapy for drug 1">0.55</PKPD_D1_confluence_condition>
 
         <PKPD_D1_central_elimination_rate type="double" units="1/min" description="decay rate of drug 1 in systemic circulation">0.0027</PKPD_D1_central_elimination_rate>
         <PKPD_D1_central_to_periphery_clearance_rate type="double" units="1/min" description="rate of central concentration change of drug 1 due to distribution">0.0048</PKPD_D1_central_to_periphery_clearance_rate>

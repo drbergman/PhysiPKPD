@@ -33,7 +33,7 @@
 #                                                                             #
 # BSD 3-Clause License (see https://opensource.org/licenses/BSD-3-Clause)     #
 #                                                                             #
-# Copyright (c) 2015-2018, Paul Macklin and the PhysiCell Project             #
+# Copyright (c) 2015-2021, Paul Macklin and the PhysiCell Project             #
 # All rights reserved.                                                        #
 #                                                                             #
 # Redistribution and use in source and binary forms, with or without          #
@@ -65,157 +65,28 @@
 ###############################################################################
 */
 
-#ifndef __PhysiCell_settings_h__
-#define __PhysiCell_settings_h__
+#include "../core/PhysiCell.h"
+#include "../modules/PhysiCell_standard_modules.h"
+#include "../addons/PhysiPKPD/src/PhysiPKPD.h"
 
-#include <iostream>
-#include <ctime>
-#include <cmath>
-#include <string>
-#include <vector>
-#include <random>
-#include <chrono>
-#include <unordered_map>
+using namespace BioFVM;
+using namespace PhysiCell;
 
-#include "./PhysiCell_pugixml.h"
-#include "../BioFVM/BioFVM.h"
+// setup functions to help us along
 
-#include "../core/PhysiCell_constants.h" 
-#include "../core/PhysiCell_utilities.h"
+void create_cell_types( void );
+void setup_tissue( void );
+void create_output_csv_files( void );
 
-using namespace BioFVM; 
+// set up the BioFVM microenvironment
+void setup_microenvironment( void );
 
-namespace PhysiCell{
- 	
-extern pugi::xml_node physicell_config_root; 
+// custom pathology coloring function
 
-bool load_PhysiCell_config_file( std::string filename );
+std::vector<std::string> my_coloring_function( Cell* );
 
-class PhysiCell_Settings
-{
- private:
- public:
-	// overall 
-	double max_time = 60*24*45;   
+// custom functions can go here
 
-	// units
-	std::string time_units = "min"; 
-	std::string space_units = "micron"; 
- 
-	// parallel options 
-	int omp_num_threads = 2; 
-	
-	// save options
-	std::string folder = "."; 
-
-	double full_save_interval = 60;  
-	bool enable_full_saves = true; 
-	bool enable_legacy_saves = false; 
-	
-	double SVG_save_interval = 60; 
-	bool enable_SVG_saves = true; 
-
-	double intracellular_save_interval = 60; 
-	bool enable_intracellular_saves = false; 
-	
-	PhysiCell_Settings();
-	
-	void read_from_pugixml( void ); 
-};
-
-class PhysiCell_Globals
-{
- private:
- public:
-	double current_time = 0.0; 
-	double next_full_save_time = 0.0; 
-	double next_SVG_save_time = 0.0; 
-	double next_intracellular_save_time = 0.0; 
-	int full_output_index = 0; 
-	int SVG_output_index = 0; 
-	int intracellular_output_index = 0; 
-};
-
-template <class T> 
-class Parameter
-{
- private:
-	template <class Y>
-	friend std::ostream& operator<<(std::ostream& os, const Parameter<Y>& param); 
-
- public: 
-	std::string name; 
-	std::string units; 
-	T value; 
-	
-	Parameter();
-	Parameter( std::string my_name ); 
-	
-	void operator=( T& rhs ); 
-	void operator=( T rhs ); 
-	void operator=( Parameter& p ); 
-};
-
-template <class T>
-class Parameters
-{
- private:
-	std::unordered_map<std::string,int> name_to_index_map; 
-	
-	template <class Y>
-	friend std::ostream& operator<<( std::ostream& os , const Parameters<Y>& params ); 
-
- public: 
-	Parameters(); 
- 
-	std::vector< Parameter<T> > parameters; 
-	
-	void add_parameter( std::string my_name ); 
-	void add_parameter( std::string my_name , T my_value ); 
-//	void add_parameter( std::string my_name , T my_value ); 
-	void add_parameter( std::string my_name , T my_value , std::string my_units ); 
-//	void add_parameter( std::string my_name , T my_value , std::string my_units ); 
-	
-	void add_parameter( Parameter<T> param );
-	
-	int find_index( std::string search_name );
-	int find_variable_index (std::string search_name); // same as above, but will return -1 if search_name is not a parameter
-	
-	// these access the values 
-	T& operator()( int i );
-	T& operator()( std::string str ); 
-
-	// these access the full, raw parameters 
-	Parameter<T>& operator[]( int i );
-	Parameter<T>& operator[]( std::string str ); 
-	
-	int size( void ) const; 
-};
-
-class User_Parameters
-{
- private:
-	friend std::ostream& operator<<( std::ostream& os , const User_Parameters up ); 
- 
- public:
-	Parameters<bool> bools; 
-	Parameters<int> ints; 
-	Parameters<double> doubles; 
-	Parameters<std::string> strings; 
-	
-	void read_from_pugixml( pugi::xml_node parent_node );
-}; 
-
-extern PhysiCell_Globals PhysiCell_globals; 
-
-extern PhysiCell_Settings PhysiCell_settings; 
-
-extern User_Parameters parameters; 
-
-bool setup_microenvironment_from_XML( pugi::xml_node root_node );
-bool setup_microenvironment_from_XML( void );
-
-}
-
-#endif 
-
+void phenotype_function( Cell* pCell, Phenotype& phenotype, double dt );
+void custom_function( Cell* pCell, Phenotype& phenotype , double dt );
+void contact_function( Cell* pMe, Phenotype& phenoMe , Cell* pOther, Phenotype& phenoOther , double dt );

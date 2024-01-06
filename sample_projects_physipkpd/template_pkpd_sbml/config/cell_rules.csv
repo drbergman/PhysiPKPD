@@ -1,0 +1,2 @@
+PKPD_cell,custom:PKPD_D1_damage,increases,apoptosis,1e-3,1e5,2,0
+PKPD_cell,custom:PKPD_D2_damage,decreases,cycle entry,1e-6,1e5,2,0

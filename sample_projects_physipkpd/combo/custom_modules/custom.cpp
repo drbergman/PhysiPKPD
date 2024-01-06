@@ -110,11 +110,6 @@ void create_cell_types(void)
     cell_defaults.functions.custom_cell_rule = custom_function;
     cell_defaults.functions.contact_function = contact_function;
 
-    for (int k = 0; k < cell_definitions_by_index.size(); k++)
-    {
-        cell_definitions_by_index[k]->functions.update_phenotype = PKPD_cell_phenotype;
-    }
-
     /*
        This builds the map of cell definitions and summarizes the setup.
     */
@@ -126,6 +121,12 @@ void create_cell_types(void)
 	*/
 
 	setup_signal_behavior_dictionaries(); 
+
+	/*
+       Cell rule definitions 
+	*/
+
+	setup_cell_rules();
 
     /* 
 	   Put any modifications to individual cell definitions here. 
@@ -216,27 +217,4 @@ void custom_function(Cell *pC, Phenotype &phenotype, double dt)
 void contact_function(Cell *pMe, Phenotype &phenoMe, Cell *pOther, Phenotype &phenoOther, double dt)
 {
     return;
-}
-
-void PKPD_cell_phenotype(Cell *pC, Phenotype &p, double dt)
-{
-    if (p.death.dead == true)
-    {
-        p.secretion.set_all_secretion_to_zero();
-        p.secretion.set_all_uptake_to_zero();
-        pC->functions.update_phenotype = NULL;
-        return;
-    }
-
-    Cell_Definition* pCD = find_cell_definition( pC->type );
-    
-    // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
-    set_single_behavior( pC, "cycle entry", get_single_base_behavior( pC, "cycle entry") );
-    set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
-    
-
-    // update phenotype based on PD dynamics
-    pd_phenotype_function(pC, p, dt);
-    return;
-
 }
