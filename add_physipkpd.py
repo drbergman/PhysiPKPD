@@ -74,32 +74,68 @@ os.rename(f"{temp_dir}/{folder_name}/README.md",f"{DIR}/addons/PhysiPKPD/README.
 shutil.rmtree(temp_dir)
 print(f"Moved PhysiPKPD files to {DIR}. Deleted {temp_dir}")
 
-source_file = open(f'{DIR}/addons/PhysiPKPD/Makefile-PhysiPKPD-Objects.txt', "r")
-with open(f'{DIR}/Makefile', 'a') as f:
-    f.write("\n")
-    f.write("PhysiPKPD_OBJECTS := PhysiPKPD_PK.o PhysiPKPD_PD.o")
-    shutil.copyfileobj(source_file, f)
+source_file = f'{DIR}/addons/PhysiPKPD/Makefile-PhysiPKPD-Objects.txt'
+with open(source_file, 'r') as sf:
+    new_lines = sf.readlines()
+print(new_lines)
+exit()
+with open(f'{DIR}/Makefile', 'r') as f:
+    lines = f.readlines()
+
+for line_number, line in enumerate(lines):
+    if "PhysiCell_custom_module_OBJECTS :=" in line:
+        break
+
+with open(f'{DIR}/Makefile','w') as f:
+    for i in range(line_number):
+        print(lines[i], file=f)
+    for new_line in new_lines:
+        print(new_line, file=f)
+    for i in range(i+1,len(lines)):
+        print(lines[i], file=f)
+
+with open(f'{DIR}/Makefile','r+') as f:
+    lines = f.readlines()
+
+for i, line in enumerate(lines):
+    if "PhysiCell_OBJECTS :=" in line:
+        line = line.rstrip('\n') + ' $(PhysiPKPD_OBJECTS)\n'
+        break
+lines[i] = line
+
+with open(f'{DIR}/Makefile','w') as f:
+    f.writelines(lines)
 
 print(f"Updated Makefile to be ready for PhysiPKPD")
 
-def get_line_number(s, f):
-    for line_number, line in enumerate(f, start=1):
+def get_line_number(s, lines):
+    for line_number, line in enumerate(lines):
         if s in line:
             return line_number
     print(f"{f.name} does not have a line containing {s}")
-with open(f'{DIR}/main.cpp',"r+") as f:
-    line_number = get_line_number("setup_tissue", f)
+    
+with open(f'{DIR}/main.cpp', 'r+') as f:
     lines = f.readlines()
-    lines.insert(line_number,"\n\tsetup_pharmacodynamics();")
-
-    line_number = get_line_number("microenvironment.simulate_diffusion_decay", f)
-    lines.insert(line_number,"\n\t\t\tPD_model( PhysiCell_globals.current_time );")
-    lines.insert(line_number-1,"\n\t\t\tPK_model( PhysiCell_globals.current_time );")
-    f.writelines(lines)
+    line_number = get_line_number("setup_tissue", lines)
+    if line_number is not None:
+        lines.insert(line_number+1, "\n\tsetup_pharmacodynamics();\n")  # new_string should end in a newline
+        f.seek(0)  # readlines consumes the iterator, so we need to start over
+        f.writelines(lines)  # No need to truncate as we are increasing filesize
+        
+with open(f'{DIR}/main.cpp', 'r+') as f:
+    lines = f.readlines()
+    line_number = get_line_number("microenvironment.simulate_diffusion_decay", lines)
+    if line_number is not None:
+        lines.insert(line_number+1, "\n\t\t\tPD_model( PhysiCell_globals.current_time );\n")  # new_string should end in a newline
+        lines.insert(line_number, "\t\t\tPK_model( PhysiCell_globals.current_time );\n\n")  # new_string should end in a newline
+        f.seek(0)  # readlines consumes the iterator, so we need to start over
+        f.writelines(lines)  # No need to truncate as we are increasing filesize
 
 with open(f"{DIR}/custom_modules/custom.h", "r+") as f:
-    line_number = get_line_number("#include", f)
-    lines.insert(line_number,'#include "../addons/PhysiPKPD/src/PhysiPKPD.h"')
+    lines = f.readlines()
+    line_number = get_line_number("#include", lines)
+    lines.insert(line_number,'#include "../addons/PhysiPKPD/src/PhysiPKPD.h"\n')
+    f.seek(0)
     f.writelines(lines)
 
 # Get studio stuff
@@ -141,8 +177,8 @@ if args.studio:
     with open(local_file, 'wb')as file:
         file.write(data.content)
 
-    studio_dir = append_suffix(f"{DIR_NAME}-studio")
-    studio_dir_temp = append_suffix(f"{DIR_NAME}-studio-TEMP")
+    studio_dir = append_suffix(f"{DIR}-studio")
+    studio_dir_temp = append_suffix(f"{DIR}-studio-TEMP")
     with ZipFile(local_file, 'r') as zObject: 
         zObject.extractall(path=studio_dir_temp)
     folder_name = os.listdir(f"./{studio_dir_temp}")[0]
@@ -151,8 +187,8 @@ if args.studio:
     os.removedirs(studio_dir_temp)
 
 print(f"You are all set!")
-print(f"\t1. Move into your new project folder:")
-print(f"\t\tcd {DIR_NAME}")
+print(f"\t1. Move into your project folder:")
+print(f"\t\tcd {DIR}")
 print(f"\t2. Make a sample project or a template project and make your PhysiPKPD model! Examples:")
 print(f"\t\tmake pkpd-proliferation-sample\n\t\tmake pkpd-apoptosis-sample\n\t\tmake pkpd-template\n\n")
 print(f"\t3. Compile the project:")
