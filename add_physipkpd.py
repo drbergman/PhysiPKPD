@@ -6,23 +6,13 @@ import requests
 import os
 from zipfile import ZipFile 
 
-def append_suffix(f,ext=""):
-    suffix = ""
-    while os.path.exists(f"{f}{suffix}{ext}"):
-        if suffix == "":
-            suffix = 1
-        else:
-            suffix += 1
-    return f"{f}{suffix}{ext}"
+from append_suffix import append_suffix
+from append_suffix import common_flags
 
 parser = argparse.ArgumentParser()
+
 parser.add_argument('DIR', type=str, help='PhysiCell project directory to add PhysiPKPD capabilities')
-
-group = parser.add_mutually_exclusive_group()
-group.add_argument('-pt','--pkpd_tag', default=None, help='the tag of the PhysiCell release to use')
-group.add_argument('-pb','--pkpd_branch', default=None, help='use this branch of a PhysiCell fork rather than a release')
-
-parser.add_argument('--studio',action='store_true', help='also downloads a copy of studio with physipkpd integration')
+common_flags(parser)
 
 args = parser.parse_args()
 DIR = args.DIR

@@ -6,14 +6,9 @@ import requests
 import os
 from zipfile import ZipFile 
 
-def append_suffix(f,ext=""):
-    suffix = ""
-    while os.path.exists(f"{f}{suffix}{ext}"):
-        if suffix == "":
-            suffix = 1
-        else:
-            suffix += 1
-    return f"{f}{suffix}{ext}"
+from append_suffix import append_suffix
+from append_suffix import common_flags
+from append_suffix import extract_from_url
 
 parser = argparse.ArgumentParser()
 
@@ -24,56 +19,42 @@ group.add_argument('-b','--branch', default=None, help='use this branch of a Phy
 parser.add_argument('-o','--owner', default='MathCancer', help='the owner of the PhysiCell fork')
 parser.add_argument('-d','--dir', default='PhysiPKPD_Project',help='target directory for new PhysiCell folder')
 
-group = parser.add_mutually_exclusive_group()
-group.add_argument('-pt','--pkpd_tag', default=None, help='the tag of the PhysiCell release to use')
-group.add_argument('-pb','--pkpd_branch', default=None, help='use this branch of a PhysiCell fork rather than a release')
-
-parser.add_argument('--studio',action='store_true', help='also downloads a copy of studio with physipkpd integration')
+common_flags(parser)
 
 args = parser.parse_args()
 
 OWNER = args.owner
 TAG = args.tag
 BRANCH = args.branch
-DIR_NAME = args.dir
+DIR = args.dir
 
 USE_BRANCH = BRANCH is not None
 USE_LATEST = (USE_BRANCH is False) and (TAG is None)
 USE_TAG = (USE_LATEST is False) and (USE_BRANCH is False)
 
-if USE_LATEST == True:
+remote_url = None
+if USE_LATEST:
     response = requests.get(f"https://api.github.com/repos/{OWNER}/PhysiCell/releases/latest")
-    release_name_str = response.json()["name"]
-    print(release_name_str)
-    print(release_name_str.split())
-    vnum = release_name_str.split()[1]
-    print("vnum =",vnum)  # e.g., vnum= 1.10.4
-    zip_folder_name = 'PhysiCell'
-    remote_url = f'https://github.com/{OWNER}/PhysiCell/releases/download/' + vnum + '/PhysiCell_V.' + vnum + '.zip'
+    remote_url = response.json()["zipball_url"]
 elif USE_TAG:
-    zip_folder_name = 'PhysiCell'
-    remote_url = f'https://github.com/{OWNER}/PhysiCell/releases/download/' + TAG + '/PhysiCell_V.' + TAG + '.zip'
+    response = requests.get(f"https://api.github.com/repos/{OWNER}/PhysiCell/tags")
+    for tag in response.json():
+        if tag["name"] == TAG:
+            remote_url = tag["zipball_url"]
+            break
 else:
-    zip_folder_name = 'PhysiCell-' + BRANCH
-    remote_url = f'https://github.com/{OWNER}/PhysiCell/archive/refs/heads/' + BRANCH + '.zip'
+    response = requests.get(f"https://api.github.com/repos/{OWNER}/PhysiCell/branches")
+    print(response.json())
+    for branch in response.json():
+        print(f"branch = {branch}")
+        if branch["name"] == BRANCH:
+            remote_url = f"https://api.github.com/repos/{OWNER}/PhysiCell/zipball/{BRANCH}"
+            break
 
-print("remote_url=",remote_url)
-local_file = 'PhysiCell.zip'
-data = requests.get(remote_url)
-with open(local_file, 'wb')as file:
-  file.write(data.content)
-
-temp_dir = append_suffix(DIR_NAME + "-TEMP")
-
-with ZipFile(local_file, 'r') as zObject: 
-    zObject.extractall(path=temp_dir)
-
-DIR_NAME = append_suffix(DIR_NAME)
-os.rename(f"{temp_dir}/" + zip_folder_name, DIR_NAME)
-
-os.removedirs(temp_dir)
-# DIR_NAME += str(suffix)
-print("unzipped to ",DIR_NAME)
+print(f"remote_url = {remote_url}")
+DIR = append_suffix(DIR)
+extract_from_url(remote_url, DIR)
+print("unzipped to ",DIR)
     
 # Get PhysiPKPD stuff
 print("----------------------")
@@ -86,67 +67,78 @@ PKPD_USE_BRANCH = PKPD_BRANCH is not None
 USE_LATEST = (PKPD_USE_BRANCH is False) and (PKPD_TAG is None)
 USE_TAG = (USE_LATEST is False) and (PKPD_USE_BRANCH is False)
 
+remote_url = None
 if USE_LATEST == True:
     response = requests.get(f"https://api.github.com/repos/drbergman/PhysiPKPD/releases/latest")
-    tag_name = response.json()["tag_name"]
-    local_file = 'PhysiPKPD-LATEST'
     remote_url =  response.json()["zipball_url"]
 elif USE_TAG:
+    response = requests.get(f"https://api.github.com/repos/drbergman/PhysiPKPD/tags")
+    if PKPD_TAG.startswith('v') is False:
+        PKPD_TAG = f"v{PKPD_TAG}"
+    for tag in response.json():
+        if tag["name"] == PKPD_TAG:
+            remote_url = tag["zipball_url"]
+            break
     local_file = f"PhysiPKPD-{PKPD_TAG}"
-    remote_url = 'https://github.com/drbergman/PhysiPKPD/releases/download/' + PKPD_TAG + '/' + PKPD_TAG + '.zip'
+    # remote_url = 'https://github.com/drbergman/PhysiPKPD/releases/download/' + PKPD_TAG + '/' + PKPD_TAG + '.zip'
 else:
     local_file = f"PhysiPKPD-{PKPD_BRANCH}"
     remote_url = 'https://github.com/drbergman/PhysiPKPD/archive/refs/heads/' + PKPD_BRANCH + '.zip'
 
-print("remote_url=",remote_url)
-data = requests.get(remote_url)
-local_file = append_suffix(local_file,'.zip')
-with open(local_file, 'wb')as file:
-   file.write(data.content)
+print(f"PKPD remote_url = {remote_url}")
+target_dir = append_suffix("PhysiPKPD-TEMP")
+extract_from_url(remote_url, target_dir)
+# data = requests.get(remote_url)
+# local_file = append_suffix(local_file,'.zip')
+# with open(local_file, 'wb')as file:
+#    file.write(data.content)
 
-temp_dir = append_suffix("PhysiPKPD-TEMP")
-with ZipFile(local_file, 'r') as zObject: 
-    zObject.extractall(path=temp_dir)
+# temp_dir = append_suffix(target_dir)
+# with ZipFile(local_file, 'r') as zObject: 
+#     zObject.extractall(path=temp_dir)
 
-print(f"extracted PhysiPKPD to {temp_dir}")
-
-folder_name = os.listdir(f"./{temp_dir}")[0]
+print(f"extracted PhysiPKPD to {target_dir}")
 
 import shutil
 
-os.rename(f"{temp_dir}/{folder_name}/addons/PhysiPKPD",f"{DIR_NAME}/addons/PhysiPKPD")
-os.removedirs(f"{temp_dir}/{folder_name}/addons")
-os.rename(f"{temp_dir}/{folder_name}/sample_projects_physipkpd",f"{DIR_NAME}/sample_projects_physipkpd")
-os.rename(f"{temp_dir}/{folder_name}/LICENSE",f"{DIR_NAME}/addons/PhysiPKPD/LICENSE")
-os.rename(f"{temp_dir}/{folder_name}/README.md",f"{DIR_NAME}/addons/PhysiPKPD/README.md")
-shutil.rmtree(temp_dir)
-print(f"Moved PhysiPKPD files to {DIR_NAME}. Deleted {temp_dir}")
+os.rename(f"{target_dir}/addons/PhysiPKPD",f"{DIR}/addons/PhysiPKPD")
+os.removedirs(f"{target_dir}/addons")
+os.rename(f"{target_dir}/sample_projects_physipkpd",f"{DIR}/sample_projects_physipkpd")
+os.rename(f"{target_dir}/LICENSE",f"{DIR}/addons/PhysiPKPD/LICENSE")
+os.rename(f"{target_dir}/README.md",f"{DIR}/addons/PhysiPKPD/README.md")
+shutil.rmtree(target_dir)
+print(f"Moved PhysiPKPD files to {DIR}. Deleted {target_dir}")
 
-source_file = open(f'{DIR_NAME}/addons/PhysiPKPD/Makefile-PhysiPKPD_Addendum.txt', "r")
-with open(f'{DIR_NAME}/sample_projects/Makefile-default', 'a') as f:
+# Update Makefile
+print("----------------------")
+print(f"Now updating {DIR}/sample_projects/Makefile-default and {DIR}/Makefile to be ready to make PhysiPKPD samples and projects.")
+
+source_file = open(f'{DIR}/addons/PhysiPKPD/Makefile-PhysiPKPD-Samples.txt', "r")
+with open(f'{DIR}/sample_projects/Makefile-default', 'a') as f:
     f.write("\n")
     shutil.copyfileobj(source_file, f)
 
-os.rename(f'{DIR_NAME}/Makefile',f'{DIR_NAME}/Makefile-backup')
-shutil.copyfile(f'{DIR_NAME}/sample_projects/Makefile-default', f'{DIR_NAME}/Makefile')
+os.rename(f'{DIR}/Makefile',f'{DIR}/Makefile-backup')
+shutil.copyfile(f'{DIR}/sample_projects/Makefile-default', f'{DIR}/Makefile')
 
 print(f"Updated Makefile to be ready for PhysiPKPD samples")
 
 # Get studio stuff
 studio_dir = None
-if args.studio:
+USE_STUDIO = args.studio
+if USE_STUDIO:
     print("----------------------")
     print("Now getting studio with physipkpd...")
     response = requests.get(f"https://api.github.com/repos/drbergman/PhysiCell-Studio/releases")
     max_pkpd_version = [0,0,0]
-    zip_url = None
+    remote_url = None
     def ver_comp(old,new):
         if new[0] > old[0]:
             return True
         elif new[0] < old[0]:
             return False
         elif len(old) == 1 and len(new) == 1:
-            print("Two idential versions??")
+            print("Two idential versions of studio found??")
             exit()
         else:
             return ver_comp(old[1:],new[1:])
@@ -159,35 +151,36 @@ if args.studio:
             version = [int(x) for x in version_str.split('.')]
             if ver_comp(max_pkpd_version, version):
                 max_pkpd_version = version
-                zip_url = release["zipball_url"]
-    if zip_url is None:
-        print("No studio-pkpd release found")
-        exit()
-    
-    remote_url = zip_url
-    print(f"remote_url = {remote_url}")
-    data = requests.get(remote_url)
-    local_file = append_suffix("studio-pkpd-TEMP",'.zip')
-    with open(local_file, 'wb')as file:
-        file.write(data.content)
+                remote_url = release["zipball_url"]
+    if remote_url is None:
+        print("No studio-pkpd release found???")
+        USE_STUDIO = False
+    else:
+        print(f"studio-pkpd remote_url = {remote_url}")
+        studio_dir = append_suffix(f"{DIR}-studio")
+        extract_from_url(remote_url, studio_dir)
 
-    studio_dir = append_suffix(f"{DIR_NAME}-studio")
-    studio_dir_temp = append_suffix(f"{DIR_NAME}-studio-TEMP")
-    with ZipFile(local_file, 'r') as zObject: 
-        zObject.extractall(path=studio_dir_temp)
-    folder_name = os.listdir(f"./{studio_dir_temp}")[0]
-    os.rename(f"{studio_dir_temp}/" + folder_name, studio_dir)
+        # data = requests.get(remote_url)
+        # local_file = append_suffix("studio-pkpd-TEMP",'.zip')
+        # with open(local_file, 'wb')as file:
+        #     file.write(data.content)
 
-    os.removedirs(studio_dir_temp)
+        # studio_dir_temp = append_suffix(f"{DIR}-studio-TEMP")
+        # with ZipFile(local_file, 'r') as zObject: 
+        #     zObject.extractall(path=studio_dir_temp)
+        # folder_name = os.listdir(f"./{studio_dir_temp}")[0]
+        # os.rename(f"{studio_dir_temp}/" + folder_name, studio_dir)
+
+        # os.removedirs(studio_dir_temp)
 
 print(f"You are all set!")
 print(f"\t1. Move into your new project folder:")
-print(f"\t\tcd {DIR_NAME}")
+print(f"\t\tcd {DIR}")
 print(f"\t2. Make a sample project or a template project and make your PhysiPKPD model! Examples:")
 print(f"\t\tmake pkpd-proliferation-sample\n\t\tmake pkpd-apoptosis-sample\n\t\tmake pkpd-template\n\n")
 print(f"\t3. Compile the project:")
 print(f"\t\tmake -j 8")
-if args.studio:
+if USE_STUDIO:
     print(f"\t4. Edit them with studio:")
     print(f"\t  For a sample project:")
     print(f"\t\t(MacOS/Unix) python ../{studio_dir}/bin/studio.py -c ./config/pkpd_model.xml -e pkpd_sample --pkpd")
