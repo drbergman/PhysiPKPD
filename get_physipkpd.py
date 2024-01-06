@@ -62,20 +62,6 @@ print("Now getting PhysiPKPD...")
 get_pkpd(args, DIR)
 update_physicell_files(DIR)
 
-# # Update Makefile
-# print("----------------------")
-# print(f"Now updating {DIR}/sample_projects/Makefile-default and {DIR}/Makefile to be ready to make PhysiPKPD samples and projects.")
-
-# source_file = open(f'{DIR}/addons/PhysiPKPD/Makefile-PhysiPKPD-Samples.txt', "r")
-# with open(f'{DIR}/sample_projects/Makefile-default', 'a') as f:
-#     f.write("\n")
-#     shutil.copyfileobj(source_file, f)
-
-# os.rename(f'{DIR}/Makefile',f'{DIR}/Makefile-backup')
-# shutil.copyfile(f'{DIR}/sample_projects/Makefile-default', f'{DIR}/Makefile')
-
-# print(f"Updated Makefile to be ready for PhysiPKPD samples")
-
 # Get studio stuff
 studio_dir = append_suffix(f"{DIR}-studio")
 USE_STUDIO = args.studio
