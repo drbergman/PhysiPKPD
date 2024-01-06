@@ -1,4 +1,4 @@
-# Python script to set up a PhysiCell project using PhysiPKPD
+# Python script to add PhysiPKPD to a PhysiCell project
 
 import sys
 import argparse
@@ -16,13 +16,7 @@ def append_suffix(f,ext=""):
     return f"{f}{suffix}{ext}"
 
 parser = argparse.ArgumentParser()
-
-group = parser.add_mutually_exclusive_group()
-group.add_argument('-t','--tag', default=None, help='the tag of the PhysiCell release to use')
-group.add_argument('-b','--branch', default=None, help='use this branch of a PhysiCell fork rather than a release')
-
-parser.add_argument('-o','--owner', default='MathCancer', help='the owner of the PhysiCell fork')
-parser.add_argument('-d','--dir', default='PhysiPKPD_Project',help='target directory for new PhysiCell folder')
+parser.add_argument('DIR', type=str, help='PhysiCell project directory to add PhysiPKPD capabilities')
 
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-pt','--pkpd_tag', default=None, help='the tag of the PhysiCell release to use')
@@ -31,50 +25,8 @@ group.add_argument('-pb','--pkpd_branch', default=None, help='use this branch of
 parser.add_argument('--studio',action='store_true', help='also downloads a copy of studio with physipkpd integration')
 
 args = parser.parse_args()
+DIR = args.DIR
 
-OWNER = args.owner
-TAG = args.tag
-BRANCH = args.branch
-DIR_NAME = args.dir
-
-USE_BRANCH = BRANCH is not None
-USE_LATEST = (USE_BRANCH is False) and (TAG is None)
-USE_TAG = (USE_LATEST is False) and (USE_BRANCH is False)
-
-if USE_LATEST == True:
-    response = requests.get(f"https://api.github.com/repos/{OWNER}/PhysiCell/releases/latest")
-    release_name_str = response.json()["name"]
-    print(release_name_str)
-    print(release_name_str.split())
-    vnum = release_name_str.split()[1]
-    print("vnum =",vnum)  # e.g., vnum= 1.10.4
-    zip_folder_name = 'PhysiCell'
-    remote_url = f'https://github.com/{OWNER}/PhysiCell/releases/download/' + vnum + '/PhysiCell_V.' + vnum + '.zip'
-elif USE_TAG:
-    zip_folder_name = 'PhysiCell'
-    remote_url = f'https://github.com/{OWNER}/PhysiCell/releases/download/' + TAG + '/PhysiCell_V.' + TAG + '.zip'
-else:
-    zip_folder_name = 'PhysiCell-' + BRANCH
-    remote_url = f'https://github.com/{OWNER}/PhysiCell/archive/refs/heads/' + BRANCH + '.zip'
-
-print("remote_url=",remote_url)
-local_file = 'PhysiCell.zip'
-data = requests.get(remote_url)
-with open(local_file, 'wb')as file:
-  file.write(data.content)
-
-temp_dir = append_suffix(DIR_NAME + "-TEMP")
-
-with ZipFile(local_file, 'r') as zObject: 
-    zObject.extractall(path=temp_dir)
-
-DIR_NAME = append_suffix(DIR_NAME)
-os.rename(f"{temp_dir}/" + zip_folder_name, DIR_NAME)
-
-os.removedirs(temp_dir)
-# DIR_NAME += str(suffix)
-print("unzipped to ",DIR_NAME)
-    
 # Get PhysiPKPD stuff
 print("----------------------")
 print("Now getting PhysiPKPD...")
@@ -114,23 +66,41 @@ folder_name = os.listdir(f"./{temp_dir}")[0]
 
 import shutil
 
-os.rename(f"{temp_dir}/{folder_name}/addons/PhysiPKPD",f"{DIR_NAME}/addons/PhysiPKPD")
+os.rename(f"{temp_dir}/{folder_name}/addons/PhysiPKPD",f"{DIR}/addons/PhysiPKPD")
 os.removedirs(f"{temp_dir}/{folder_name}/addons")
-os.rename(f"{temp_dir}/{folder_name}/sample_projects_physipkpd",f"{DIR_NAME}/sample_projects_physipkpd")
-os.rename(f"{temp_dir}/{folder_name}/LICENSE",f"{DIR_NAME}/addons/PhysiPKPD/LICENSE")
-os.rename(f"{temp_dir}/{folder_name}/README.md",f"{DIR_NAME}/addons/PhysiPKPD/README.md")
+# os.rename(f"{temp_dir}/{folder_name}/sample_projects_physipkpd",f"{DIR}/sample_projects_physipkpd") # don't need to move sample projects in this case
+os.rename(f"{temp_dir}/{folder_name}/LICENSE",f"{DIR}/addons/PhysiPKPD/LICENSE")
+os.rename(f"{temp_dir}/{folder_name}/README.md",f"{DIR}/addons/PhysiPKPD/README.md")
 shutil.rmtree(temp_dir)
-print(f"Moved PhysiPKPD files to {DIR_NAME}. Deleted {temp_dir}")
+print(f"Moved PhysiPKPD files to {DIR}. Deleted {temp_dir}")
 
-source_file = open(f'{DIR_NAME}/addons/PhysiPKPD/Makefile-PhysiPKPD_Addendum.txt', "r")
-with open(f'{DIR_NAME}/sample_projects/Makefile-default', 'a') as f:
+source_file = open(f'{DIR}/addons/PhysiPKPD/Makefile-PhysiPKPD-Objects.txt', "r")
+with open(f'{DIR}/Makefile', 'a') as f:
     f.write("\n")
+    f.write("PhysiPKPD_OBJECTS := PhysiPKPD_PK.o PhysiPKPD_PD.o")
     shutil.copyfileobj(source_file, f)
 
-os.rename(f'{DIR_NAME}/Makefile',f'{DIR_NAME}/Makefile-backup')
-shutil.copyfile(f'{DIR_NAME}/sample_projects/Makefile-default', f'{DIR_NAME}/Makefile')
+print(f"Updated Makefile to be ready for PhysiPKPD")
 
-print(f"Updated Makefile to be ready for PhysiPKPD samples")
+def get_line_number(s, f):
+    for line_number, line in enumerate(f, start=1):
+        if s in line:
+            return line_number
+    print(f"{f.name} does not have a line containing {s}")
+with open(f'{DIR}/main.cpp',"r+") as f:
+    line_number = get_line_number("setup_tissue", f)
+    lines = f.readlines()
+    lines.insert(line_number,"\n\tsetup_pharmacodynamics();")
+
+    line_number = get_line_number("microenvironment.simulate_diffusion_decay", f)
+    lines.insert(line_number,"\n\t\t\tPD_model( PhysiCell_globals.current_time );")
+    lines.insert(line_number-1,"\n\t\t\tPK_model( PhysiCell_globals.current_time );")
+    f.writelines(lines)
+
+with open(f"{DIR}/custom_modules/custom.h", "r+") as f:
+    line_number = get_line_number("#include", f)
+    lines.insert(line_number,'#include "../addons/PhysiPKPD/src/PhysiPKPD.h"')
+    f.writelines(lines)
 
 # Get studio stuff
 studio_dir = None
