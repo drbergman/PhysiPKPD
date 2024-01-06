@@ -48,4 +48,4 @@ unit_tests/
 # Miscellaneous folders
 MeetingMinutes/*
 .vscode/*
-
+__pycache__
