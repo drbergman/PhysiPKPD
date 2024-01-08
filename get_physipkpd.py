@@ -83,11 +83,11 @@ if USE_STUDIO:
     print(f"\t{i}. Edit them with studio:")
     i+=1
     print(f"\t  For a sample project:")
-    print(f"\t\t(MacOS/Unix) python ../{studio_dir}/bin/studio.py -c ./config/pkpd_model.xml -e pkpd_sample --pkpd")
-    print(f"\t\t(Windows) python ..\{studio_dir}\bin\studio.py -c .\config\pkpd_model.xml -e pkpd_sample.exe --pkpd\n")
+    print(f"\t\t(MacOS/Unix)\tpython ../{studio_dir}/bin/studio.py -c ./config/pkpd_model.xml -e pkpd_sample --pkpd")
+    print(f"\t\t(Windows)\tpython ..\{studio_dir}\bin\studio.py -c .\config\pkpd_model.xml -e pkpd_sample.exe --pkpd\n")
     print(f"\t  For a template project:")
-    print(f"\t\t(MacOS/Unix) python ../{studio_dir}/bin/studio.py -c ./config/pkpd_model.xml -e pkpd_project --pkpd")
-    print(f"\t\t(Windows) python ..\{studio_dir}\bin\studio.py -c .\config\pkpd_model.xml -e pkpd_project.exe --pkpd\n\n")
+    print(f"\t\t(MacOS/Unix)\tpython ../{studio_dir}/bin/studio.py -c ./config/pkpd_model.xml -e pkpd_project --pkpd")
+    print(f"\t\t(Windows)\tpython ..\{studio_dir}\bin\studio.py -c .\config\pkpd_model.xml -e pkpd_project.exe --pkpd\n\n")
 else:
     print(f"\t{i}a. Run the samples with")
     print("\t\t(MaxOS/Unix) ./pkpd_sample ./config/pkpd_model.xml")

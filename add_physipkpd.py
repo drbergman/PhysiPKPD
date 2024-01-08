@@ -52,11 +52,11 @@ if args.studio:
     print(f"\t{i}. Edit them with studio. Make sure your config file is correct:")
     i+=1
     print(f"\t     For a sample project:")
-    print(f"\t\t(MacOS/Unix) python {studio_dir}/bin/studio.py -c ./config/PhysiCell_settings.xml -e {project_name} --pkpd")
-    print(f"\t\t(Windows) python {studio_dir}\bin\studio.py -c .\config\PhysiCell_settings.xml -e {project_name}.exe --pkpd")
+    print(f"\t\t(MacOS/Unix)\tpython {studio_dir}/bin/studio.py -c ./config/PhysiCell_settings.xml -e {project_name} --pkpd")
+    print(f"\t\t(Windows)\tpython {studio_dir}\bin\studio.py -c .\config\PhysiCell_settings.xml -e {project_name}.exe --pkpd")
     print(f"\t     For a template project:")
-    print(f"\t\t(MacOS/Unix) python {studio_dir}/bin/studio.py -c ./config/PhysiCell_settings.xml -e {project_name} --pkpd")
-    print(f"\t\t(Windows) python {studio_dir}\bin\studio.py -c .\config\PhysiCell_settings.xml -e {project_name}.exe --pkpd")
+    print(f"\t\t(MacOS/Unix)\tpython {studio_dir}/bin/studio.py -c ./config/PhysiCell_settings.xml -e {project_name} --pkpd")
+    print(f"\t\t(Windows)\tpython {studio_dir}\bin\studio.py -c .\config\PhysiCell_settings.xml -e {project_name}.exe --pkpd")
 else:
     print(f"\t{i}. Edit according to https://github.com/drbergman/PhysiPKPD/releases/latest")
     i+=1

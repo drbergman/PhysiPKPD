@@ -80,7 +80,7 @@ def get_pkpd(args, target_dir):
     if os.path.exists(f"{target_dir}/addons") is False:
         print(f"Making an addons folder in the project directory {target_dir}...")
         os.mkdir(f"{target_dir}/addons")
-        
+
     PKPD_TAG = args.pkpd_tag
     PKPD_BRANCH = args.pkpd_branch
 
@@ -129,6 +129,11 @@ def print_generic_pkpd_advice(i):
 
 
 def update_physicell_files(DIR, project_loaded=False):
+    main_file = f'{DIR}/main.cpp'
+    if project_loaded and os.path.exists(main_file) is False:
+        print(f"{main_file} does not exist so the addition of PhysiPKPD is incomplete. Make your project and re-run this to complete.")
+        exit(-1)
+
     with open(f'{DIR}/addons/PhysiPKPD/Makefile-PhysiPKPD-Samples.txt', "r") as f:
         add_samples_to_makefile(f, f"{DIR}/sample_projects/Makefile-default")
 
@@ -180,7 +185,6 @@ def update_physicell_files(DIR, project_loaded=False):
             print(f"{f.name} does not have a line containing {s}")
             return None
             
-        main_file = f'{DIR}/main.cpp'
         main_temp = append_suffix(f'{DIR}/main','.cpp')
         with open(main_file, 'r+') as f:
             lines = f.readlines()
