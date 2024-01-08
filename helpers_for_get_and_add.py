@@ -140,101 +140,126 @@ def update_physicell_files(DIR, project_loaded=False):
     if project_loaded:
         makefile = f'{DIR}/Makefile'
         makefile_temp = append_suffix(f'{DIR}/Makefile-TEMP')
+        add_to_makefile = True
         with open(makefile, 'r') as f:
             lines = f.readlines()
             for line_number, line in enumerate(lines):
-                if "PhysiCell_custom_module_OBJECTS :=" in line:
-                    lines.insert(line_number,"PhysiPKPD_OBJECTS := PhysiPKPD_PK.o PhysiPKPD_PD.o\n\n")
+                if "PhysiPKPD_OBJECTS := PhysiPKPD_PK.o PhysiPKPD_PD.o" in line:
+                    print(f"WARNING: Found PhysiPKPD_OBJECTS already defined in {makefile}. Skipping the rest of Makefile additions.")
+                    print(f"\tIf compilation errors occur, make sure PhysiPKPD_PK.o and PhysiPKPD_PD.o are defined")
+                    print(f"\tAnd make sure that $(PhysiPKPD_OBJECTS) is added to PhysiCell_OBJECTS.")
+                    add_to_makefile = False
+                    break
+            if add_to_makefile:
+                for line_number, line in enumerate(lines):
+                    if "PhysiCell_custom_module_OBJECTS :=" in line:
+                        lines.insert(line_number,"PhysiPKPD_OBJECTS := PhysiPKPD_PK.o PhysiPKPD_PD.o\n\n")
+                        break
+        
+        if add_to_makefile:
+            source_file = f'{DIR}/addons/PhysiPKPD/Makefile-PhysiPKPD-Objects.txt'
+            with open(source_file, 'r') as sf:
+                new_lines = sf.readlines()
+
+            for line_number, line in enumerate(lines):
+                if "custom_modules/custom.cpp" in line:
                     break
 
-        source_file = f'{DIR}/addons/PhysiPKPD/Makefile-PhysiPKPD-Objects.txt'
-        with open(source_file, 'r') as sf:
-            new_lines = sf.readlines()
+            with open(makefile_temp,'w') as f:
+                for i in range(line_number):
+                    print(lines[i].rstrip('\n'), file=f)
+                for new_line in new_lines:
+                    print(new_line.rstrip('\n'), file=f)
+                print("\n", file=f)
+                for i in range(i+1,len(lines)):
+                    print(lines[i].rstrip('\n'), file=f)
 
-        for line_number, line in enumerate(lines):
-            if "custom_modules/custom.cpp" in line:
-                break
+            with open(makefile_temp,'r+') as f:
+                lines = f.readlines()
 
-        with open(makefile_temp,'w') as f:
-            for i in range(line_number):
-                print(lines[i].rstrip('\n'), file=f)
-            for new_line in new_lines:
-                print(new_line.rstrip('\n'), file=f)
-            print("\n", file=f)
-            for i in range(i+1,len(lines)):
-                print(lines[i].rstrip('\n'), file=f)
+            for i, line in enumerate(lines):
+                if "PhysiCell_OBJECTS :=" in line:
+                    line = line.rstrip('\n') + ' $(PhysiPKPD_OBJECTS)\n'
+                    break
+            lines[i] = line
 
-        with open(makefile_temp,'r+') as f:
-            lines = f.readlines()
+            with open(makefile_temp,'w') as f:
+                f.writelines(lines)
 
-        for i, line in enumerate(lines):
-            if "PhysiCell_OBJECTS :=" in line:
-                line = line.rstrip('\n') + ' $(PhysiPKPD_OBJECTS)\n'
-                break
-        lines[i] = line
+            print(f"{makefile_temp} is ready for PhysiPKPD. Editing other files first before overwriting {makefile}")
 
-        with open(makefile_temp,'w') as f:
-            f.writelines(lines)
-
-        print(f"{makefile_temp} is ready for PhysiPKPD. Editing other files first before overwriting {makefile}")
-
-        def get_line_number(s, lines):
+        def get_line_number(s, lines, print_missing_message=True):
             for line_number, line in enumerate(lines):
                 if s in line:
                     return line_number
-            print(f"{f.name} does not have a line containing {s}")
+            if print_missing_message:
+                print(f"{f.name} does not have a line containing {s}")
             return None
             
+        add_to_main = True
         main_temp = append_suffix(f'{DIR}/main','.cpp')
         with open(main_file, 'r+') as f:
             lines = f.readlines()
-            line_number = get_line_number("setup_tissue", lines)
-            if line_number is not None:
-                lines.insert(line_number+1, "\n\tsetup_pharmacodynamics();\n")  # new_string should end in a newline
-                with open(main_temp,'w') as f_temp:
-                    f_temp.writelines(lines)  # No need to truncate as we are increasing filesize
+            if get_line_number("setup_pharmacodynamics", lines, print_missing_message=False) is not None:
+                print(f"WARNING: Found setup_pharmacodynamics already defined in {main_file}. Skipping the rest of main.cpp additions.")
+                print(f"\tIf errors occur, make sure PK_model(PhysiCell_globals.current_time); and PD_model(PhysiCell_globals.current_time); are on either side of microenvironment.simulate_diffusion_decay.")
+                add_to_main = False
             else:
-                print(f"{DIR}/main.cpp does not include `setup_tissue();`???")
-                exit()
+                line_number = get_line_number("setup_tissue", lines)
+                if line_number is not None:
+                    lines.insert(line_number+1, "\n\tsetup_pharmacodynamics();\n")  # new_string should end in a newline
+                    with open(main_temp,'w') as f_temp:
+                        f_temp.writelines(lines)  # No need to truncate as we are increasing filesize
+                else:
+                    print(f"{DIR}/main.cpp does not include `setup_tissue();`???")
+                    exit()
                 
-        with open(main_temp, 'r+') as f:
-            lines = f.readlines()
-            line_number = get_line_number("microenvironment.simulate_diffusion_decay", lines)
-            if line_number is not None:
-                lines.insert(line_number+1, "\n\t\t\tPD_model( PhysiCell_globals.current_time );\n")  # new_string should end in a newline
-                lines.insert(line_number, "\t\t\tPK_model( PhysiCell_globals.current_time );\n\n")  # new_string should end in a newline
-                f.seek(0)  # readlines consumes the iterator, so we need to start over
-                f.writelines(lines)  # No need to truncate as we are increasing filesize
-            else:
-                print(f"{DIR}/main.cpp does not include `microenvironment.simulate_diffusion_decay(diffusion_dt);`???")
-                exit()
+        if add_to_main:
+            with open(main_temp, 'r+') as f:
+                lines = f.readlines()
+                line_number = get_line_number("microenvironment.simulate_diffusion_decay", lines)
+                if line_number is not None:
+                    lines.insert(line_number+1, "\n\t\t\tPD_model( PhysiCell_globals.current_time );\n")  # new_string should end in a newline
+                    lines.insert(line_number, "\t\t\tPK_model( PhysiCell_globals.current_time );\n\n")  # new_string should end in a newline
+                    f.seek(0)  # readlines consumes the iterator, so we need to start over
+                    f.writelines(lines)  # No need to truncate as we are increasing filesize
+                else:
+                    print(f"{DIR}/main.cpp does not include `microenvironment.simulate_diffusion_decay(diffusion_dt);`???")
+                    exit()
 
-        print(f"{main_temp} is ready for PhysiPKPD. Editing other files first before overwriting {main_file}")
+            print(f"{main_temp} is ready for PhysiPKPD. Editing other files first before overwriting {main_file}")
 
         with open(f"{DIR}/custom_modules/custom.h", "r+") as f:
             lines = f.readlines()
-            line_number = get_line_number("#include", lines)
-            if line_number is not None:
-                lines.insert(line_number,'#include "../addons/PhysiPKPD/src/PhysiPKPD.h"\n')
-                f.seek(0)
-                f.writelines(lines)
+            if get_line_number("addons/PhysiPKPD/src/PhysiPKPD.h", lines, print_missing_message=False):
+                print("Found addons/PhysiPKPD/src/PhysiPKPD.h in {DIR}/custom_modules/custom.h. Not going to add it again here.")
             else:
-                print(f"{DIR}/custom_modules/custom.h does not have any `#include` statements???")
-                exit()
+                line_number = get_line_number("#include", lines)
+                if line_number is not None:
+                    lines.insert(line_number,'#include "../addons/PhysiPKPD/src/PhysiPKPD.h"\n')
+                    f.seek(0)
+                    f.writelines(lines)
+                else:
+                    print(f"{DIR}/custom_modules/custom.h does not have any `#include` statements???")
+                    exit()
 
-        with open(makefile, 'w') as f:
-            with open(makefile_temp, 'r') as f_temp:
-                lines = f_temp.readlines()
-                f.writelines(lines)
+        if add_to_makefile:
+            with open(makefile, 'w') as f:
+                with open(makefile_temp, 'r') as f_temp:
+                    lines = f_temp.readlines()
+                    f.writelines(lines)
 
-        with open(main_file, 'w') as f:
-            with open(main_temp, 'r') as f_temp:
-                lines = f_temp.readlines()
-                f.writelines(lines)
+        if add_to_main:
+            with open(main_file, 'w') as f:
+                with open(main_temp, 'r') as f_temp:
+                    lines = f_temp.readlines()
+                    f.writelines(lines)
 
         print(f"All files (Makefile, main.cpp, and custom_modules/custom.h) updated and overwritten now. Removing temporary files...")
-        os.remove(makefile_temp)
-        os.remove(main_temp)
+        if os.path.exists(makefile):
+            os.remove(makefile_temp)
+        if os.path.exists(main_temp):
+            os.remove(main_temp)
     else:
         with open(f'{DIR}/addons/PhysiPKPD/Makefile-PhysiPKPD-Samples.txt', "r") as f:
             add_samples_to_makefile(f, f"{DIR}/Makefile")
