@@ -77,6 +77,10 @@ def get_pkpd(args, target_dir):
     if os.path.exists(f"{target_dir}/addons/PhysiPKPD"):
         print(f"Found PhysiPKPD files already in {target_dir}.")
         return
+    if os.path.exists(f"{target_dir}/addons") is False:
+        print(f"Making an addons folder in the project directory {target_dir}...")
+        os.mkdir(f"{target_dir}/addons")
+        
     PKPD_TAG = args.pkpd_tag
     PKPD_BRANCH = args.pkpd_branch
 

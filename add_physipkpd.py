@@ -16,6 +16,10 @@ common_flags(parser)
 args = parser.parse_args()
 DIR = args.DIR
 
+if os.path.exists(DIR) is False:
+    print(f"The target project directory {DIR} cannot be found...\n\tCheck for typos and try again.")
+    exit(-1)
+
 # Get PhysiPKPD stuff
 print("----------------------")
 print("Now getting PhysiPKPD...")
