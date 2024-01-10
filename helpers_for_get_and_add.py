@@ -256,7 +256,7 @@ def update_physicell_files(DIR, project_loaded=False):
                     f.writelines(lines)
 
         print(f"All files (Makefile, main.cpp, and custom_modules/custom.h) updated and overwritten now. Removing temporary files...")
-        if os.path.exists(makefile):
+        if os.path.exists(makefile_temp):
             os.remove(makefile_temp)
         if os.path.exists(main_temp):
             os.remove(main_temp)
