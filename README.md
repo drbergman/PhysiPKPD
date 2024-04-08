@@ -17,6 +17,10 @@ python add_physipkpd.py path/to/project/dir --studio
 ```
    * The `--studio` flag downloads a PhysiPKPD-enabled version of PhysiCell-Studio to help build the model
 3. Follow output for next steps
+**Note**: This script will perform the steps [below](#AddingManually), except updates to the configuration file. Specifically, it will...
+*  add lines to your project's `main.cpp`, `custom.h`, `custom.cpp`, and `Makefile`
+*  add PhysiPKPD to your project's `addons` if it does not exist already
+*  create a new copy of the PhysiPKPD-enabled studio at the same directory level as your project
 
 ### ...by downloading PhysiPKPD and adding to a working PhysiCell directory <a name="DL"></a>
 1. Download the repository and unzip the file.
@@ -59,7 +63,7 @@ Load one with `make pkpd-template` or `make pkpd-template-sbml`.
 The former sets up a model with two PKPD substrates, one with a dosing schedule defined by a CSV file.
 The latter sets up a model with two PKPD substrates, one defined by an SBML model.
 
-## Adding PhysiPKPD to an existing project
+## Adding PhysiPKPD to an existing project <a name="AddingManually"></a>
 To add PhysiPKPD to an existing project, take the following steps:
 1. In `main.cpp`...
    * add `setup_pharmacodynamics();` as a new line after `setup_tissue();`
