@@ -110,12 +110,6 @@ void create_cell_types(void)
     cell_defaults.functions.custom_cell_rule = custom_function;
     cell_defaults.functions.contact_function = contact_function;
 
-    for (int k = 0; k < cell_definitions_by_index.size(); k++)
-    {
-        cell_definitions_by_index[k]->functions.update_phenotype = cell_phenotype;
-        cell_definitions_by_index[k]->functions.custom_cell_rule = custom_function;
-    }
-
     /*
        This builds the map of cell definitions and summarizes the setup.
     */
@@ -126,7 +120,13 @@ void create_cell_types(void)
 	   This intializes cell signal and response dictionaries 
 	*/
 
-	setup_signal_behavior_dictionaries(); 
+	setup_signal_behavior_dictionaries();
+
+	/*
+       Cell rule definitions 
+	*/
+
+	setup_cell_rules(); 
 
     /* 
 	   Put any modifications to individual cell definitions here. 
@@ -215,57 +215,10 @@ void phenotype_function(Cell *pC, Phenotype &phenotype, double dt)
 
 void custom_function(Cell *pC, Phenotype &p, double dt)
 {
-    if (p.death.dead == true)
-    {
-        pC->functions.custom_cell_rule = NULL;
-        return;
-    }
-
-    Cell_Definition *pCD = find_cell_definition(pC->type);
-
-    // first reset all rates to their base values. Otherwise drug effects will stack, which is (probably) not what you want.
-    set_single_behavior(pC, "migration speed", get_single_base_behavior(pC, "migration speed"));
-
-    pd_custom_function(pC, p, dt);
     return;
 }
 
 void contact_function(Cell *pMe, Phenotype &phenoMe, Cell *pOther, Phenotype &phenoOther, double dt)
 {
-    return;
-}
-
-void cell_phenotype(Cell *pC, Phenotype &p, double dt)
-{
-    if (p.death.dead == true)
-    {
-        p.secretion.set_all_secretion_to_zero();
-        p.secretion.set_all_uptake_to_zero();
-        pC->functions.update_phenotype = NULL;
-        return;
-    }
-
-    Cell_Definition* pCD = find_cell_definition( pC->type );
-
-    // find index of apoptosis death model
-    static int nApop = p.death.find_death_model_index( "apoptosis" );
-    // find index of necrosis death model
-    static int nNec = p.death.find_death_model_index( "Necrosis" );
-    
-    // first reset the rate of the affected process to its base values. Otherwise drug effects will stack, which is (probably) not what you want.
-    
-    // if this phenotype has a prolif moa
-    set_single_behavior( pC, "cycle entry", get_single_base_behavior( pC, "cycle entry") );
-    
-    // if this phenotype has a apop moa
-    set_single_behavior( pC, "apoptosis", get_single_base_behavior( pC, "apoptosis"));
-    
-    // if this phenotype has a necrosis moa
-    set_single_behavior( pC, "necrosis", get_single_base_behavior( pC, "necrosis"));
-        
-
-    // update phenotype based on PD dynamics
-    pd_phenotype_function(pC, p, dt);
-
     return;
 }
