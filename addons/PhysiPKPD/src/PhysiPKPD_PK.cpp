@@ -18,6 +18,9 @@ void SBML_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
 
 static double tolerance = 0.01 * diffusion_dt; // using this in PK_model and write_cell_data_for_plots for determining when to do these
 
+AnalyticConstant_PK_Solver::AnalyticConstant_PK_Solver()
+{ return; }
+
 Analytic2C_PK_Solver::Analytic2C_PK_Solver()
 { return; }
 
@@ -55,51 +58,33 @@ Pharmacokinetics_Model *create_pk_model(void)
 void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node)
 {
     pNew->biot_number = pk_node.child("biot_number").text().as_double();
-    // if (parameters.doubles.find_index(pNew->substrate_name + "_biot_number") == -1)
-    // {
-    //     std::cout << "PhysiPKPD WARNING: " << pNew->substrate_name << "_biot_number not set." << std::endl
-    //               << "  Using a default value of 1.0." << std::endl;
-    //     pNew->biot_number = 1.0;
-    // } // assume a default value of 1
-    // else
-    // {
-    //     pNew->biot_number = parameters.doubles(pNew->substrate_name + "_biot_number");
-    // }
 
-    void(*setup_function)(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node);
+    void (*setup_function)(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node);
     std::string model = pk_node.child("model").text().as_string();
-    // if (parameters.strings.find_index(substrate_name + "_pk_model")==-1)
-    // {
-    //     std::cout << "PhysiPKPD WARNING: No PK model specified for " << substrate_name << std::endl
-    //               << "  Will attempt to set up a 2-compartment model." << std::endl
-    //               << std::endl;
-    //     setup_function = &setup_pk_model_two_compartment;
-    // }
-    // else 
-    // {
-        std::vector<std::string> current_options = {"2C","1C","SBML"};
-        std::vector<void (*)(Pharmacokinetics_Model*, pugi::xml_node pk_node)> fns;
-        fns.push_back(&setup_pk_model_two_compartment);
-        fns.push_back(&setup_pk_model_one_compartment);
-        fns.push_back(NULL); // handle this case separately
 
-        bool model_found = false;
-        for ( int i=0; i<current_options.size(); i++)
+    std::vector<std::string> current_options = {"Constant","2C", "1C", "SBML"};
+    std::vector<void (*)(Pharmacokinetics_Model *, pugi::xml_node pk_node)> fns;
+    fns.push_back(&setup_pk_model_constant);
+    fns.push_back(&setup_pk_model_two_compartment);
+    fns.push_back(&setup_pk_model_one_compartment);
+    fns.push_back(NULL); // handle SBML case separately
+
+    bool model_found = false;
+    for (int i = 0; i < current_options.size(); i++)
+    {
+        if (model == current_options[i])
         {
-            if (model==current_options[i])
-            {
-                setup_function = fns[i];
-                model_found = true;
-                break;
-            }
+            setup_function = fns[i];
+            model_found = true;
+            break;
         }
-        if (!model_found)
-        {
-            std::cout << "PhysiPKPD ERROR: " << pNew->substrate_name + " is set to follow " + pk_node.child("model").text().as_string() + " but this is not an allowable option." << std::endl
-                      << "  Current options include: " << current_options << std::endl;
-            exit(-1);
-        }
-    // }
+    }
+    if (!model_found)
+    {
+        std::cout << "PhysiPKPD ERROR: " << pNew->substrate_name + " is set to follow " + pk_node.child("model").text().as_string() + " but this is not an allowable option." << std::endl
+                  << "  Current options include: " << current_options << std::endl;
+        exit(-1);
+    }
 
     if (setup_function)
     {
@@ -257,6 +242,16 @@ void parse_config_for_pk(std::vector<Pharmacokinetics_Model *> &all_pk)
     }
 }
 
+void setup_pk_model_constant(Pharmacokinetics_Model *pPK, pugi::xml_node pk_node)
+{
+    AnalyticConstant_PK_Solver *pSolver;
+    pSolver = new AnalyticConstant_PK_Solver;
+
+    pSolver->circulation_concentration = 0;
+    pPK->pk_solver = pSolver;
+    return;
+}
+
 void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK, pugi::xml_node pk_node)
 {
     Analytic2C_PK_Solver *pSolver;
@@ -267,85 +262,6 @@ void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK, pugi::xml_node 
     double k21 = pk_node.child("k21").text().as_double();
     double R = pk_node.child("volume_ratio").text().as_double();
     double l = pk_node.child("elimination_rate").text().as_double();
-
-    /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
-    /*
-    if (parameters.doubles.find_index(pPK->substrate_name + "_central_to_periphery_volume_ratio") == -1)
-    {
-        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_to_periphery_volume_ratio not set." << std::endl;
-        if (parameters.doubles.find_index("central_to_periphery_volume_ratio") != -1)
-        {
-            std::cout << "  Using central_to_periphery_volume_ratio instead." << std::endl
-                      << std::endl;
-            R = parameters.doubles("central_to_periphery_volume_ratio");
-        }
-        else
-        {
-            R = 1.0;
-            std::cout << "  You did not supply a volume ratio for the 2-compartment model for " << pPK->substrate_name << std::endl
-                      << "  Assuming a ratio of R = " << 1.0 << std::endl;
-        }
-    }
-    else
-    {
-        R = parameters.doubles(pPK->substrate_name + "_central_to_periphery_volume_ratio");
-    }
-
-    if (parameters.doubles.find_index(pPK->substrate_name + "_central_to_periphery_clearance_rate") == -1)
-    {
-        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_to_periphery_clearance_rate not set." << std::endl;
-        if (parameters.doubles.find_index(pPK->substrate_name + "_flux_across_capillaries") != -1)
-        {
-            std::cout << "  " << pPK->substrate_name << "_flux_across_capillaries is set. Using that instead." << std::endl
-                      << "  You can achieve the same thing using " << pPK->substrate_name << "_periphery_to_central_clearance_rate = " << pPK->substrate_name << "_flux_across_capillaries" << std::endl
-                      << std::endl;
-            k12 = parameters.doubles(pPK->substrate_name + "_flux_across_capillaries");
-        }
-        else
-        {
-            std::cout << "  Also could not find " << pPK->substrate_name << "_flux_across_capillaries" << std::endl
-                      << "  Setting k12 = 0." << std::endl;
-            k12 = 0;
-        }
-    }
-    else
-    {
-        k12 = parameters.doubles(pPK->substrate_name + "_central_to_periphery_clearance_rate");
-    }
-    if (parameters.doubles.find_index(pPK->substrate_name + "_periphery_to_central_clearance_rate") == -1)
-    {
-        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_periphery_to_central_clearance_rate not set." << std::endl;
-        if (parameters.doubles.find_index(pPK->substrate_name + "_flux_across_capillaries") != -1)
-        {
-            std::cout << "  " << pPK->substrate_name << "_flux_across_capillaries is set. Using that instead with the understanding that you are using the simplified 2-compartment PK model." << std::endl
-                      << "  You can achieve the same thing using " << pPK->substrate_name << "_periphery_to_central_clearance_rate = " << pPK->substrate_name << "_flux_across_capillaries * " << pPK->substrate_name << "_central_to_periphery_volume_ratio" << std::endl
-                      << std::endl;
-            k21 = parameters.doubles(pPK->substrate_name + "_flux_across_capillaries") * R;
-        }
-        else
-        {
-            std::cout << "  Also could not find " << pPK->substrate_name << "_flux_across_capillaries" << std::endl
-                      << "  Setting k21 = 0." << std::endl;
-            k21 = 0;
-        }
-    }
-    else
-    {
-        k21 = parameters.doubles(pPK->substrate_name + "_periphery_to_central_clearance_rate");
-    }
-
-    if (parameters.doubles.find_index(pPK->substrate_name + "_central_elimination_rate") == -1)
-    {
-        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
-                  << "  Using a default value of 0.0." << std::endl;
-        l = 0.0;
-    } // assume a default value of 0
-    else
-    {
-        l = parameters.doubles(pPK->substrate_name + "_central_elimination_rate");
-    }
-    */
-    /*    %%%%%%%%%%%% Made sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
     if (k12==0 || k21==0 || R==0)
     {
@@ -400,21 +316,6 @@ void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK, pugi::xml_node 
 
     // pk parameters
     double l = pk_node.child("elimination_rate").text().as_double();
-
-    /*   %%%%%%%%%%%% Making sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
-    /*
-    if (parameters.doubles.find_index(pPK->substrate_name + "_central_elimination_rate") == -1)
-    {
-        std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_central_elimination_rate not set." << std::endl
-                  << "  Using a default value of 0.0." << std::endl;
-        l = 0.0;
-    } // assume a default value of 0
-    else
-    {
-        l = parameters.doubles(pPK->substrate_name + "_central_elimination_rate");
-    }
-    */
-    /*    %%%%%%%%%%%% Made sure all expected user parameters are supplied %%%%%%%%%%%%%%%%%% */
 
     // pre-computed quantities to express solution to matrix exponential
     pSolver->M = exp(-l * diffusion_dt);
@@ -616,6 +517,17 @@ void read_time_parameter(double &time, const pugi::char_t* par_name, pugi::xml_n
                       << "\tThe following are accepted: {min, minutes, minute, hours, h, hour, days, d, day}" << std::endl;
             exit(-1);
         }
+    }
+    return;
+}
+
+void AnalyticConstant_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
+{
+    // set value if time for that
+    if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
+    {
+        circulation_concentration = dose_amounts[dose_count];
+        dose_count++;
     }
     return;
 }

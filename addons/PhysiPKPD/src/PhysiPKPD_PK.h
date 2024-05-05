@@ -15,6 +15,7 @@ using namespace BioFVM;
 using namespace PhysiCell;
 
 class Pharmacokinetics_Solver;
+class AnalyticConstant_PK_Solver;
 class Analytic2C_PK_Solver;
 class Analytic1C_PK_Solver;
 class SBML_PK_Solver;
@@ -36,6 +37,19 @@ public:
 
     virtual void advance(Pharmacokinetics_Model *pPK, double current_time) = 0;
     Pharmacokinetics_Solver();
+};
+
+class AnalyticConstant_PK_Solver : public Pharmacokinetics_Solver // this is like RoadRunnerIntracellular
+{
+public:
+    void advance(Pharmacokinetics_Model *pPK, double current_time);
+    double circulation_concentration = 0;
+
+    double get_circulation_concentration(void) {
+        return circulation_concentration;
+    }
+
+    AnalyticConstant_PK_Solver();
 };
 
 class Analytic2C_PK_Solver : public Pharmacokinetics_Solver // this is like RoadRunnerIntracellular
@@ -122,6 +136,7 @@ void read_time_parameter(double &time, const pugi::char_t* par_name, pugi::xml_n
 
 // PK functions
 void PK_model( double current_time );
+void setup_pk_model_constant(Pharmacokinetics_Model *pPK, pugi::xml_node pk_node);
 void setup_pk_model_two_compartment(Pharmacokinetics_Model *pPK, pugi::xml_node pk_node);
 void setup_pk_model_one_compartment(Pharmacokinetics_Model *pPK, pugi::xml_node pk_node);
 void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current_time);
