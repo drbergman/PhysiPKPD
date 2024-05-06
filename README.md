@@ -1,7 +1,7 @@
 # PhysiPKPD
 ## Getting started...
 ### ...with a new project
-1. Download (or copy contents of) `get_physipkpd.py` to a local file.
+1. Download (or copy contents of) `get_physipkpd.py` and `helpers_for_get_and_add.py` to local files in the same directory.
 2. Run 
 ```
 python get_physipkpd.py --dir path/to/project/dir --studio
@@ -10,7 +10,7 @@ python get_physipkpd.py --dir path/to/project/dir --studio
 3. Follow output for next steps
 
 ### ...adding PhysiPKPD to an existing project
-1. Download (or copy contents of) `add_physipkpd.py` to a local file.
+1. Download (or copy contents of) `add_physipkpd.py` and `helpers_for_get_and_add.py` to local files in the same directory.
 2. Run
 ```
 python add_physipkpd.py path/to/project/dir --studio
@@ -74,8 +74,8 @@ To add PhysiPKPD to an existing project, take the following steps:
    * add `#include "../addons/PhysiPKPD/src/PhysiPKPD.h"` to the top
 3. In the configuration file, e.g., `config/PhysiCell_settings.xml`...
    * add a `PK` element to every PK substrate (`microenvironment_setup//variable`) (see [PK Templates](#pk_templates))
-   * add a `PD` element to every `cell_definition` that will be affected by a PD substrate; add a `substrate` block within this `PD` element for each PD substrate affecting the given cell definition (see [Templates](#pd_templates))
-   * add `S_damage` to *every* `cell_definition//custom_data` for every PD substrate `S`
+   * add a `PD` element to every `cell_definition` that will be affected by a PD substrate; add a `substrate` block within this `PD` element for each PD substrate affecting the given cell definition (see [PD Templates](#pd_templates))
+   * add `S_damage` to *every* `cell_definition//custom_data` for every PD substrate `S` (even those unaffected by `S` because PhysiCell requires all cells to have the same custom data)
 4. In `Makefile`...
    * add a line `PhysiPKPD_OBJECTS := PhysiPKPD_PK.o PhysiPKPD_PD.o`
    * add `$(PhysiPKPD_OBJECTS)` to the list of `PhysiCell_OBJECTS`
@@ -450,7 +450,7 @@ If you want these parameters to vary by cells *within* a cell type, that is not 
 | Parameter | Description | If Missing |
 | :-- | :-- | :-- |
 | `dt` | Sets the time interval between PD updates (in minutes) | Set to `mechanics_dt` |
-| `precompute` $(m)$ | Boolean for precomputations | **Must be** `true` |
+| `precompute` | Boolean for precomputations | **Must be** `true` |
 <a name="tab:pd__optional_pars">
 <p align="center">
     <b>Table:</b> Optional XML elements for all PD models
