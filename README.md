@@ -105,7 +105,7 @@ PK models are added as `microenvironment_setup//variable//PK` element, i.e., at 
 An `enabled="true"` attribute is required to turn on the PK model.
 
 ### PK models
-There are three available `model`'s: `1C`, `2C`, and `SBML`[^sbml].
+There are four available `model`'s: `Constant`, `1C`, `2C`, and `SBML`[^sbml].
 An example template for each is provided [below](#pk_templates).
 For each `model`, the `circulation_concentration` of the PK model is what interacts with the microenvironment.
 Specifically, any Dirichlet node for `S` is set as `circulation_concentration x biot_number`.
@@ -116,6 +116,7 @@ If you can run the `sample_projects_intracellular/ode` projects, you are ready t
 
 | Model | Description | Specification |
 | :-- | :-- | :-: |
+| Constant | Piecewise constant circulation compartment | `Constant` |
 | 1-compartment | Circulation compartment with linear elimination | `1C` |
 | 2-compartment | `1C` plus a periphery compartment with linear intercompartmental clearance rates | `2C` |
 | SBML-defined | Any SBML-defined model. Place the file in the `./config/` folder. PhysiPKPD will look for the species named `circulation_concentration` to use for updating Dirichlet nodes | `SBML` |
@@ -130,6 +131,10 @@ If you can run the `sample_projects_intracellular/ode` projects, you are ready t
 <p align="center">
     <b>Table:</b> XML elements for all PK models
 </p>
+
+#### `Constant` model <a name="Constant"></a>
+The `Constant` model fixes the circulation compartment concentration at user-specified times and values.
+The times and values must be supplied in a CSV (see [below](#csv_dosing)).
 
 #### `1C` model <a name="1C"></a>
 The `1C` model is a 1-comparment model defined by 
@@ -183,6 +188,10 @@ For `1C` and `2C` models, these can be set either with parameters of a CSV file.
 This is set with the `schedule` element and its attribute `format`, set to either `parameters` or `csv`.
 See the [`1C` template](#1c_template) for an example using `parameters`, and see the [`2C` template](#2c_template) for an example using `csv`.
 
+For `Constant` models, use a CSV in the same format as the `1C` and `2C` models, i.e., times in column one and values in column two.
+In this case, the values are what the circulation compartment concentration is set to rather than the amount added to that compartment.
+It will remain at that value indefinitely, so to turn "off" the substrate, add a (time, value) pair of (t<sub>off</sub>, 0).
+
 #### Dosing parameters
 
 Two types of doses can be set this way, loading doses and regular doses.
@@ -208,7 +217,7 @@ The dose given on a loading dose is set by `loading_dose` and on a regular dose 
     <b>Table:</b> Dosing parameters
 </p>
 
-#### Dosing by CSV
+#### Dosing by CSV <a name="csv_dosing"></a>
 
 If the `format` attribute in `schedule` is set to `"csv"`, PhysiPKPD will look for the file `./config/S_dose_schedule.csv` to define the dosing schedule.
 This file consists of two columns: time of dose (min), dose amount.
@@ -554,6 +563,17 @@ Place any of the following within the `variable` element:
    </variable>
    ...
 </microenvironment_setup>
+```
+
+#### `Constant` template <a name="constant_template"></a>
+
+
+```
+<PK enabled="true">
+    <model>Constant</model>
+    <schedule format="csv" />
+    <biot_number>1</biot_number>
+</PK>
 ```
 
 #### `1C` template <a name="1c_template"></a>
