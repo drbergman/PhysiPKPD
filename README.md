@@ -138,11 +138,13 @@ The times and values must be supplied in a CSV (see [below](#csv_dosing)).
 
 #### `1C` model <a name="1C"></a>
 The `1C` model is a 1-comparment model defined by 
+
 $$
 \begin{aligned}
 C' & = - \lambda C
 \end{aligned}
 $$
+
 where $\lambda$ is the elimination rate of the `circulation_concentration`, $C$.
 
 #### `2C` model
