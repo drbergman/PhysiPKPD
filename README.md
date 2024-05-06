@@ -147,12 +147,14 @@ where $\lambda$ is the elimination rate of the `circulation_concentration`, $C$.
 
 #### `2C` model
 The `2C` model is a 2-comparment model defined by 
+
 $$
 \begin{aligned}
 C' & = \frac{k_{21}}{R}P - k_{12}C - \lambda C \\
 P' & = k_{12}RC - k_{21}P
 \end{aligned}
 $$
+
 where $\lambda$ and $C$ are as [above](#1C), $P$ is the concentration in a peripheral compartment, though not the PhysiCell microenvironment.
 The intercompartmental clearance rates, $k_{12}$ and $k_{21}$, define the exchange rate between these compartments while $R$ is the ratio of the compartmental volumes: $V_C/V_P$.
 
