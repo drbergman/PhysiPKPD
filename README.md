@@ -337,6 +337,7 @@ You can also set the following parameters in `microenvironment_setup` for each s
 PD models are added as `cell_definition//PD` element, i.e.,  at the same level as `custom_data`.
 Within this element, multiple `cell_definition//PD//substrate` elements define which substrates affect the given cell type.
 Each `substrate` includes the attribute `name="S"` to set the substrate.
+**See templates [here](#pd_templates).**
 
 ### PD models
 Two similar models are supplied for PD, both using the principle of Area Under the Curve or AUC.
