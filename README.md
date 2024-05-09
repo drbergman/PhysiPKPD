@@ -224,6 +224,7 @@ The dose given on a loading dose is set by `loading_dose` and on a regular dose 
 #### Dosing by CSV <a name="csv_dosing"></a>
 
 If the `format` attribute in `schedule` is set to `"csv"`, PhysiPKPD will look for the file `./config/S_dose_schedule.csv` to define the dosing schedule.
+Alternatively, you can specify the path similar to the `cell_positions` and `cell_rules` files by supplying a `folder` and `filename` (see the [2C template](#2c_template)).
 This file consists of two columns: time of dose (min), dose amount.
 No header row is needed.
 <!-- | `S_read_dose_schedule_from_csv`[^dose_csv] | `bool` | If true, ignore the following parameters and read in a dosing schedule from `./config/S_dose_schedule.csv` | Set to `False` | -->
@@ -429,7 +430,7 @@ These parameters go in the `custom_data` of `C`. -->
 
 ### Mechanisms of action
 The effect of the PD model on the cell type is no longer defined by PhysiPKPD.
-Instead, the user must supply rules that define how each cell type is affected by each PD substrate, if at all.
+Instead, you must supply rules that define how each cell type is affected by each PD substrate, if at all.
 The intention of PhysiPKPD is that users will use the signal `custom:S_damage` to alter cell phenotype via the rules.
 We recommend using PhysiCell-Studio to help generate a rules file.
 
@@ -572,7 +573,6 @@ Place any of the following within the `variable` element:
 
 #### `Constant` template <a name="constant_template"></a>
 
-
 ```
 <PK enabled="true">
     <model>Constant</model>
@@ -582,7 +582,6 @@ Place any of the following within the `variable` element:
 ```
 
 #### `1C` template <a name="1c_template"></a>
-
 
 ```
 <PK enabled="true">
@@ -605,7 +604,10 @@ Place any of the following within the `variable` element:
 ```
 <PK enabled="true">
     <model>2C</model>
-    <schedule format="csv" />
+    <schedule format="csv>
+        <folder>./config</folder>
+        <filename>S_dose_schedule.csv</filename>
+    </schedule>
     <elimination_rate units="1/min">0.0027</elimination_rate>
     <k12 units="1/min">0.0048</k12>
     <k21 units="1/min">.0048</k21>
