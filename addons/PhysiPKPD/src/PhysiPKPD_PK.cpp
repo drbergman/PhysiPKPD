@@ -380,6 +380,8 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                     filename = folder + "/" + schedule_node.child("filename").text().as_string();
                 }
 
+                std::cout << "PhysiPKPD Update: Reading in dosing schedule from " << filename << "." << std::endl;
+
                 std::ifstream file(filename, std::ios::in);
 
                 if (!file)
@@ -405,35 +407,22 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
                 }
                 pPK->pk_solver->max_doses = pPK->pk_solver->dose_times.size();
 
+                std::cout << "\tPhysiPKPD Update: Finished reading in dosing schedule from " << filename << "." << std::endl;
+                std::cout << "\tPhysiPKPD Update: Found " << pPK->pk_solver->max_doses << " doses." << std::endl;
+                std::cout << "\tPhysiPKPD Update: Dose times are: " << pPK->pk_solver->dose_times << std::endl;
+                std::cout << "\tPhysiPKPD Update: Dose amounts are: " << pPK->pk_solver->dose_amounts << std::endl;
+
                 file.close();
             }
             else
             {
-                // get max dose number
-                // if (parameters.ints.find_index(pPK->substrate_name + "_max_number_doses") == -1)
-                // {
-                //     std::cout << "PhysiPKPD WARNING: " << pPK->substrate_name << "_max_number_doses not set." << std::endl
-                //               << "  Using a default value of 0." << std::endl;
-                //     pPK->pk_solver->max_doses = 0;
-                // } // assume a default value of 0
-                // else
-                // {
-                    pPK->pk_solver->max_doses = schedule_node.child("total_doses").text().as_int();
-                // }
+                pPK->pk_solver->max_doses = schedule_node.child("total_doses").text().as_int();
 
                 if (pPK->pk_solver->max_doses == 0)
                 {
                     pPK->dosing_schedule_setup_done = true;
                     return;
                 }
-
-                // if ((!(schedule_node.child("confluence_start"))) && (!(schedule_node.child("confluence_condition"))))
-                // {
-                //     std::cout << "PhysiPKPD WARNING: No specification of how to set first dose time." << std::endl
-                //               << "  Defaulting to current_time." << std::endl
-                //               << "  Specify this by setting " << pPK->substrate_name + "_set_first_dose_time" + " = true" << std::endl
-                //               << "  Or setting " << pPK->substrate_name + "_confluence_condition" << std::endl;
-                // }
 
                 pPK->pk_solver->dose_times.resize(pPK->pk_solver->max_doses, 0);
                 pPK->pk_solver->dose_amounts.resize(pPK->pk_solver->max_doses, 0);
@@ -548,6 +537,8 @@ void AnalyticConstant_PK_Solver::advance(Pharmacokinetics_Model *pPK, double cur
     {
         circulation_concentration = dose_amounts[dose_count];
         dose_count++;
+        std::cout << "PhysiPKPD Update: Dosing " << dose_amounts[dose_count] << " to " << pPK->substrate_name << " at time " << current_time << "." << std::endl
+                  << "\tUsing the constant PK model, so setting the circulation concentration to this amount." << std::endl;
     }
     return;
 }
@@ -559,6 +550,8 @@ void Analytic2C_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_t
     {
         compartment_concentrations[0] += dose_amounts[dose_count];
         dose_count++;
+        std::cout << "PhysiPKPD Update: Dosing " << dose_amounts[dose_count] << " to " << pPK->substrate_name << " at time " << current_time << "." << std::endl
+                  << "\tUsing the 2-compartment PK model, so adding this amount to the central compartment concentration resulting in a central concentration of " << compartment_concentrations[0] << "." << std::endl;
     }
 
     // store previous quantities for computation
@@ -573,10 +566,12 @@ void Analytic2C_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_t
 void Analytic1C_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_time)
 {
     // add dose if time for that
-if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
+    if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
     {
         circulation_concentration += dose_amounts[dose_count];
         dose_count++;
+        std::cout << "PhysiPKPD Update: Dosing " << dose_amounts[dose_count] << " to " << pPK->substrate_name << " at time " << current_time << "." << std::endl
+                  << "\tUsing the 1-compartment PK model, so adding this amount to the circulation concentration resulting in a concentration of " << circulation_concentration << "." << std::endl;
     }
 
     circulation_concentration = M * circulation_concentration;
