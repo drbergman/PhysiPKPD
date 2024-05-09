@@ -360,8 +360,28 @@ void setup_pk_single_dosing_schedule(Pharmacokinetics_Model *pPK, double current
         {
             if (read_csv)
             {
-                std::string filename = "./config/" + pPK->substrate_name + "_dose_schedule.csv";
+                std::string filename;
+                if (!(schedule_node.child("folder")) || !(schedule_node.child("filename")))
+                {
+                    std::cout << "PhysiPKPD WARNING: Reading in a dosing schedule from a CSV file, but no folder or filename is given." << std::endl
+                              << "\tWill look for it in ./config/" << pPK->substrate_name + "_dose_schedule.csv" << std::endl
+                              << std::endl
+                              << "\tSpecify this in the config by updating the <schedule> element to:" << std::endl
+                              << "\t<schedule format=\"csv\">" << std::endl
+                              << "\t  <folder>path/to/folder</folder>" << std::endl
+                              << "\t  <filename>file.csv</filename>" << std::endl
+                              << "\t</schedule>" << std::endl;
+
+                    filename = "./config/" + pPK->substrate_name + "_dose_schedule.csv";
+                }
+                else
+                {
+                    std::string folder = schedule_node.child("folder").text().as_string();
+                    filename = folder + "/" + schedule_node.child("filename").text().as_string();
+                }
+
                 std::ifstream file(filename, std::ios::in);
+
                 if (!file)
                 {
                     std::cout << "PhysiPKPD ERROR: " << filename << " not found in ./config/. " << pPK->substrate_name + "_read_dose_schedule_from_csv" << " set to true in config file." << std::endl;

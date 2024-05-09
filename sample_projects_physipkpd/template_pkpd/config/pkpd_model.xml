@@ -67,7 +67,10 @@
             </Dirichlet_options>
             <PK enabled="true">
                 <model>2C</model>
-                <schedule format="csv" />
+                <schedule format="csv">
+                    <folder>./config</folder>
+                    <filename>PKPD_D1_dose_schedule.csv</filename>
+                </schedule>
                 <elimination_rate units="1/min">0.0027</elimination_rate>
                 <k12 units="1/min">0.0048</k12>
                 <k21 units="1/min">.0048</k21>
