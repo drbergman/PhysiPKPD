@@ -326,7 +326,10 @@ Place any of the following within the `variable` element:
 ```
 <PK enabled="true">
     <model>Constant</model>
-    <schedule format="csv" />
+    <schedule format="csv">
+        <folder>./config</folder>
+        <filename>S_dose_schedule.csv</filename>
+    </schedule>
     <biot_number>1</biot_number>
 </PK>
 ```
