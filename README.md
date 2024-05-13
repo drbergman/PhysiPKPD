@@ -354,7 +354,7 @@ Place any of the following within the `variable` element:
 ```
 <PK enabled="true">
     <model>2C</model>
-    <schedule format="csv>
+    <schedule format="csv">
         <folder>./config</folder>
         <filename>S_dose_schedule.csv</filename>
     </schedule>
