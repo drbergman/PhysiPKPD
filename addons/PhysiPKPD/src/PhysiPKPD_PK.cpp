@@ -536,9 +536,9 @@ void AnalyticConstant_PK_Solver::advance(Pharmacokinetics_Model *pPK, double cur
     if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
     {
         circulation_concentration = dose_amounts[dose_count];
-        dose_count++;
         std::cout << "PhysiPKPD Update: Dosing " << dose_amounts[dose_count] << " to " << pPK->substrate_name << " at time " << current_time << "." << std::endl
-                  << "\tUsing the constant PK model, so setting the circulation concentration to this amount." << std::endl;
+                  << "\tUsing the constant PK model, so set the circulation concentration to " << circulation_concentration << "." << std::endl;
+        dose_count++;
     }
     return;
 }
@@ -549,9 +549,9 @@ void Analytic2C_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_t
     if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
     {
         compartment_concentrations[0] += dose_amounts[dose_count];
-        dose_count++;
         std::cout << "PhysiPKPD Update: Dosing " << dose_amounts[dose_count] << " to " << pPK->substrate_name << " at time " << current_time << "." << std::endl
                   << "\tUsing the 2-compartment PK model, so adding this amount to the central compartment concentration resulting in a central concentration of " << compartment_concentrations[0] << "." << std::endl;
+        dose_count++;
     }
 
     // store previous quantities for computation
@@ -569,9 +569,9 @@ void Analytic1C_PK_Solver::advance(Pharmacokinetics_Model *pPK, double current_t
     if (dose_count < max_doses && current_time > dose_times[dose_count] - tolerance)
     {
         circulation_concentration += dose_amounts[dose_count];
-        dose_count++;
         std::cout << "PhysiPKPD Update: Dosing " << dose_amounts[dose_count] << " to " << pPK->substrate_name << " at time " << current_time << "." << std::endl
                   << "\tUsing the 1-compartment PK model, so adding this amount to the circulation concentration resulting in a concentration of " << circulation_concentration << "." << std::endl;
+        dose_count++;
     }
 
     circulation_concentration = M * circulation_concentration;
