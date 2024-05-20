@@ -104,22 +104,37 @@ void setup_pk_model(Pharmacokinetics_Model *pNew, pugi::xml_node pk_node)
         rrc::RRCDataPtr result;
 
         // reading given SBML
+        std::string sbml_folder = "./config/"; // default folder for SBML files
+        if (!(pk_node.child("sbml_folder")))
+        {
+            std::cout << "PhysiPKPD WARNING: No SBML folder provided for " << pNew->substrate_name << "." << std::endl
+                      << "  You may include a folder as a string in " << "sbml_folder" << std::endl
+                      << "  For now, PhysiPKPD will use " << sbml_folder << " as the default folder for SBML files." << std::endl
+                      << std::endl;
+        }
+        else
+        {
+            sbml_folder = pk_node.child("sbml_folder").text().as_string();
+            // check that sbml_folder ends in a file separator
+            if (sbml_folder.back() != '/')
+            {
+                sbml_folder += "/";
+            }
+        }
         std::string sbml_filename = "PK_default.xml";
-        // if (parameters.strings.find_index(pNew->substrate_name + "_sbml_filename")==-1)
         if (!(pk_node.child("sbml_filename")))
         {
             std::cout << "PhysiPKPD WARNING: No SBML filename provided for " << pNew->substrate_name << "." << std::endl
-                      << "  You may include a filename as a string in " << pNew->substrate_name + "_sbml_filename" << std::endl
-                      << "  For example: <" << pNew->substrate_name << "_sbml_filename type=\"string\">PK_default.xml</" << pNew->substrate_name + "_sbml_filename>" << std::endl
-                      << "  Place that file in ./config/ for PhysiPKPD to properly locate it." << std::endl
-                      << "  For now, PhysiPKPD will use ./config/" + sbml_filename << std::endl
+                      << "  You may include a filename as a string in " << "sbml_filename" << std::endl
+                      << "  Place that file in " << sbml_folder << " for PhysiPKPD to properly locate it." << std::endl
+                      << "  For now, PhysiPKPD will use " + sbml_folder + "/" + sbml_filename << std::endl
                       << std::endl;
         }
         else
         {
             sbml_filename = pk_node.child("sbml_filename").text().as_string();
         }
-        sbml_filename = "./config/" + sbml_filename;
+        sbml_filename = sbml_folder + sbml_filename;
         char sbml[sbml_filename.length()+1];
         strcpy(sbml, sbml_filename.c_str());
 
