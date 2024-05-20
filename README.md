@@ -110,7 +110,7 @@ If you can run the `sample_projects_intracellular/ode` projects, you are ready t
 | Constant | Piecewise constant circulation compartment | `Constant` |
 | 1-compartment | Circulation compartment with linear elimination | `1C` |
 | 2-compartment | `1C` plus a periphery compartment with linear intercompartmental clearance rates | `2C` |
-| SBML-defined | Any SBML-defined model. Place the file in the `./config/` folder. PhysiPKPD will look for the species named `circulation_concentration` to use for updating Dirichlet nodes | `SBML` |
+| SBML-defined | Any SBML-defined model. Place the file in the `./config/` folder (or `sbml_folder` element; see the [SBML template](#sbml-template)). PhysiPKPD will look for the species named `circulation_concentration` to use for updating Dirichlet nodes | `SBML` |
 <p align="center">
     <b>Table:</b> PK model specifications
 </p>
@@ -170,6 +170,7 @@ If `sbml_filename` is not set, PhysiPKPD will look for `./config/PK_default.xml`
 
 | Parameter | Description | If Missing |
 | :-- | :-- | :-- |
+| `sbml_folder` | Folder containing SBML file, e.g. `./config` | Set to `./config` |
 | `sbml_filename` | Filename of SBML file, e.g. `PK_default.xml` | Set to `PK_default.xml` |
 <p align="center">
     <b>Table:</b> PK parameters for `SBML` models
@@ -374,6 +375,7 @@ Place any of the following within the `variable` element:
 ```
 <PK enabled="true">
     <model>SBML</model>
+    <sbml_folder>./config</sbml_filename>
     <sbml_filename>PK_default.xml</sbml_filename>
     <biot_number>1</biot_number>
 </PK>
