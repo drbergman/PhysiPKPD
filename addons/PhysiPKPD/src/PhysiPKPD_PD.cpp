@@ -126,7 +126,16 @@ Pharmacodynamics_Model *create_pd_model(int cell_definition_index, std::string c
     {
         std::cout << "PhysiPKPD WARNING: No PD time step supplied for " << substrate_name << " effects on " << cell_definition_name << std::endl
                   << "\tWill use the mechanics_dt by default." << std::endl
-                  << "\tSpecify one using " << substrate_name + "_dt_" + cell_definition_name << std::endl
+                  << "\tSpecify one using the dt node within this substrate element:" << std::endl
+                  << "  <cell_definition name=\"" << cell_definition_name << "\" ID=\"" << cell_definition_index << "\">" << std::endl
+                  << "  ..." << std::endl
+                  << "    <PD>" << std::endl
+                  << "      <substrate name=\"" << substrate_name << "\">" << std::endl
+                  << "        ..." << std::endl
+                  << "        <dt>0.1</dt>" << std::endl
+                  << "      </substrate>" << std::endl
+                  << "    </PD>" << std::endl
+                  << "  </cell_definition>" << std::endl
                   << std::endl;
 
         pNew->dt = mechanics_dt;
@@ -200,85 +209,9 @@ void setup_pharmacodynamics()
             default_microenvironment_options.track_internalized_substrates_in_each_agent = true; // ensure that internalized substrates are being tracked
             all_pd.push_back(create_pd_model(cd_ind, cd_name, substrate_node));
 
-
             substrate_node = substrate_node.next_sibling("substrate");
         }
     }
-
-    /*
-    std::string s;
-    std::string delimiter = ",";
-    size_t pos = 0;
-    std::string token;
-
-    if (parameters.strings.find_index("PKPD_pd_substrate_names") == -1)
-    {
-        std::cout << "PhysiPKPD WARNING: PKPD_pd_substrate_names was not found in User Parameters." << std::endl
-                  << "\tWill assume no PD substrates." << std::endl;
-        s = "";
-    }
-    else
-    {
-        s = parameters.strings("PKPD_pd_substrate_names");
-    }
-
-    // Get density index for all listed PD substrates
-    while ((pos = s.find(delimiter)) != std::string::npos)
-    {
-        token = s.substr(0, pos);
-        if (microenvironment.find_density_index(token) != -1)
-        {
-            PD_names.push_back(token);
-            PD_ind.push_back(microenvironment.find_density_index(token));
-        }
-        else
-        {
-            std::cout << "PhysiPKPD WARNING: " << token << " is not a substrate in the microenvironment." << std::endl;
-        }
-        s.erase(0, pos + 1);
-    }
-    if (s.size() > 0 && microenvironment.find_density_index(s) != -1)
-    {
-        PD_names.push_back(s);
-        PD_ind.push_back(microenvironment.find_density_index(s));
-    }
-    else if (s.size() > 0)
-    {
-        std::cout << "PhysiPKPD WARNING: " << s << " is not a substrate in the microenvironment." << std::endl;
-    }
-    */
-    
-    /*
-    // add the necessary custom variables to all cells
-    for (int n = 0; n < PD_ind.size(); n++) // loop over all identified PD substrates
-    {
-        for (int cd_ind = 0; cd_ind < cell_definitions_by_index.size(); cd_ind++) // loop over all cell definitions
-        {
-            bool is_type_affected_by_drug = false;
-            Cell_Definition* pCD = cell_definitions_by_index[cd_ind];
-            Hypothesis_Ruleset* pHRS = find_ruleset(pCD);
-            for (int rule_ind = 0; rule_ind < pHRS->rules.size(); rule_ind++) // loop over all rules for this cell definition
-            {
-                Hypothesis_Rule HR = pHRS->rules[rule_ind];
-                for (int sig_ind = 0; sig_ind < HR.signals.size(); sig_ind++) // loop over all signals looking for this PD substrate
-                {
-                    std::string signal = HR.signals[sig_ind];
-                    if (signal=="custom:" + PD_names[n] + "_damage")
-                    {
-                        default_microenvironment_options.track_internalized_substrates_in_each_agent = true; // ensure that internalized substrates are being tracked
-                        is_type_affected_by_drug = true;
-                        all_pd.push_back(create_pd_model(PD_ind[n], PD_names[n], cd_ind, pCD->name));
-                        break;
-                    }
-                }
-                if (is_type_affected_by_drug==true)
-                {
-                    break;
-                }
-            }
-        }
-    } // finish looping over all identified PD substrates
-    */
     return;
 }
 
@@ -355,47 +288,6 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_no
     }
 
     Cell_Definition *pCD = cell_definitions_by_index[pPD->cell_definition_index];
-
-    /*
-    // add backwards compatibility for usinge PKPD_D1_repair_rate to mean the constant repair rate
-    if (pCD->custom_data.find_variable_index(pPD->substrate_name + "_repair_rate") != -1) // possibly using the previous repair model and parameter syntax
-    {
-        if (pCD->custom_data.find_variable_index(pPD->substrate_name + "_repair_rate_constant") == -1)
-        {
-            pCD->custom_data.add_variable(pPD->substrate_name + "_repair_rate_constant", "damage/min", pCD->custom_data[pPD->substrate_name + "_repair_rate"]); // use the repair rate
-        }
-        if (pCD->custom_data.find_variable_index(pPD->substrate_name + "_repair_rate_linear") == -1)
-        {
-            pCD->custom_data.add_variable(pPD->substrate_name + "_repair_rate_linear", "1/min", 0.0);
-        }
-    }
-    */
-
-    /*
-    // make sure that all the necessary intracellular dynamics are present
-    std::vector<std::string> necessary_custom_fields;
-    necessary_custom_fields.push_back(pPD->substrate_name + "_metabolism_rate");
-    necessary_custom_fields.push_back(pPD->substrate_name + "_repair_rate_constant");
-    necessary_custom_fields.push_back(pPD->substrate_name + "_repair_rate_linear");
-    for (int i = 0; i < necessary_custom_fields.size(); i++)
-    {
-        if (pCD->custom_data.find_variable_index(necessary_custom_fields[i]) == -1)
-        {
-            std::cout << "PhysiPKPD WARNING: " << pCD->name << " does not have " << necessary_custom_fields[i] << " in custom_data" << std::endl
-                      << "\tSetting to 0 by default." << std::endl
-                      << std::endl;
-            pCD->custom_data.add_variable(necessary_custom_fields[i], 0.0);
-#pragma omp parallel for
-            for (int j = 0; j < (*all_cells).size(); j++) // loop over all cells to see if they have a type that got moas added to their custom_data
-            {
-                if ((*all_cells)[j]->type == pPD->cell_definition_index)
-                {
-                    (*all_cells)[j]->custom_data.add_variable(necessary_custom_fields[i], 0.0);
-                }
-            }
-        }
-    }
-    */
 
     if (pPD->use_precomputed_quantities) // setup precomputed quanities (if not using precomputed quantities, there is currently nothing to set up)
     {
