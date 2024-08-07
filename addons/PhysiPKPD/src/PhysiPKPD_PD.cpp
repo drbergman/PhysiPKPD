@@ -537,18 +537,18 @@ void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_c
             Hypothesis_Ruleset *pHRS = find_ruleset(pCD);
             for (int rule_ind = 0; rule_ind < pHRS->rules.size(); rule_ind++) // loop over all rules for this cell definition
             {
-                Hypothesis_Rule HR = pHRS->rules[rule_ind];
-                for (int sig_ind = 0; sig_ind < HR.signals.size(); sig_ind++) // loop over all signals looking for this PD substrate
+                Hypothesis_Rule *pHR = pHRS->rules[rule_ind];
+                for (int sig_ind = 0; sig_ind < pHR->signals.size(); sig_ind++) // loop over all signals looking for this PD substrate
                 {
                     if (k >= 2)
                     {
                         break;
                     }
-                    if (HR.signals[sig_ind] == "custom:" + PD_names[n] + "_damage")
+                    if (pHR->signals[sig_ind] == "custom:" + PD_names[n] + "_damage")
                     {
                         damage_inds[i].push_back(find_cell_definition(i)->custom_data.find_variable_index(all_pd[n]->substrate_name + "_damage"));
-                        ec50_vals[i].push_back(HR.half_maxes[sig_ind]);
-                        hp_vals[i].push_back(HR.hill_powers[sig_ind]);
+                        ec50_vals[i].push_back(pHR->half_maxes[sig_ind]);
+                        hp_vals[i].push_back(pHR->hill_powers[sig_ind]);
                         k++;
                     }
                 }
