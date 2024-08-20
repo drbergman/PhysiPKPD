@@ -299,28 +299,40 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_no
                       << std::endl;
             exit(-1);
         }
+        double metabolism_rate = substrate_node.child("metabolism_rate").text().as_double();
+        double linear_repair_rate = substrate_node.child("linear_repair_rate").text().as_double();
+        double constant_repair_rate = substrate_node.child("constant_repair_rate").text().as_double();
 
         // internalized drug amount (or concentration) simply decreases as A(dt) = A0 * exp(-metabolism_rate * dt);
-        pPD->metabolism_reduction_factor = exp(-substrate_node.child("metabolism_rate").text().as_double() * pPD->dt);
+        pPD->metabolism_reduction_factor = exp(-metabolism_rate * pPD->dt);
 
-        // Damage (D) follows D' = A - linear_rate * D - constant_rate ==> D(dt) = d_00 + d_10 * A0 + d_01 * D0; defining d_00, d_10, and d_01 here
-        pPD->initial_damage_coefficient = exp(-substrate_node.child("linear_repair_rate").text().as_double() * pPD->dt); // d_01
-
-        pPD->damage_constant = substrate_node.child("constant_repair_rate").text().as_double();
-        pPD->damage_constant /= substrate_node.child("linear_repair_rate").text().as_double();
-        pPD->damage_constant *= pPD->initial_damage_coefficient - 1; // d_00
-
-        // if the metabolism and repair rates are equal, then the system has repeated eigenvalues and the analytic solution is qualitatively different; notice the division by the difference of these rates in the first case
-        if (substrate_node.child("metabolism_rate").text().as_double() != substrate_node.child("linear_repair_rate").text().as_double())
+        if (linear_repair_rate == 0)
         {
-            pPD->initial_substrate_coefficient = pPD->metabolism_reduction_factor;
-            pPD->initial_substrate_coefficient -= pPD->initial_damage_coefficient; // d_10
-            pPD->initial_substrate_coefficient /= substrate_node.child("linear_repair_rate").text().as_double() - substrate_node.child("metabolism_rate").text().as_double(); // this would be bad if these rates were equal!
+            // Damage (D) follows D' = A - constant_rate ==> D(dt) = d_00 + d_10 * A0 + 1 * D0; defining d_00 and d_01 here
+            pPD->damage_constant = -constant_repair_rate * pPD->dt; // d_00
+            pPD->initial_substrate_coefficient = (1 - exp(-metabolism_rate * pPD->dt)) / metabolism_rate; // d_10
+            pPD->initial_damage_coefficient = 1.0; // d_01
         }
         else
         {
-            pPD->initial_substrate_coefficient = pPD->dt;
-            pPD->initial_substrate_coefficient *= pPD->initial_damage_coefficient; // d_10
+            // Damage (D) follows D' = A - linear_rate * D - constant_rate ==> D(dt) = d_00 + d_10 * A0 + d_01 * D0; defining d_00, d_10, and d_01 here
+            pPD->initial_damage_coefficient = exp(-linear_repair_rate * pPD->dt); // d_01
+
+            pPD->damage_constant = constant_repair_rate;
+            pPD->damage_constant /= linear_repair_rate;
+            pPD->damage_constant *= pPD->initial_damage_coefficient - 1; // d_00
+
+            // if the metabolism and repair rates are equal, then the system has repeated eigenvalues and the analytic solution is qualitatively different; notice the division by the difference of these rates in the first case
+            if (metabolism_rate != linear_repair_rate)
+            {
+                pPD->initial_substrate_coefficient = pPD->metabolism_reduction_factor;
+                pPD->initial_substrate_coefficient -= pPD->initial_damage_coefficient;                                                                                            // d_10
+                pPD->initial_substrate_coefficient /= linear_repair_rate - metabolism_rate; // this would be bad if these rates were equal!
+            }
+            else
+            {
+                pPD->initial_substrate_coefficient = pPD->initial_damage_coefficient * pPD->dt; // d_10
+            }
         }
     }
 }
@@ -356,32 +368,6 @@ void single_pd_model(Pharmacodynamics_Model *pPD, double current_time)
                               << "\tWe anticipate the main reason to not use precomputation is for heterogeneity of PD parameters within a cell_definition." << std::endl
                               << "\tWe need to discuss how best to move PD parameters into custom_data for this to work, we think." << std::endl;
                     exit(-1);
-                    /*
-                    double metabolism_reduction_factor = exp(-pC->custom_data[pPD->substrate_name + "_metabolism_rate"] * dt);
-                    double initial_damage_coefficient = exp(-pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * dt);
-                    double damage_constant = pC->custom_data[pPD->substrate_name + "_repair_rate_constant"] / pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] * (initial_damage_coefficient - 1); // +d_00...
-                    double initial_substrate_coefficient;
-                    if (pC->custom_data[pPD->substrate_name + "_metabolism_rate"] != pC->custom_data[pPD->substrate_name + "_repair_rate_linear"]) // +d_10*A0 (but the analytic form depends on whether the repair and metabolism rates are equal)
-                    {
-                        initial_substrate_coefficient = (metabolism_reduction_factor - initial_damage_coefficient) / (pC->custom_data[pPD->substrate_name + "_repair_rate_linear"] - pC->custom_data[pPD->substrate_name + "_metabolism_rate"]);
-                    }
-                    else
-                    {
-                        initial_substrate_coefficient = dt * metabolism_reduction_factor;
-                    }
-                    if (!pPD->use_internalized_amount)
-                    {
-                        initial_substrate_coefficient /= pC->phenotype.volume.total; // use concentration of internalized substrate to cause damage rather than internalized amount
-                    }
-                    pC->custom_data[pPD->damage_index] *= initial_damage_coefficient;                                                                 // D(dt) = d_01 * D(0)...
-                    pC->custom_data[pPD->damage_index] += damage_constant;                                                                            // + d_00 ...
-                    pC->custom_data[pPD->damage_index] += initial_substrate_coefficient * p.molecular.internalized_total_substrates[pPD->substrate_index]; // + d_10*A(0) or + d_10*C(0) if using concentration
-                    if (pC->custom_data[pPD->damage_index] <= 0)
-                    {
-                        pC->custom_data[pPD->damage_index] = 0; // very likely that cells will end up with negative damage without this because the repair rate is assumed constant (not proportional to amount of damage)
-                    }
-                    p.molecular.internalized_total_substrates[pPD->substrate_index] *= metabolism_reduction_factor;
-                    */
                 }
                 else
                 {
