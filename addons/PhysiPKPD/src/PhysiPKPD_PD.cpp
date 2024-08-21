@@ -306,13 +306,40 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_no
         // internalized drug amount (or concentration) simply decreases as A(dt) = A0 * exp(-metabolism_rate * dt);
         pPD->metabolism_reduction_factor = exp(-metabolism_rate * pPD->dt);
 
+        // Damage (D) follows D' = A - linear_rate * D - constant_rate ==> D(dt) = d_00 + d_10 * A0 + d_01 * D0; defining d_00, d_10, and d_01 here
+        pPD->initial_damage_coefficient = exp(-linear_repair_rate * pPD->dt); // d_01
+        if (linear_repair_rate == 0)
+        {
+            pPD->damage_constant = -constant_repair_rate * pPD->dt; // d_00
+        }
+        else
+        {
+            pPD->damage_constant = (constant_repair_rate / linear_repair_rate) * (pPD->initial_damage_coefficient - 1); // d_00
+        }
+        if (metabolism_rate != linear_repair_rate)
+        {
+            pPD->initial_substrate_coefficient = (pPD->metabolism_reduction_factor - pPD->initial_damage_coefficient) / (linear_repair_rate - metabolism_rate); // d_10
+        }
+        else
+        {
+            pPD->initial_substrate_coefficient = pPD->initial_damage_coefficient * pPD->dt; // d_10
+        }
+        /* OLD CODE USED TO COMPUTE d_00, d_10, and d_01
         if (linear_repair_rate == 0)
         {
             // Damage (D) follows D' = A - constant_rate ==> D(dt) = d_00 + d_10 * A0 + 1 * D0; defining d_00 and d_01 here
             pPD->damage_constant = -constant_repair_rate * pPD->dt; // d_00
-            pPD->initial_substrate_coefficient = (1 - exp(-metabolism_rate * pPD->dt)) / metabolism_rate; // d_10
+            if (metabolism_rate == 0)
+            {
+                pPD->initial_substrate_coefficient = pPD->dt; // d_10
+            }
+            else
+            {
+                pPD->initial_substrate_coefficient = (1 - pPD->metabolism_reduction_factor) / metabolism_rate; // d_10
+            }
             pPD->initial_damage_coefficient = 1.0; // d_01
         }
+
         else
         {
             // Damage (D) follows D' = A - linear_rate * D - constant_rate ==> D(dt) = d_00 + d_10 * A0 + d_01 * D0; defining d_00, d_10, and d_01 here
@@ -334,6 +361,7 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_no
                 pPD->initial_substrate_coefficient = pPD->initial_damage_coefficient * pPD->dt; // d_10
             }
         }
+        */
     }
 }
 
