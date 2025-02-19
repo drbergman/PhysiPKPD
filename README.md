@@ -238,23 +238,27 @@ Each `substrate` includes the attribute `name="S"` to set the substrate.
 **See templates [here](#pd_templates).**
 
 ### PD models
-Two similar models are supplied for PD, both using the principle of Area Under the Curve or AUC.
-One uses the AUC of the internalized *concentration*, `AUC`, and the other uses the AUC of the internalized *amount*, `AUC_amount`.
+There are four available PD models: `AUC`, `AUC_amount`, `MMD`, and `MMD_amount`.
+The `AUC`-prefixed models use the area under the curve (AUC) of the internalized concentration to set the damage variable, `S_damage`.
+By contrast, the `MMD`-prefixed models are based on metabolism-mediated damage (MMD) and use the amount of internalized substrate metabolized to set the damage variable, also accumulated over time similar to AUC.
+The value of $\gamma$ below differentiates between these two classes.
+
+The `_amount`-suffixed models use the internalized *amount* rather than the internalized *concentration* to update the damage variable.
 PhysiPKPD will turn on `track_internalized_substrates` for you if it detects a PD model.
-When using `AUC`, PhysiPKPD divides the internalized amount that PhysiCell tracks by the cell's current volume to determine the initial condition for $A$.
+When using `AUC` or `MMD`, PhysiPKPD divides the internalized amount that PhysiCell tracks by the cell's current volume to determine the initial condition for $A$.
+
 Both update according to the following differential equation:
 
 $$
 \begin{aligned}
 A' & = -mA \\
-D' & = A - r_1D - r_0
+D' & = \gamma A - r_1D - r_0
 \end{aligned}
 $$
 
-where $A$ is the internalized quantity, amount or concentration, and $D$ is the accumulated damage or AUC[^auc_no_par].
+where $A$ is the internalized quantity, amount or concentration, and $D$ is the accumulated damage.
 The internalized quantity, $A$, is metabolized at a rate $m$, damage is repaired with linear rate $r_1$ and constant rate $r_0$.
-
-[^auc_no_par]: Because $D$ is measuring the AUC, the coefficient for $A$ in $D'$ is fixed to $1$. That is, $D$ has units amount x min or concentration x min, depending on the model used.
+The parameter $\gamma$ is set either to `1.0` (for `AUC` and `AUC_amount`) or set to $m$ (for `MMD` and `MMD_amount`).
 
 | Parameter | Description | If Missing |
 | :-- | :-- | :-- |
@@ -407,7 +411,7 @@ Place the following within the `cell_definition` element:
         <dt>0.1</dt>
     </substrate>
     <substrate name="PKPD_D2">
-        <model>AUC</model>
+        <model>MMD</model>
         <metabolism_rate>0.05</metabolism_rate>
         <constant_repair_rate>5e3</constant_repair_rate>
         <linear_repair_rate>2e-2</linear_repair_rate>

@@ -10,68 +10,6 @@ static double tolerance = 0.01 * diffusion_dt; // using this in single_pd_model 
 Pharmacodynamics_Model::Pharmacodynamics_Model()
 { return; }
 
-/*
-Pharmacodynamics_Model *create_pd_model(int substrate_index, std::string substrate_name, int cell_definition_index, std::string cell_definition_name)
-{
-    Pharmacodynamics_Model *pNew = create_pd_model(substrate_index, cell_definition_index);
-    pNew->substrate_name = substrate_name;
-    pNew->cell_definition_name = cell_definition_name;
-
-    if (parameters.doubles.find_index(substrate_name + "_dt_" + cell_definition_name)==-1)
-    {
-        std::cout << "PhysiPKPD WARNING: No PD time step supplied for " << substrate_name << " effects on " << cell_definition_name << std::endl
-                  << "\tWill use the mechanics_dt by default." << std::endl
-                  << "\tSpecify one using " << substrate_name + "_dt_" + cell_definition_name << std::endl << std::endl;
-
-        pNew->dt = mechanics_dt;
-    }
-    else
-    {
-        pNew->dt = parameters.doubles(substrate_name + "_dt_" + cell_definition_name);
-    }
-
-    setup_pd_advancer(pNew);
-    pNew->previous_pd_time = PhysiCell_globals.current_time;
-    pNew->next_pd_time = PhysiCell_globals.current_time;
-    Cell_Definition* pCD = cell_definitions_by_index[cell_definition_index];
-    if (pCD->custom_data.find_variable_index(substrate_name + "_damage")==-1) // make sure a damage variable for this cell was initialized for this substrate
-    {
-        for (int i = 0; i < cell_definitions_by_index.size(); i++)
-        {
-            if (cell_definitions_by_index[i]->custom_data.find_variable_index(substrate_name + "_damage")!=-1)
-            {
-                std::cout << "PhysiPKPD ERROR: No damage variable for " << substrate_name << " acting on " << cell_definition_name << " given." << std::endl
-                          << "\tBut " << cell_definitions_by_index[i]->name << " does have this damage variable." << std::endl
-                          << "\tI cannot guarantee that adding this variable will put it in the right index." << std:: endl
-                          << "\tSet this with " << substrate_name + "_damage"
-                          << "\tas a custom variable for " << cell_definition_name << std::endl
-                          << std::endl;
-                exit(-1);
-            }
-        }
-        std::cout << "PhysiPKPD WARNING: No damage variable for " << substrate_name << " acting on " << cell_definition_name << " given." << std::endl
-                  << "\tSet this with " << substrate_name + "_damage for all cell types affected by this substrate."
-                  << "\tOtherwise, you risk changing variable indices and I can't guarantee that won't cause issues." << std::endl
-                  << std::endl;
-        pCD->custom_data.add_variable(substrate_name + "_damage", 0.0);
-
-#pragma omp parallel for
-        for (int i = 0; i < (*all_cells).size(); i++) // loop over all cells to see if they have a type that got moas added to their custom_data
-        {
-            if ((*all_cells)[i]->type==cell_definition_index) // check if this cell is of the current type
-            {
-                (*all_cells)[i]->custom_data.add_variable(substrate_name + "_damage", 0.0);
-            }
-        } // finish looping over each cell
-    }
-    
-    pNew->damage_index = cell_definitions_by_index[cell_definition_index]->custom_data.find_variable_index(substrate_name + "_damage");
-    pNew->advance = &single_pd_model;
-
-    return pNew;
-}
-*/
-
 Pharmacodynamics_Model *create_pd_model(int substrate_index, int cell_definition_index)
 {
     Pharmacodynamics_Model *pNew = create_pd_model();
@@ -226,7 +164,7 @@ void PD_model(double current_time)
 void setup_pd_advancer(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_node)
 {
     void (*setup_function)(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_node);
-    std::vector<std::string> current_options = {"AUC","AUC_amount","SBML"};
+    std::vector<std::string> current_options = {"AUC","AUC_amount","SBML","MMD","MMD_amount"};
     std::string method;
     if (!(substrate_node.child("model")))
     {
@@ -243,6 +181,8 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_nod
         fns.push_back(&setup_pd_model_auc);
         fns.push_back(&setup_pd_model_auc);
         fns.push_back(&setup_pd_model_sbml);
+        fns.push_back(&setup_pd_model_auc);
+        fns.push_back(&setup_pd_model_auc);
 
         std::string model = substrate_node.child("model").text().as_string();
         bool model_found = false;
@@ -264,7 +204,7 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_nod
         }
     }
     setup_function(pPD, substrate_node);
-    pPD->use_internalized_amount = (method=="AUC_amount");
+    pPD->use_internalized_amount = (method=="AUC_amount") || (method=="MMD_amount");
     return;
 }
 
@@ -300,6 +240,7 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_no
             exit(-1);
         }
         double metabolism_rate = substrate_node.child("metabolism_rate").text().as_double();
+        double substrate_to_damage_rate = parse_substrate_to_damage_rate(substrate_node);
         double linear_repair_rate = substrate_node.child("linear_repair_rate").text().as_double();
         double constant_repair_rate = substrate_node.child("constant_repair_rate").text().as_double();
 
@@ -318,50 +259,27 @@ void setup_pd_model_auc(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_no
         }
         if (metabolism_rate != linear_repair_rate)
         {
-            pPD->initial_substrate_coefficient = (pPD->metabolism_reduction_factor - pPD->initial_damage_coefficient) / (linear_repair_rate - metabolism_rate); // d_10
+            pPD->initial_substrate_coefficient = substrate_to_damage_rate * (pPD->metabolism_reduction_factor - pPD->initial_damage_coefficient) / (linear_repair_rate - metabolism_rate); // d_10
         }
         else
         {
-            pPD->initial_substrate_coefficient = pPD->initial_damage_coefficient * pPD->dt; // d_10
+            pPD->initial_substrate_coefficient = substrate_to_damage_rate * pPD->initial_damage_coefficient * pPD->dt; // d_10
         }
-        /* OLD CODE USED TO COMPUTE d_00, d_10, and d_01
-        if (linear_repair_rate == 0)
-        {
-            // Damage (D) follows D' = A - constant_rate ==> D(dt) = d_00 + d_10 * A0 + 1 * D0; defining d_00 and d_01 here
-            pPD->damage_constant = -constant_repair_rate * pPD->dt; // d_00
-            if (metabolism_rate == 0)
-            {
-                pPD->initial_substrate_coefficient = pPD->dt; // d_10
-            }
-            else
-            {
-                pPD->initial_substrate_coefficient = (1 - pPD->metabolism_reduction_factor) / metabolism_rate; // d_10
-            }
-            pPD->initial_damage_coefficient = 1.0; // d_01
-        }
+    }
+}
 
-        else
-        {
-            // Damage (D) follows D' = A - linear_rate * D - constant_rate ==> D(dt) = d_00 + d_10 * A0 + d_01 * D0; defining d_00, d_10, and d_01 here
-            pPD->initial_damage_coefficient = exp(-linear_repair_rate * pPD->dt); // d_01
-
-            pPD->damage_constant = constant_repair_rate;
-            pPD->damage_constant /= linear_repair_rate;
-            pPD->damage_constant *= pPD->initial_damage_coefficient - 1; // d_00
-
-            // if the metabolism and repair rates are equal, then the system has repeated eigenvalues and the analytic solution is qualitatively different; notice the division by the difference of these rates in the first case
-            if (metabolism_rate != linear_repair_rate)
-            {
-                pPD->initial_substrate_coefficient = pPD->metabolism_reduction_factor;
-                pPD->initial_substrate_coefficient -= pPD->initial_damage_coefficient;                                                                                            // d_10
-                pPD->initial_substrate_coefficient /= linear_repair_rate - metabolism_rate; // this would be bad if these rates were equal!
-            }
-            else
-            {
-                pPD->initial_substrate_coefficient = pPD->initial_damage_coefficient * pPD->dt; // d_10
-            }
-        }
-        */
+double parse_substrate_to_damage_rate(const pugi::xml_node &substrate_node)
+{
+    std::string model = substrate_node.child("model").text().as_string();
+    if (model.find("AUC") == 0)
+    { return 1.0; }
+    else if (model.find("MMD") == 0)
+    { return substrate_node.child("metabolism_rate").text().as_double(); }
+    else
+    {
+        std::cout << "PhysiPKPD ERROR: The model " << model << " is not a valid option for the substrate_to_damage_rate." << std::endl
+                  << "\tValid options include AUC, AUC_amount, MMD, and MMD_amount." << std::endl;
+        exit(-1);
     }
 }
 

@@ -13,6 +13,7 @@ using namespace PhysiCell;
 
 class Pharmacodynamics_Model;
 
+// possible future exercise: use this as abstract class and define inheritance from it for auc, sbml, etc.
 class Pharmacodynamics_Model
 {
  public:
@@ -26,7 +27,7 @@ class Pharmacodynamics_Model
     double dt = mechanics_dt; // mechanics_dt is the default time step for PD dynamics
     double previous_pd_time = 0.0;
     double next_pd_time = 0.0;
-
+    
     double metabolism_reduction_factor;
     double damage_constant;
     double initial_substrate_coefficient;
@@ -51,8 +52,8 @@ void setup_pd_advancer(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_nod
 void setup_pd_model_auc(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_node);
 void setup_pd_model_sbml(Pharmacodynamics_Model *pPD, pugi::xml_node substrate_node);
 void single_pd_model(Pharmacodynamics_Model *pPD, double current_time);
-// void pd_phenotype_function( Cell* pC, Phenotype& p, double dt );
-// void pd_custom_function( Cell* pC, Phenotype& p, double dt );
+
+double parse_substrate_to_damage_rate(const pugi::xml_node &substrate_node);
 
 // Coloring and miscellaneous functions
 void intialize_damage_coloring(int nCD, std::vector<std::vector<int>> &default_colors, std::vector<std::vector<int>> &color_diffs_D1, std::vector<std::vector<int>> &color_diffs_D2, std::vector<std::vector<int>> &damage_inds, std::vector<std::vector<int>> &ec50_inds, std::vector<std::vector<int>> &hp_inds);
