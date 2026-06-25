@@ -44,7 +44,7 @@ def get_studio_pkpd(USE_STUDIO, studio_dir):
     print("----------------------")
     print("Now getting studio with physipkpd...")
     response = requests.get(f"https://api.github.com/repos/drbergman/PhysiCell-Studio/releases")
-    max_pkpd_version = [0,0,0]
+    max_pkpd_version = [0,0,0,0,0,0]
     remote_url = None
     def ver_comp(old,new):
         if new[0] > old[0]:
@@ -58,13 +58,19 @@ def get_studio_pkpd(USE_STUDIO, studio_dir):
             return ver_comp(old[1:],new[1:])
     for release in response.json():
         if "pkpd" in release["tag_name"]:
-            print(f"tag_name = {release['tag_name']}")
-            version_ind = release["tag_name"].find('-v') + 2
-            version_str = release["tag_name"][version_ind:]
-            print(f"version_str = {version_str}")
-            version = [int(x) for x in version_str.split('.')]
-            if ver_comp(max_pkpd_version, version):
-                max_pkpd_version = version
+            ver_bookends = release["tag_name"].split('-pkpd-')
+            if len(ver_bookends) != 2:
+                print(f"Unexpected tag_name format for studio-pkpd release: {release['tag_name']}")
+                exit()
+            if ver_bookends[0] == 'studio':
+                upstream_version = [0,0,0]
+            else:
+                upstream_version = [int(x) for x in ver_bookends[0].split('.')]
+            pkpd_version_str = ver_bookends[1].lstrip('v')
+            pkpd_version = [int(x) for x in pkpd_version_str.split('.')]
+            release_version = [*upstream_version,*pkpd_version]
+            if ver_comp(max_pkpd_version, release_version):
+                max_pkpd_version = release_version
                 remote_url = release["zipball_url"]
     if remote_url is None:
         print("No studio-pkpd release found???")
